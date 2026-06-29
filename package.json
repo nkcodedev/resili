@@ -1,0 +1,71 @@
+{
+  "name": "resili",
+  "version": "0.0.0-development",
+  "private": true,
+  "description": "Production-ready TypeScript resilience toolkit for modern Node.js applications.",
+  "type": "module",
+  "packageManager": "pnpm@10.0.0",
+  "engines": {
+    "node": ">=20",
+    "pnpm": ">=10"
+  },
+  "scripts": {
+    "build": "pnpm -r build",
+    "clean": "pnpm -r clean",
+    "dev": "pnpm -r --parallel dev",
+    "lint": "eslint . --max-warnings=0",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier . --check",
+    "format:fix": "prettier . --write",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "coverage": "vitest run --coverage",
+    "typecheck": "pnpm -r typecheck",
+    "docs": "typedoc",
+    "api:extract": "pnpm --filter @resili/core api:extract",
+    "api:check": "pnpm --filter @resili/core api:check",
+    "pack:check": "npm pack ./packages/core --pack-destination packages/core/temp --ignore-scripts",
+    "changeset": "changeset",
+    "version-packages": "changeset version",
+    "release": "semantic-release",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx,cjs,mjs,json,md,yml,yaml}": [
+      "prettier --write"
+    ],
+    "*.{ts,tsx,js,jsx,cjs,mjs}": [
+      "eslint --fix"
+    ]
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
+  },
+  "devDependencies": {
+    "@changesets/cli": "latest",
+    "@eslint/js": "latest",
+    "@microsoft/api-extractor": "latest",
+    "@semantic-release/changelog": "latest",
+    "@semantic-release/commit-analyzer": "latest",
+    "@semantic-release/git": "latest",
+    "@semantic-release/github": "latest",
+    "@semantic-release/npm": "latest",
+    "@semantic-release/release-notes-generator": "latest",
+    "@types/node": "latest",
+    "@vitest/coverage-v8": "latest",
+    "eslint": "latest",
+    "eslint-config-prettier": "latest",
+    "husky": "latest",
+    "lint-staged": "latest",
+    "prettier": "latest",
+    "semantic-release": "latest",
+    "tsup": "latest",
+    "tsx": "latest",
+    "typedoc": "latest",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "latest",
+    "vitest": "latest"
+  }
+}

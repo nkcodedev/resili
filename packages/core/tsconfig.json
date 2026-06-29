@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "rootDir": "src",
+    "outDir": "dist",
+    "tsBuildInfoFile": "dist/tsconfig.tsbuildinfo"
+  },
+  "files": [
+    "src/index.ts",
+    "src/core/classification/index.ts",
+    "src/core/clock/index.ts",
+    "src/core/context.ts",
+    "src/core/errors/index.ts",
+    "src/core/events/index.ts",
+    "src/core/metrics/index.ts",
+    "src/core/policy/index.ts",
+    "src/core/state/index.ts"
+  ],
+  "include": ["src/**/*.ts"],
+  "exclude": ["dist", "coverage", "temp", "**/*.test.ts", "**/*.spec.ts"]
+}
