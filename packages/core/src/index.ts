@@ -6,6 +6,7 @@
 export const RESILI_VERSION = "0.0.0";
 
 export type { FailureClassifier, FailureVerdict, Outcome } from "./core/classification/index";
+export type { CircuitState, Client, ClientHealth, ClientStats } from "./core/client/index";
 export { composeClassifier, httpClassifier } from "./core/classification/index";
 export type { Clock } from "./core/clock/index";
 export { systemClock } from "./core/clock/index";
