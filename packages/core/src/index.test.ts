@@ -1,23 +1,52 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  AbortError,
+  BulkheadRejectedError,
+  CircuitOpenError,
+  ConfigurationError,
+  RateLimitExceededError,
+  ResiliError,
+  RetryExceededError,
+  TimeoutError,
+  bulkheadPolicy,
+  circuitBreakerPolicy,
   composeClassifier,
+  createClient,
+  definePlugin,
+  fallbackPolicy,
   httpClassifier,
+  isResiliError,
   memoryStore,
   definePolicy,
+  rateLimiterPolicy,
+  resili,
+  retryPolicy,
   RESILI_VERSION,
+  systemClock,
+  timeoutPolicy,
+  type Builder,
+  type BulkheadOptions,
+  type CircuitBreakerOptions,
   type Client,
   type ClientHealth,
   type ClientStats,
   type FailureClassifier,
   type FailureVerdict,
   type Context,
+  type FallbackOptions,
   type Outcome,
+  type Operation,
   type Policy,
   type PolicyFactory,
   type PolicyServices,
   type PolicyState,
+  type RateLimiterOptions,
+  type ResiliConfig,
+  type ResiliPlugin,
+  type RetryOptions,
   type StateStore,
+  type TimeoutOptions,
 } from "./index";
 
 describe("@resili/core package entry", () => {
@@ -90,5 +119,130 @@ describe("@resili/core package entry", () => {
 
     expect(client.stats()).toBe(stats);
     expect(client.health()).toBe(health);
+  });
+
+  it("exposes public error classes and guard", () => {
+    const errors = [
+      new ConfigurationError("invalid"),
+      new TimeoutError({ timeoutMs: 1 }),
+      new CircuitOpenError({ key: "service", retryAfterMs: 1 }),
+      new RetryExceededError({ attempts: 1, lastError: new Error("failed") }),
+      new BulkheadRejectedError({ maxConcurrent: 1, queueSize: 0 }),
+      new RateLimitExceededError({ retryAfterMs: 1 }),
+      new AbortError(),
+    ];
+
+    expect(errors.every((error) => error instanceof ResiliError)).toBe(true);
+    expect(errors.every((error) => isResiliError(error))).toBe(true);
+  });
+
+  it("exposes plugin contracts", () => {
+    const plugin: ResiliPlugin = definePlugin({
+      name: "test-plugin",
+      version: "1.0.0",
+      apiVersion: "1.0.0",
+      setup() {
+        return undefined;
+      },
+    });
+
+    expect(plugin.name).toBe("test-plugin");
+  });
+
+  it("exposes built-in policy factories and option types", () => {
+    const timeout: TimeoutOptions = { perAttemptMs: 10 };
+    const bulkhead: BulkheadOptions = { maxConcurrent: 1 };
+    const rateLimiter: RateLimiterOptions = { limit: 1, intervalMs: 100 };
+    const circuitBreaker: CircuitBreakerOptions = { minimumThroughput: 1 };
+    const retry: RetryOptions = { maxAttempts: 1, jitter: "none" };
+    const fallback: FallbackOptions<string> = {
+      handler() {
+        return "fallback";
+      },
+    };
+
+    expect(timeoutPolicy.name).toBe("timeout");
+    expect(bulkheadPolicy.name).toBe("bulkhead");
+    expect(rateLimiterPolicy.name).toBe("rate-limiter");
+    expect(circuitBreakerPolicy.name).toBe("circuit-breaker");
+    expect(retryPolicy.name).toBe("retry");
+    expect(fallbackPolicy.name).toBe("fallback");
+    expect({ timeout, bulkhead, rateLimiter, circuitBreaker, retry, fallback }).toBeDefined();
+  });
+
+  it("creates a fluent builder with resili", async () => {
+    const operation: Operation<readonly [string], string> = (id) => Promise.resolve(`user:${id}`);
+    const builder: Builder<readonly [string], string> = resili(operation);
+    const client = builder.build();
+
+    await expect(client.call("42")).resolves.toBe("user:42");
+  });
+
+  it("creates a client from supported declarative config", async () => {
+    const config: ResiliConfig<string> = {
+      timeout: { perAttemptMs: 100 },
+      bulkhead: { maxConcurrent: 1 },
+      rateLimiter: { limit: 2, intervalMs: 100 },
+      circuitBreaker: { minimumThroughput: 1 },
+      retry: { maxAttempts: 1, jitter: "none" },
+      fallback: {
+        handler() {
+          return "fallback";
+        },
+      },
+      classifier: httpClassifier,
+      store: memoryStore(),
+      clock: systemClock,
+      policies: [],
+    };
+    const client = createClient(() => Promise.resolve("ok"), config);
+
+    await expect(client.call()).resolves.toBe("ok");
+  });
+
+  it("applies fallback config through createClient", async () => {
+    const client = createClient(() => Promise.reject(new Error("failed")), {
+      fallback() {
+        return "fallback";
+      },
+    });
+
+    await expect(client.call()).resolves.toBe("fallback");
+  });
+
+  it("applies custom policy config through createClient", async () => {
+    const events: string[] = [];
+    const factory = definePolicy({
+      name: "observer",
+      order: 100,
+      create() {
+        return {
+          name: "observer",
+          order: 100,
+          async execute(ctx, next) {
+            events.push(ctx.operationName);
+
+            return await next(ctx);
+          },
+        };
+      },
+    });
+    const client = createClient(() => Promise.resolve("ok"), {
+      policies: [{ factory }],
+    });
+
+    await expect(client.call()).resolves.toBe("ok");
+    expect(events).toEqual(["operation"]);
+  });
+
+  it("rejects unsupported runtime config fields", () => {
+    expect(() =>
+      createClient(() => Promise.resolve("ok"), {
+        plugins: [],
+      } as unknown as ResiliConfig),
+    ).toThrow(ConfigurationError);
+    expect(() =>
+      createClient(() => Promise.resolve("ok"), null as unknown as ResiliConfig),
+    ).toThrow(ConfigurationError);
   });
 });
