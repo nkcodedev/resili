@@ -8,6 +8,8 @@
   - docs/ARCHITECTURE.md
   - docs/API_SPECIFICATION.md
   - docs/INTERNAL_DESIGN.md
+- Do not implement future modules or roadmap items unless explicitly requested.
+- If blocked by a missing interface, unclear contract, or conflicting instruction, stop and explain the blocker.
 
 ## Code Style
 
@@ -26,6 +28,7 @@
 ## Testing
 
 - Add or update unit tests.
+- Run validation before completion.
 - Run:
 
 ```bash
