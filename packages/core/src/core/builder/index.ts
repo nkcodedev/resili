@@ -8,9 +8,16 @@ import {
   type ResiliEventType,
 } from "../events";
 import { ConfigurationError } from "../errors";
-import { noopMetrics } from "../metrics";
+import { noopMetrics, type MetricsRecorder } from "../metrics";
 import { compilePipeline } from "../pipeline";
 import { definePolicy, type PolicyFactory, type PolicyServices } from "../policy";
+import {
+  definePlugin,
+  installPlugins,
+  type PluginInstance,
+  type PluginRegistration,
+  type ResiliPlugin,
+} from "../plugins";
 import { memoryStore, type StateStore } from "../state";
 import { bulkheadPolicy, type BulkheadOptions } from "../../policies/bulkhead";
 import { circuitBreakerPolicy, type CircuitBreakerOptions } from "../../policies/circuit-breaker";
@@ -67,6 +74,11 @@ export interface Builder<Args extends readonly unknown[], R> {
   fallback(options: FallbackOptions<R> | FallbackFn<R>): this;
 
   /**
+   * Registers a plugin for setup during build.
+   */
+  use<O = void>(plugin: ResiliPlugin<O>, options?: O): this;
+
+  /**
    * Registers a custom policy factory for the future client pipeline.
    */
   policy(factory: PolicyFactory, options?: unknown): this;
@@ -110,10 +122,12 @@ interface EventRegistration<T extends ResiliEventType = ResiliEventType> {
 interface BuilderState<Args extends readonly unknown[], R> {
   readonly operation: Operation<Args, R>;
   readonly policies: readonly PolicyRegistration[];
+  readonly plugins: readonly PluginRegistration[];
   readonly events: readonly EventRegistration[];
   readonly classifier: FailureClassifier;
   readonly store: StateStore;
   readonly clock: Clock;
+  readonly metrics: MetricsRecorder;
 }
 
 /**
@@ -131,10 +145,12 @@ export function createBuilder<Args extends readonly unknown[], R>(
   return new ImmutableBuilder({
     operation,
     policies: Object.freeze([]),
+    plugins: Object.freeze([]),
     events: Object.freeze([]),
     classifier: httpClassifier,
     store: memoryStore(),
     clock: systemClock,
+    metrics: noopMetrics,
   });
 }
 
@@ -171,6 +187,17 @@ class ImmutableBuilder<Args extends readonly unknown[], R> implements Builder<Ar
     const fallbackOptions = typeof options === "function" ? { handler: options } : options;
 
     return this.policy(fallbackPolicy, fallbackOptions);
+  }
+
+  use<O = void>(plugin: ResiliPlugin<O>, options?: O): this {
+    const validatedPlugin = definePlugin(plugin);
+
+    return this.#next({
+      plugins: Object.freeze([
+        ...this.#state.plugins,
+        freezePluginRegistration(validatedPlugin, options, this.#state.plugins.length),
+      ]),
+    });
   }
 
   policy(factory: PolicyFactory, options?: unknown): this {
@@ -221,16 +248,25 @@ class ImmutableBuilder<Args extends readonly unknown[], R> implements Builder<Ar
       events.on(registration.type, registration.handler);
     }
 
-    const services: PolicyServices = Object.freeze({
+    const installedPlugins = installPlugins({
+      plugins: this.#state.plugins,
+      events,
       clock: this.#state.clock,
-      metrics: noopMetrics,
+      metrics: this.#state.metrics,
+      store: this.#state.store,
+    });
+
+    const services: PolicyServices = Object.freeze({
+      clock: installedPlugins.clock,
+      metrics: installedPlugins.metrics,
       emit(event: ResiliEvent): void {
         events.emit(event);
       },
-      store: this.#state.store,
+      store: installedPlugins.store,
       classifier: this.#state.classifier,
     });
-    const policies = this.#state.policies.map(({ factory, options }) =>
+    const policyRegistrations = [...this.#state.policies, ...installedPlugins.policies];
+    const policies = policyRegistrations.map(({ factory, options }) =>
       factory.create(services, options),
     );
     const pipeline = compilePipeline(policies);
@@ -239,6 +275,7 @@ class ImmutableBuilder<Args extends readonly unknown[], R> implements Builder<Ar
       operation: this.#state.operation,
       pipeline,
       events,
+      dispose: createPluginDisposer(installedPlugins.instances),
     });
   }
 
@@ -256,10 +293,12 @@ function freezeState<Args extends readonly unknown[], R>(
   return Object.freeze({
     operation: state.operation,
     policies: Object.freeze([...state.policies]),
+    plugins: Object.freeze([...state.plugins]),
     events: Object.freeze([...state.events]),
     classifier: state.classifier,
     store: state.store,
     clock: state.clock,
+    metrics: state.metrics,
   });
 }
 
@@ -274,6 +313,33 @@ function freezePolicyRegistration(factory: PolicyFactory, options: unknown): Pol
           options,
         },
   );
+}
+
+function freezePluginRegistration<O>(
+  plugin: ResiliPlugin<O>,
+  options: O | undefined,
+  index: number,
+): PluginRegistration<O> {
+  return Object.freeze(
+    options === undefined
+      ? {
+          plugin,
+          index,
+        }
+      : {
+          plugin,
+          options,
+          index,
+        },
+  );
+}
+
+function createPluginDisposer(instances: readonly PluginInstance[]): () => Promise<void> {
+  return async () => {
+    for (let index = instances.length - 1; index >= 0; index -= 1) {
+      await instances[index]?.dispose?.();
+    }
+  };
 }
 
 function validateOperation(operation: unknown): void {

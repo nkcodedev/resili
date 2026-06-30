@@ -7,6 +7,7 @@ import type { ResiliEvent } from "../events";
 import { ConfigurationError } from "../errors";
 import { noopMetrics } from "../metrics";
 import { definePolicy, type Next, type PolicyFactory, type PolicyServices } from "../policy";
+import { definePlugin } from "../plugins";
 import { memoryStore, type StateStore } from "../state";
 import { createBuilder, type Builder } from "./index";
 
@@ -209,6 +210,217 @@ describe("createBuilder", () => {
       .build();
 
     await expect(client.call()).resolves.toBe("ok");
+  });
+
+  it("registers plugins immutably and runs setup during build", async () => {
+    const events: string[] = [];
+    const setup = vi.fn();
+    const plugin = definePlugin<{ readonly enabled: boolean }>({
+      name: "observer-plugin",
+      version: "1.0.0",
+      apiVersion: "1.0.0",
+      setup(ctx, options) {
+        setup(options);
+        ctx.registerPolicy(observerFactory("plugin-policy", 100, events));
+
+        return { name: "observer-plugin" };
+      },
+    });
+    const builder = createBuilder(() => Promise.resolve("ok"));
+    const nextBuilder = builder.use(plugin, { enabled: true });
+
+    expect(nextBuilder).not.toBe(builder);
+    expect(Object.isFrozen(nextBuilder)).toBe(true);
+
+    await builder.build().call();
+    expect(events).toEqual([]);
+
+    await nextBuilder.build().call();
+
+    expect(setup).toHaveBeenCalledWith({ enabled: true });
+    expect(events).toEqual(["plugin-policy:before", "plugin-policy:after"]);
+  });
+
+  it("orders plugin setup by dependency and priority before creating policies", async () => {
+    const installed: string[] = [];
+    const events: string[] = [];
+    const lowPriority = definePlugin({
+      name: "low",
+      version: "1.0.0",
+      apiVersion: "1.0.0",
+      priority: 10,
+      setup(ctx) {
+        installed.push("low");
+        ctx.registerPolicy(observerFactory("low", 200, events));
+
+        return { name: "low" };
+      },
+    });
+    const highPriority = definePlugin({
+      name: "high",
+      version: "1.0.0",
+      apiVersion: "1.0.0",
+      priority: -1,
+      setup(ctx) {
+        installed.push("high");
+        ctx.registerPolicy(observerFactory("high", 100, events));
+
+        return { name: "high" };
+      },
+    });
+    const dependent = definePlugin({
+      name: "dependent",
+      version: "1.0.0",
+      apiVersion: "1.0.0",
+      dependencies: ["low"],
+      priority: -100,
+      setup() {
+        installed.push("dependent");
+
+        return { name: "dependent" };
+      },
+    });
+
+    await createBuilder(() => Promise.resolve("ok"))
+      .use(lowPriority)
+      .use(dependent)
+      .use(highPriority)
+      .build()
+      .call();
+
+    expect(installed).toEqual(["high", "low", "dependent"]);
+    expect(events).toEqual(["high:before", "low:before", "low:after", "high:after"]);
+  });
+
+  it("applies plugin event handlers and service overrides", async () => {
+    const handler = vi.fn();
+    const event = createRequestStartedEvent();
+    const clock = createClock();
+    const store = memoryStore();
+    let capturedServices: PolicyServices | undefined;
+    const metrics = Object.freeze({
+      counter(name: string, help?: string) {
+        return noopMetrics.counter(name, help);
+      },
+      gauge(name: string, help?: string) {
+        return noopMetrics.gauge(name, help);
+      },
+      histogram(name: string, help?: string, buckets?: readonly number[]) {
+        return noopMetrics.histogram(name, help, buckets);
+      },
+    });
+    const plugin = definePlugin({
+      name: "services",
+      version: "1.0.0",
+      apiVersion: "1.0.0",
+      setup(ctx) {
+        ctx.on("RequestStarted", handler);
+        ctx.useClock(clock);
+        ctx.useStore(store);
+        ctx.useMetrics(metrics);
+        ctx.registerPolicy(
+          definePolicy({
+            name: "capture",
+            order: 100,
+            create(services) {
+              capturedServices = services;
+
+              return {
+                name: "capture",
+                order: 100,
+                execute<T>(ctx: Context, next: Next<T>): Promise<T> {
+                  services.emit(event);
+
+                  return next(ctx);
+                },
+              };
+            },
+          }),
+        );
+
+        return { name: "services" };
+      },
+    });
+
+    await createBuilder(() => Promise.resolve("ok"))
+      .use(plugin)
+      .build()
+      .call();
+
+    expect(handler).toHaveBeenCalledWith(event);
+    expect(capturedServices).toMatchObject({ clock, store, metrics });
+  });
+
+  it("disposes plugin instances in reverse install order on client destroy", async () => {
+    const calls: string[] = [];
+    const first = definePlugin({
+      name: "first",
+      version: "1.0.0",
+      apiVersion: "1.0.0",
+      setup() {
+        return {
+          name: "first",
+          dispose() {
+            calls.push("first");
+          },
+        };
+      },
+    });
+    const second = definePlugin({
+      name: "second",
+      version: "1.0.0",
+      apiVersion: "1.0.0",
+      dependencies: ["first"],
+      setup() {
+        return {
+          name: "second",
+          dispose() {
+            calls.push("second");
+          },
+        };
+      },
+    });
+    const client = createBuilder(() => Promise.resolve("ok"))
+      .use(first)
+      .use(second)
+      .build();
+
+    await client.destroy();
+    await client.destroy();
+
+    expect(calls).toEqual(["second", "first"]);
+  });
+
+  it("rejects invalid plugin graphs during build", () => {
+    const plugin = definePlugin({
+      name: "duplicate",
+      version: "1.0.0",
+      apiVersion: "1.0.0",
+      setup() {
+        return undefined;
+      },
+    });
+    const dependent = definePlugin({
+      name: "dependent",
+      version: "1.0.0",
+      apiVersion: "1.0.0",
+      dependencies: ["missing"],
+      setup() {
+        return undefined;
+      },
+    });
+
+    expect(() =>
+      createBuilder(() => Promise.resolve("ok"))
+        .use(plugin)
+        .use(plugin)
+        .build(),
+    ).toThrow(ConfigurationError);
+    expect(() =>
+      createBuilder(() => Promise.resolve("ok"))
+        .use(dependent)
+        .build(),
+    ).toThrow(ConfigurationError);
   });
 
   it("preserves canonical built-in policy ordering regardless of chaining order", async () => {
