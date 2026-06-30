@@ -1,4 +1,4 @@
-import { createClient, type ResiliConfig } from "@resili/core";
+import { createClient, type Client, type Context, type ResiliConfig } from "@resili/core";
 
 /**
  * Minimal structural Undici request options supported by this adapter.
@@ -60,13 +60,15 @@ export type ResilientUndici = (options: UndiciRequestOptions) => Promise<UndiciR
  */
 export function createUndici(options: CreateUndiciOptions): ResilientUndici {
   const requestImplementation = options.request;
-  const client = createClient(
+  const client: Client<readonly [], UndiciResponse> = createClient<readonly [], UndiciResponse>(
     (): Promise<UndiciResponse> => requestImplementation({ origin: "about:blank", path: "/" }),
     createCoreConfig(options),
   );
 
   return (requestOptions: UndiciRequestOptions): Promise<UndiciResponse> =>
-    client.execute((ctx) => requestImplementation({ ...requestOptions, signal: ctx.signal }));
+    client.execute<UndiciResponse>((ctx: Context) =>
+      requestImplementation({ ...requestOptions, signal: ctx.signal }),
+    );
 }
 
 function createCoreConfig(options: CreateUndiciOptions): ResiliConfig<UndiciResponse> {

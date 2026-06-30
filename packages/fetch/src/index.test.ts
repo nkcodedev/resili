@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
+import type { Outcome } from "@resili/core";
 import { createFetch, type FetchImplementation } from "./index";
 
 const RESPONSE = new Response("ok", { status: 200 });
@@ -83,7 +84,7 @@ describe("createFetch", () => {
       retry: {
         maxAttempts: 2,
         jitter: "none",
-        retryOn(outcome) {
+        retryOn(outcome: Outcome) {
           return outcome.status === "error";
         },
       },

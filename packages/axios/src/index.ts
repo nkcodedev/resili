@@ -1,4 +1,4 @@
-import { createClient, type ResiliConfig } from "@resili/core";
+import { createClient, type Client, type Context, type ResiliConfig } from "@resili/core";
 
 /**
  * Minimal structural Axios request config supported by this adapter.
@@ -90,14 +90,16 @@ export interface ResilientAxios {
  */
 export function createAxios(options: CreateAxiosOptions): ResilientAxios {
   const axiosImplementation = options.axios;
-  const client = createClient(
+  const client: Client<readonly [], AxiosResponse> = createClient<readonly [], AxiosResponse>(
     (): Promise<AxiosResponse> => axiosImplementation({}),
     createCoreConfig(options),
   );
   const request = <T = unknown, D = unknown>(
     config: AxiosRequestConfig<D>,
   ): Promise<AxiosResponse<T, D>> =>
-    client.execute((ctx) => axiosImplementation<T, D>({ ...config, signal: ctx.signal }));
+    client.execute<AxiosResponse<T, D>>((ctx: Context) =>
+      axiosImplementation<T, D>({ ...config, signal: ctx.signal }),
+    );
   const axios = ((config: AxiosRequestConfig): Promise<AxiosResponse> =>
     request(config)) as ResilientAxios;
 

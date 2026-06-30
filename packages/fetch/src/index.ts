@@ -1,4 +1,4 @@
-import { createClient, type ResiliConfig } from "@resili/core";
+import { createClient, type Client, type Context, type ResiliConfig } from "@resili/core";
 
 /**
  * Fetch-compatible implementation used by the adapter.
@@ -40,13 +40,15 @@ export type ResilientFetch = (input: RequestInfo | URL, init?: RequestInit) => P
  */
 export function createFetch(options: CreateFetchOptions = {}): ResilientFetch {
   const fetchImplementation = options.fetch ?? globalThis.fetch;
-  const client = createClient(
+  const client: Client<readonly [], Response> = createClient<readonly [], Response>(
     (): Promise<Response> => fetchImplementation("about:blank"),
     createCoreConfig(options),
   );
 
   return (input: RequestInfo | URL, init?: RequestInit): Promise<Response> =>
-    client.execute((ctx) => fetchImplementation(input, { ...init, signal: ctx.signal }));
+    client.execute<Response>((ctx: Context) =>
+      fetchImplementation(input, { ...init, signal: ctx.signal }),
+    );
 }
 
 function createCoreConfig(options: CreateFetchOptions): ResiliConfig<Response> {

@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
+import type { Outcome } from "@resili/core";
 import {
   createAxios,
   type AxiosImplementation,
@@ -146,7 +147,7 @@ describe("createAxios", () => {
       retry: {
         maxAttempts: 2,
         jitter: "none",
-        retryOn(outcome) {
+        retryOn(outcome: Outcome) {
           return outcome.status === "error";
         },
       },
