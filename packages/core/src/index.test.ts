@@ -6,6 +6,9 @@ import {
   memoryStore,
   definePolicy,
   RESILI_VERSION,
+  type Client,
+  type ClientHealth,
+  type ClientStats,
   type FailureClassifier,
   type FailureVerdict,
   type Context,
@@ -66,5 +69,26 @@ describe("@resili/core package entry", () => {
 
     expect(factory.name).toBe("root-policy");
     expect(typeof factory.create(services).execute).toBe("function");
+  });
+
+  it("exposes the client contract", () => {
+    const stats: ClientStats = {
+      circuit: {},
+      bulkhead: {},
+      rateLimiter: {},
+      totals: { calls: 0, successes: 0, failures: 0, retries: 0 },
+    };
+    const health: ClientHealth = {
+      status: "healthy",
+      openCircuits: [],
+      details: stats,
+    };
+    const client: Pick<Client<readonly [string], string>, "stats" | "health"> = {
+      stats: () => stats,
+      health: () => health,
+    };
+
+    expect(client.stats()).toBe(stats);
+    expect(client.health()).toBe(health);
   });
 });
