@@ -5,6 +5,55 @@
 ```ts
 
 // @public
+export type CircuitState = "closed" | "open" | "half_open";
+
+// @public
+export interface Client<Args extends readonly unknown[], R> {
+    call(...args: Args): Promise<R>;
+    destroy(): Promise<void>;
+    execute<T = R>(operation: (ctx: Context) => Promise<T>, init?: ContextInit): Promise<T>;
+    health(): ClientHealth;
+    on<T extends ResiliEventType>(type: T, handler: EventHandler<T>): Unsubscribe;
+    stats(): ClientStats;
+}
+
+// @public
+export interface ClientHealth {
+    // (undocumented)
+    readonly details: ClientStats;
+    // (undocumented)
+    readonly openCircuits: readonly string[];
+    // (undocumented)
+    readonly status: "healthy" | "degraded" | "unhealthy";
+}
+
+// @public
+export interface ClientStats {
+    // (undocumented)
+    readonly bulkhead: Readonly<Record<string, {
+        readonly active: number;
+        readonly queued: number;
+    }>>;
+    // (undocumented)
+    readonly circuit: Readonly<Record<string, {
+        readonly state: CircuitState;
+        readonly failureRate: number;
+        readonly calls: number;
+    }>>;
+    // (undocumented)
+    readonly rateLimiter: Readonly<Record<string, {
+        readonly available: number;
+    }>>;
+    // (undocumented)
+    readonly totals: {
+        readonly calls: number;
+        readonly successes: number;
+        readonly failures: number;
+        readonly retries: number;
+    };
+}
+
+// @public
 export interface Clock {
     clearTimeout(handle: ReturnType<typeof globalThis.setTimeout>): void;
     now(): number;
