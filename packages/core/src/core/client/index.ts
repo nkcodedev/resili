@@ -97,6 +97,7 @@ export interface CoreClientInit<Args extends readonly unknown[], R> {
   readonly operation: (...args: Args) => Promise<R>;
   readonly pipeline: Pipeline;
   readonly events?: EventBus;
+  readonly dispose?: () => void | Promise<void>;
 }
 
 interface ClientTotals {
@@ -127,6 +128,7 @@ class ImmutableClient<Args extends readonly unknown[], R> implements Client<Args
   readonly #operation: (...args: Args) => Promise<R>;
   readonly #pipeline: Pipeline;
   readonly #events: EventBus;
+  readonly #dispose?: () => void | Promise<void>;
   readonly #totals: ClientTotals = {
     calls: 0,
     successes: 0,
@@ -139,6 +141,9 @@ class ImmutableClient<Args extends readonly unknown[], R> implements Client<Args
     this.#operation = init.operation;
     this.#pipeline = init.pipeline;
     this.#events = init.events ?? new DefaultEventBus();
+    if (init.dispose !== undefined) {
+      this.#dispose = init.dispose;
+    }
 
     Object.freeze(this);
   }
@@ -175,18 +180,20 @@ class ImmutableClient<Args extends readonly unknown[], R> implements Client<Args
     return this.#events.on(type, handler);
   }
 
-  destroy(): Promise<void> {
+  async destroy(): Promise<void> {
     if (this.#destroyed) {
-      return Promise.resolve();
+      return;
     }
 
     this.#destroyed = true;
 
-    if (this.#events instanceof DefaultEventBus) {
-      this.#events.clear();
+    try {
+      await this.#dispose?.();
+    } finally {
+      if (this.#events instanceof DefaultEventBus) {
+        this.#events.clear();
+      }
     }
-
-    return Promise.resolve();
   }
 
   async #run<T>(execute: () => Promise<T>): Promise<T> {

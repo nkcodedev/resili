@@ -1,8 +1,8 @@
 import type { Clock } from "../clock";
-import type { EventHandler, ResiliEventType } from "../events";
+import type { EventBus, EventHandler, ResiliEventType } from "../events";
 import { ConfigurationError } from "../errors";
 import type { MetricsRecorder } from "../metrics";
-import type { PolicyFactory } from "../policy";
+import { definePolicy, type PolicyFactory } from "../policy";
 import type { StateStore } from "../state";
 
 /**
@@ -141,6 +141,121 @@ export function definePlugin<O = void>(plugin: ResiliPlugin<O>): ResiliPlugin<O>
   });
 }
 
+/**
+ * Internal immutable plugin registration captured by the builder.
+ *
+ * @internal
+ */
+export interface PluginRegistration<O = unknown> {
+  readonly plugin: ResiliPlugin<O>;
+  readonly options?: O;
+  readonly index: number;
+}
+
+/**
+ * Internal plugin installer input.
+ *
+ * @internal
+ */
+export interface PluginInstallInput {
+  readonly plugins: readonly PluginRegistration[];
+  readonly events: EventBus;
+  readonly clock: Clock;
+  readonly metrics: MetricsRecorder;
+  readonly store: StateStore;
+}
+
+/**
+ * Internal policy registration produced by plugin setup hooks.
+ *
+ * @internal
+ */
+export interface PluginPolicyRegistration {
+  readonly factory: PolicyFactory;
+  readonly options?: unknown;
+}
+
+/**
+ * Internal plugin installation result consumed by the builder.
+ *
+ * @internal
+ */
+export interface PluginInstallResult {
+  readonly policies: readonly PluginPolicyRegistration[];
+  readonly instances: readonly PluginInstance[];
+  readonly clock: Clock;
+  readonly metrics: MetricsRecorder;
+  readonly store: StateStore;
+}
+
+/**
+ * Installs plugins in dependency and priority order.
+ *
+ * This intentionally does not perform API-version compatibility checks.
+ *
+ * @internal
+ */
+export function installPlugins(input: PluginInstallInput): PluginInstallResult {
+  const orderedPlugins = orderPlugins(input.plugins);
+  const policies: PluginPolicyRegistration[] = [];
+  const instances: PluginInstance[] = [];
+  const instanceByName = new Map<string, PluginInstance>();
+  let clock = input.clock;
+  let metrics = input.metrics;
+  let store = input.store;
+
+  for (const registration of orderedPlugins) {
+    const ctx: PluginContext = Object.freeze({
+      apiVersion: registration.plugin.apiVersion,
+      registerPolicy(factory: PolicyFactory, options?: unknown): void {
+        policies.push(freezePluginPolicyRegistration(definePolicy(factory), options));
+      },
+      on<T extends ResiliEventType>(type: T, handler: EventHandler<T>): void {
+        input.events.on(type, handler);
+      },
+      useMetrics(recorder: MetricsRecorder): void {
+        metrics = recorder;
+      },
+      useStore(nextStore: StateStore): void {
+        store = nextStore;
+      },
+      useClock(nextClock: Clock): void {
+        clock = nextClock;
+      },
+      getPlugin(name: string): PluginInstance | undefined {
+        return instanceByName.get(name);
+      },
+      logger: Object.freeze({
+        warn(): void {
+          // Intentionally no-op until a logger service exists.
+        },
+      }),
+    });
+
+    const instance = setupPlugin(registration, ctx);
+
+    if (instance !== undefined) {
+      validatePluginInstance(instance, registration.plugin.name);
+      if (instanceByName.has(instance.name)) {
+        throw new ConfigurationError(`Duplicate plugin instance "${instance.name}".`, {
+          field: "plugin.name",
+        });
+      }
+      const frozenInstance = freezePluginInstance(instance);
+      instances.push(frozenInstance);
+      instanceByName.set(frozenInstance.name, frozenInstance);
+    }
+  }
+
+  return Object.freeze({
+    policies: Object.freeze([...policies]),
+    instances: Object.freeze([...instances]),
+    clock,
+    metrics,
+    store,
+  });
+}
+
 function validatePlugin(plugin: unknown): asserts plugin is ResiliPlugin<unknown> {
   if (plugin === null || typeof plugin !== "object" || Array.isArray(plugin)) {
     throw new ConfigurationError("Plugin must be an object.", { field: "plugin" });
@@ -167,6 +282,137 @@ function validatePlugin(plugin: unknown): asserts plugin is ResiliPlugin<unknown
       field: "plugin.setup",
     });
   }
+}
+
+function orderPlugins(plugins: readonly PluginRegistration[]): readonly PluginRegistration[] {
+  validateUniquePluginNames(plugins);
+  validatePluginDependencies(plugins);
+
+  const remaining = new Set(plugins);
+  const installed = new Set<string>();
+  const ordered: PluginRegistration[] = [];
+
+  while (remaining.size > 0) {
+    const candidates = [...remaining]
+      .filter((registration) =>
+        (registration.plugin.dependencies ?? []).every((dependency) => installed.has(dependency)),
+      )
+      .sort(comparePluginRegistration);
+
+    if (candidates.length === 0) {
+      throw new ConfigurationError("Plugin dependencies contain a cycle.", {
+        field: "plugin.dependencies",
+      });
+    }
+
+    for (const registration of candidates) {
+      remaining.delete(registration);
+      installed.add(registration.plugin.name);
+      ordered.push(registration);
+    }
+  }
+
+  return Object.freeze(ordered);
+}
+
+function comparePluginRegistration(left: PluginRegistration, right: PluginRegistration): number {
+  const priorityDifference = (left.plugin.priority ?? 0) - (right.plugin.priority ?? 0);
+
+  return priorityDifference === 0 ? left.index - right.index : priorityDifference;
+}
+
+function validateUniquePluginNames(plugins: readonly PluginRegistration[]): void {
+  const names = new Set<string>();
+
+  for (const { plugin } of plugins) {
+    if (names.has(plugin.name)) {
+      throw new ConfigurationError(`Duplicate plugin "${plugin.name}".`, {
+        field: "plugin.name",
+      });
+    }
+    names.add(plugin.name);
+  }
+}
+
+function validatePluginDependencies(plugins: readonly PluginRegistration[]): void {
+  const names = new Set(plugins.map(({ plugin }) => plugin.name));
+
+  for (const { plugin } of plugins) {
+    for (const dependency of plugin.dependencies ?? []) {
+      if (!names.has(dependency)) {
+        throw new ConfigurationError(
+          `Plugin "${plugin.name}" depends on missing plugin "${dependency}".`,
+          {
+            field: "plugin.dependencies",
+          },
+        );
+      }
+    }
+  }
+}
+
+function setupPlugin(
+  registration: PluginRegistration,
+  ctx: PluginContext,
+): PluginInstance | undefined {
+  try {
+    return registration.plugin.setup(ctx, registration.options);
+  } catch (error) {
+    throw new ConfigurationError(`Plugin "${registration.plugin.name}" setup failed.`, {
+      cause: error,
+      field: "plugin.setup",
+    });
+  }
+}
+
+function freezePluginPolicyRegistration(
+  factory: PolicyFactory,
+  options: unknown,
+): PluginPolicyRegistration {
+  return Object.freeze(
+    options === undefined
+      ? {
+          factory,
+        }
+      : {
+          factory,
+          options,
+        },
+  );
+}
+
+function validatePluginInstance(
+  instance: unknown,
+  pluginName: string,
+): asserts instance is PluginInstance {
+  if (instance === null || typeof instance !== "object" || Array.isArray(instance)) {
+    throw new ConfigurationError(`Plugin "${pluginName}" setup must return a plugin instance.`, {
+      field: "plugin.setup",
+    });
+  }
+
+  const candidate = instance as Partial<PluginInstance>;
+
+  validateName(candidate.name, "plugin.instance.name");
+
+  if (candidate.dispose !== undefined && typeof candidate.dispose !== "function") {
+    throw new ConfigurationError("plugin.instance.dispose must be a function.", {
+      field: "plugin.instance.dispose",
+    });
+  }
+}
+
+function freezePluginInstance(instance: PluginInstance): PluginInstance {
+  return Object.freeze(
+    instance.dispose === undefined
+      ? {
+          name: instance.name,
+        }
+      : {
+          name: instance.name,
+          dispose: instance.dispose.bind(instance),
+        },
+  );
 }
 
 function validateName(value: unknown, field: string): asserts value is string {

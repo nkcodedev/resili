@@ -126,6 +126,41 @@ describe("createCoreClient", () => {
     expect(handler).toHaveBeenCalledTimes(1);
   });
 
+  it("runs client disposer once during destroy", async () => {
+    const dispose = vi.fn<() => Promise<void>>(() => Promise.resolve());
+    const client = createCoreClient({
+      operation: () => Promise.resolve("ok"),
+      pipeline: compilePipeline([]),
+      dispose,
+    });
+
+    await client.destroy();
+    await client.destroy();
+
+    expect(dispose).toHaveBeenCalledTimes(1);
+  });
+
+  it("rejects destroy when the client disposer fails", async () => {
+    const failure = new Error("dispose failed");
+    const events = new DefaultEventBus();
+    const handler = vi.fn();
+    const client = createCoreClient({
+      operation: () => Promise.resolve("ok"),
+      pipeline: compilePipeline([]),
+      events,
+      dispose() {
+        throw failure;
+      },
+    });
+
+    client.on("RequestStarted", handler);
+
+    await expect(client.destroy()).rejects.toBe(failure);
+    events.emit(createRequestStartedEvent());
+
+    expect(handler).not.toHaveBeenCalled();
+  });
+
   it("allows subscriptions to be removed without destroying the client", () => {
     const events = new DefaultEventBus();
     const handler = vi.fn();
