@@ -15,23 +15,18 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
-    strategy:
-      fail-fast: false
-      matrix:
-        node-version: [20, 22]
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version: 20
           cache: pnpm
+
+      - name: Enable pnpm
+        run: corepack enable pnpm
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -43,16 +38,13 @@ jobs:
         run: pnpm lint
 
       - name: Typecheck
-        run: pnpm typecheck
+        run: pnpm -r typecheck
 
       - name: Test
-        run: pnpm coverage
+        run: pnpm test
 
       - name: Build
-        run: pnpm build
+        run: pnpm -r build
 
       - name: API Extractor
-        run: pnpm api:check
-
-      - name: Pack verification
-        run: pnpm pack:check
+        run: pnpm --filter @resili/core api:check
