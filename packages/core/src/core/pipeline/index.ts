@@ -1,4 +1,4 @@
-import type { Context } from "../context";
+import { createContext, releaseContext, type Context, type ContextInit } from "../context";
 import type { Next, Policy, PolicyOrder } from "../policy";
 
 /**
@@ -14,8 +14,8 @@ export type Operation<T> = (ctx: Context) => Promise<T>;
  * @internal
  */
 export interface Pipeline {
-  readonly policies: ReadonlyArray<Policy>;
-  execute<T>(operation: Operation<T>, ctx?: Partial<Context>): Promise<T>;
+  readonly policies: readonly Policy[];
+  execute<T>(operation: Operation<T>, ctx?: ContextInit): Promise<T>;
 }
 
 /**
@@ -24,25 +24,61 @@ export interface Pipeline {
  * @internal
  */
 export function compilePipeline(policies: Policy[]): Pipeline {
-  // Sort policies by their order hint
-  const sortedPolicies = [...policies].sort((a, b) => {
-    const orderA = getPolicyOrderValue(a.order);
-    const orderB = getPolicyOrderValue(b.order);
-    return orderA - orderB;
-  });
+  const sortedPolicies = sortPolicies(policies);
 
   return {
     policies: Object.freeze(sortedPolicies),
-    execute<T>(operation: Operation<T>, ctxInit?: Partial<Context>): Promise<T> {
-      // Create root context
+    async execute<T>(operation: Operation<T>, ctxInit?: ContextInit): Promise<T> {
       const rootContext = createContext(ctxInit ?? {});
-      
-      // Build the middleware chain from innermost to outermost
-      const chain = buildExecutionChain(sortedPolicies, operation);
-      
-      return chain(rootContext);
+
+      try {
+        const chain = buildExecutionChain(sortedPolicies, operation);
+
+        return await chain(rootContext);
+      } finally {
+        releaseContext(rootContext);
+      }
     },
   };
+}
+
+interface OrderedPolicy {
+  readonly policy: Policy;
+  readonly order: number;
+  readonly index: number;
+}
+
+const BUILTIN_POLICY_ORDER: Readonly<Record<string, number>> = Object.freeze({
+  fallback: 100,
+  retry: 200,
+  "circuit-breaker": 300,
+  timeout: 400,
+  "rate-limiter": 500,
+  bulkhead: 600,
+});
+
+const RELATIVE_ORDER_OFFSET = 0.5;
+
+/**
+ * Sorts policies by resolved order while preserving input order for ties.
+ *
+ * @internal
+ */
+function sortPolicies(policies: readonly Policy[]): Policy[] {
+  return policies
+    .map<OrderedPolicy>((policy, index) => ({
+      policy,
+      order: getPolicyOrderValue(policy.order),
+      index,
+    }))
+    .sort(compareOrderedPolicies)
+    .map(({ policy }) => policy);
+}
+
+function compareOrderedPolicies(left: OrderedPolicy, right: OrderedPolicy): number {
+  const orderDifference = left.order - right.order;
+
+  return orderDifference === 0 ? left.index - right.index : orderDifference;
 }
 
 /**
@@ -51,17 +87,19 @@ export function compilePipeline(policies: Policy[]): Pipeline {
  * @internal
  */
 function buildExecutionChain<T>(policies: Policy[], operation: Operation<T>): Next<T> {
-  // Start with the innermost operation
   let chain: Next<T> = operation;
-  
-  // Wrap each policy around the current chain, from outermost to innermost
+
   for (let i = policies.length - 1; i >= 0; i--) {
     const policy = policies[i];
     const next = chain;
-    
+
+    if (policy === undefined) {
+      continue;
+    }
+
     chain = (ctx: Context) => policy.execute(ctx, next);
   }
-  
+
   return chain;
 }
 
@@ -74,37 +112,18 @@ function getPolicyOrderValue(order: PolicyOrder): number {
   if (typeof order === "number") {
     return order;
   }
-  
-  // For relative orders, we'll use a default mapping based on canonical order
-  // This is a simplified approach - in practice this would be more sophisticated
-  const builtinOrderMap: Record<string, number> = {
-    fallback: 100,
-    retry: 200,
-    "circuit-breaker": 300,
-    timeout: 400,
-    "rate-limiter": 500,
-    bulkhead: 600,
-  };
-  
+
   if ("before" in order) {
-    return builtinOrderMap[order.before] ?? Number.MAX_SAFE_INTEGER;
+    const anchorOrder = BUILTIN_POLICY_ORDER[order.before] ?? Number.MAX_SAFE_INTEGER;
+
+    return anchorOrder - RELATIVE_ORDER_OFFSET;
   }
-  
+
   if ("after" in order) {
-    return builtinOrderMap[order.after] ?? Number.MAX_SAFE_INTEGER;
+    const anchorOrder = BUILTIN_POLICY_ORDER[order.after] ?? Number.MAX_SAFE_INTEGER;
+
+    return anchorOrder + RELATIVE_ORDER_OFFSET;
   }
-  
+
   return Number.MAX_SAFE_INTEGER;
 }
-
-/**
- * Creates a root context for pipeline execution.
- *
- * @internal
- */
-function createContext(ctxInit: Partial<Context>): Context {
-  // This would be implemented by importing the actual createContext function
-  // For now, we'll return a minimal placeholder that satisfies the interface
-  throw new Error("Not implemented - would use actual createContext from context module");
-}
-```
