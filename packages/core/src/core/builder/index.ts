@@ -12,6 +12,12 @@ import { noopMetrics } from "../metrics";
 import { compilePipeline } from "../pipeline";
 import { definePolicy, type PolicyFactory, type PolicyServices } from "../policy";
 import { memoryStore, type StateStore } from "../state";
+import { bulkheadPolicy, type BulkheadOptions } from "../../policies/bulkhead";
+import { circuitBreakerPolicy, type CircuitBreakerOptions } from "../../policies/circuit-breaker";
+import { fallbackPolicy, type FallbackFn, type FallbackOptions } from "../../policies/fallback";
+import { rateLimiterPolicy, type RateLimiterOptions } from "../../policies/rate-limiter";
+import { retryPolicy, type RetryOptions } from "../../policies/retry";
+import { timeoutPolicy, type TimeoutOptions } from "../../policies/timeout";
 
 /**
  * Any wrappable async operation; arg and return types are preserved end-to-end.
@@ -30,6 +36,36 @@ export type Operation<Args extends readonly unknown[], R> = (...args: Args) => P
  * @public
  */
 export interface Builder<Args extends readonly unknown[], R> {
+  /**
+   * Adds the built-in retry policy.
+   */
+  retry(options?: RetryOptions): this;
+
+  /**
+   * Adds the built-in timeout policy.
+   */
+  timeout(options: number | TimeoutOptions): this;
+
+  /**
+   * Adds the built-in circuit breaker policy.
+   */
+  circuitBreaker(options?: CircuitBreakerOptions): this;
+
+  /**
+   * Adds the built-in bulkhead policy.
+   */
+  bulkhead(options: number | BulkheadOptions): this;
+
+  /**
+   * Adds the built-in rate limiter policy.
+   */
+  rateLimiter(options: RateLimiterOptions): this;
+
+  /**
+   * Adds the built-in fallback policy.
+   */
+  fallback(options: FallbackOptions<R> | FallbackFn<R>): this;
+
   /**
    * Registers a custom policy factory for the future client pipeline.
    */
@@ -109,6 +145,32 @@ class ImmutableBuilder<Args extends readonly unknown[], R> implements Builder<Ar
     this.#state = freezeState(state);
 
     Object.freeze(this);
+  }
+
+  retry(options?: RetryOptions): this {
+    return this.policy(retryPolicy, options);
+  }
+
+  timeout(options: number | TimeoutOptions): this {
+    return this.policy(timeoutPolicy, options);
+  }
+
+  circuitBreaker(options?: CircuitBreakerOptions): this {
+    return this.policy(circuitBreakerPolicy, options);
+  }
+
+  bulkhead(options: number | BulkheadOptions): this {
+    return this.policy(bulkheadPolicy, options);
+  }
+
+  rateLimiter(options: RateLimiterOptions): this {
+    return this.policy(rateLimiterPolicy, options);
+  }
+
+  fallback(options: FallbackOptions<R> | FallbackFn<R>): this {
+    const fallbackOptions = typeof options === "function" ? { handler: options } : options;
+
+    return this.policy(fallbackPolicy, fallbackOptions);
   }
 
   policy(factory: PolicyFactory, options?: unknown): this {

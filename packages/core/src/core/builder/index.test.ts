@@ -169,6 +169,112 @@ describe("createBuilder", () => {
     expect(runtimeHandler).toHaveBeenCalledTimes(1);
   });
 
+  it("adds built-in policy methods as immutable chainable snapshots", () => {
+    const builder = createBuilder(() => Promise.resolve("ok"));
+    const snapshots = [
+      builder.timeout(10),
+      builder.bulkhead(1),
+      builder.rateLimiter({ limit: 1, intervalMs: 100 }),
+      builder.circuitBreaker(),
+      builder.retry({ maxAttempts: 1, jitter: "none" }),
+      builder.fallback(() => "fallback"),
+    ];
+
+    for (const snapshot of snapshots) {
+      expect(snapshot).not.toBe(builder);
+      expect(Object.isFrozen(snapshot)).toBe(true);
+    }
+  });
+
+  it("normalizes fallback function shorthand", async () => {
+    const client = createBuilder(() => Promise.reject(new Error("failed")))
+      .fallback(() => "fallback")
+      .build();
+
+    await expect(client.call()).resolves.toBe("fallback");
+  });
+
+  it("builds built-in policies from their options", async () => {
+    const client = createBuilder(() => Promise.resolve("ok"))
+      .timeout({ perAttemptMs: 100 })
+      .bulkhead({ maxConcurrent: 1 })
+      .rateLimiter({ limit: 1, intervalMs: 100 })
+      .circuitBreaker({ minimumThroughput: 1 })
+      .retry({ maxAttempts: 1, jitter: "none" })
+      .fallback({
+        handler() {
+          return "fallback";
+        },
+      })
+      .build();
+
+    await expect(client.call()).resolves.toBe("ok");
+  });
+
+  it("preserves canonical built-in policy ordering regardless of chaining order", async () => {
+    const clock = createManualClock();
+    let calls = 0;
+    const fallback = vi.fn(() => "fallback");
+    const client = createBuilder(() => {
+      calls += 1;
+
+      return calls === 1 ? Promise.reject(new Error("retryable")) : Promise.resolve("ok");
+    })
+      .withClock(clock)
+      .retry({
+        maxAttempts: 2,
+        backoff: "fixed",
+        baseDelayMs: 10,
+        maxDelayMs: 10,
+        jitter: "none",
+        retryOn(outcome) {
+          return outcome.status === "error";
+        },
+      })
+      .fallback(fallback)
+      .build();
+    const result = client.call();
+
+    await advanceManualClock(clock, 10);
+
+    await expect(result).resolves.toBe("ok");
+    expect(calls).toBe(2);
+    expect(fallback).not.toHaveBeenCalled();
+  });
+
+  it("validates built-in policy options during build", () => {
+    expect(() =>
+      createBuilder(() => Promise.resolve("ok"))
+        .timeout(0)
+        .build(),
+    ).toThrow(ConfigurationError);
+    expect(() =>
+      createBuilder(() => Promise.resolve("ok"))
+        .bulkhead(0)
+        .build(),
+    ).toThrow(ConfigurationError);
+    expect(() =>
+      createBuilder(() => Promise.resolve("ok"))
+        .rateLimiter({ limit: 0, intervalMs: 100 })
+        .build(),
+    ).toThrow(ConfigurationError);
+    expect(() =>
+      createBuilder(() => Promise.resolve("ok"))
+        .circuitBreaker({ failureRateThreshold: 0 })
+        .build(),
+    ).toThrow(ConfigurationError);
+    expect(() =>
+      createBuilder(() => Promise.resolve("ok"))
+        .retry({ jitter: "full" })
+        .build(),
+    ).toThrow(ConfigurationError);
+    expect(() =>
+      createBuilder(() => Promise.resolve("ok"))
+        .fallback({ handler: undefined as never })
+        .build(),
+    ).toThrow(ConfigurationError);
+  });
+
   it("rejects invalid builder inputs", () => {
     expect(() => createBuilder(null as unknown as () => Promise<unknown>)).toThrow(
       ConfigurationError,
@@ -237,6 +343,53 @@ function createClock(): Clock {
       globalThis.clearTimeout(handle);
     },
   });
+}
+
+interface ManualClock extends Clock {
+  tick(ms: number): void;
+}
+
+function createManualClock(): ManualClock {
+  let now = 0;
+  let nextHandle = 1;
+  const timers = new Map<number, { readonly at: number; readonly callback: () => void }>();
+
+  return {
+    now(): number {
+      return now;
+    },
+    setTimeout(callback: () => void, ms: number): ReturnType<typeof globalThis.setTimeout> {
+      const handle = nextHandle++;
+
+      timers.set(handle, {
+        at: now + ms,
+        callback,
+      });
+
+      return handle;
+    },
+    clearTimeout(handle: ReturnType<typeof globalThis.setTimeout>): void {
+      timers.delete(handle as number);
+    },
+    tick(ms: number): void {
+      now += ms;
+
+      for (const [handle, timer] of [...timers].sort(
+        ([leftHandle], [rightHandle]) => leftHandle - rightHandle,
+      )) {
+        if (timer.at <= now && timers.delete(handle)) {
+          timer.callback();
+        }
+      }
+    },
+  };
+}
+
+async function advanceManualClock(clock: ManualClock, ms: number): Promise<void> {
+  await Promise.resolve();
+  await Promise.resolve();
+  clock.tick(ms);
+  await Promise.resolve();
 }
 
 function createRequestStartedEvent(): ResiliEvent {
