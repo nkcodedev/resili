@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { createContext } from "../context";
 import { DefaultEventBus, type ResiliEvent } from "../events";
 import { compilePipeline, type Pipeline } from "../pipeline";
-import { createCoreClient } from "./index";
+import { createCoreClient, type ClientHealth, type ClientStats } from "./index";
 
 describe("createCoreClient", () => {
   it("calls the wrapped operation through the pipeline", async () => {
@@ -106,6 +106,66 @@ describe("createCoreClient", () => {
     });
   });
 
+  it("reports unhealthy when any circuit is open", () => {
+    const stats = createStats({
+      circuit: {
+        users: { state: "closed", failureRate: 0, calls: 10 },
+        billing: { state: "open", failureRate: 1, calls: 5 },
+      },
+    });
+
+    expect(createHealth(stats)).toEqual({
+      status: "unhealthy",
+      openCircuits: ["billing"],
+      details: stats,
+    });
+  });
+
+  it("reports degraded when any circuit is half-open", () => {
+    const stats = createStats({
+      circuit: {
+        users: { state: "half_open", failureRate: 0.5, calls: 10 },
+      },
+    });
+
+    expect(createHealth(stats)).toEqual({
+      status: "degraded",
+      openCircuits: [],
+      details: stats,
+    });
+  });
+
+  it("reports degraded when any bulkhead has queued work", () => {
+    const stats = createStats({
+      bulkhead: {
+        users: { active: 2, queued: 1 },
+      },
+    });
+
+    expect(createHealth(stats)).toEqual({
+      status: "degraded",
+      openCircuits: [],
+      details: stats,
+    });
+  });
+
+  it("reports healthy when circuits are closed and bulkheads are not queued", () => {
+    const stats = createStats({
+      circuit: {
+        users: { state: "closed", failureRate: 0, calls: 10 },
+      },
+      bulkhead: {
+        users: { active: 2, queued: 0 },
+      },
+    });
+
+    expect(createHealth(stats)).toEqual({
+      status: "healthy",
+      openCircuits: [],
+      details: stats,
+    });
+  });
+
   it("subscribes to events and clears default listeners on destroy", async () => {
     const events = new DefaultEventBus();
     const handler = vi.fn();
@@ -196,6 +256,34 @@ function failingPipeline(error: Error): Pipeline {
       return Promise.reject(error);
     },
   };
+}
+
+function createStats(
+  patch: Partial<Pick<ClientStats, "circuit" | "bulkhead" | "rateLimiter">>,
+): ClientStats {
+  return Object.freeze({
+    circuit: Object.freeze({ ...(patch.circuit ?? {}) }),
+    bulkhead: Object.freeze({ ...(patch.bulkhead ?? {}) }),
+    rateLimiter: Object.freeze({ ...(patch.rateLimiter ?? {}) }),
+    totals: Object.freeze({
+      calls: 0,
+      successes: 0,
+      failures: 0,
+      retries: 0,
+    }),
+  });
+}
+
+function createHealth(stats: ClientStats): ClientHealth {
+  const client = createCoreClient({
+    operation: () => Promise.resolve("ok"),
+    pipeline: compilePipeline([]),
+  });
+  const prototype = Object.getPrototypeOf(client) as {
+    health(this: { stats(): ClientStats }): ClientHealth;
+  };
+
+  return prototype.health.call({ stats: () => stats });
 }
 
 function createRequestStartedEvent(): ResiliEvent {

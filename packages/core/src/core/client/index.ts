@@ -168,9 +168,17 @@ class ImmutableClient<Args extends readonly unknown[], R> implements Client<Args
     const hasHalfOpenCircuit = Object.values(details.circuit).some(
       (circuit) => circuit.state === "half_open",
     );
+    const hasQueuedBulkhead = Object.values(details.bulkhead).some(
+      (bulkhead) => bulkhead.queued > 0,
+    );
 
     return Object.freeze({
-      status: openCircuits.length > 0 ? "unhealthy" : hasHalfOpenCircuit ? "degraded" : "healthy",
+      status:
+        openCircuits.length > 0
+          ? "unhealthy"
+          : hasHalfOpenCircuit || hasQueuedBulkhead
+            ? "degraded"
+            : "healthy",
       openCircuits: Object.freeze(openCircuits),
       details,
     });
