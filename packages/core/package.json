@@ -1,6 +1,6 @@
 {
   "name": "@resili/core",
-  "version": "0.0.0",
+  "version": "0.1.0-alpha.1",
   "description": "Core Resili resilience toolkit package.",
   "type": "module",
   "license": "MIT",
