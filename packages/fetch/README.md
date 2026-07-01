@@ -201,4 +201,4 @@ policy that matches your application contract.
 
 ## License
 
-MIT © Resili contributors.
+MIT © Nitin Kaushal and contributors.

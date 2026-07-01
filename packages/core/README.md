@@ -296,4 +296,4 @@ Core modules are deliberately small:
 
 ## License
 
-MIT © Resili contributors.
+MIT © Nitin Kaushal and contributors.

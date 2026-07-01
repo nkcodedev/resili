@@ -1,8 +1,8 @@
 blank_issues_enabled: false
 contact_links:
   - name: Discussions
-    url: https://github.com/resili/resili/discussions
+    url: https://github.com/nkcodedev/resili/discussions
     about: Ask questions, share ideas, and discuss design tradeoffs.
   - name: Documentation
-    url: https://github.com/resili/resili#readme
+    url: https://github.com/nkcodedev/resili#readme
     about: Read the project overview, examples, package docs, and development guidance.

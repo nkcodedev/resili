@@ -39,5 +39,14 @@
     "pack:check": "npm pack --pack-destination temp --ignore-scripts"
   },
   "dependencies": {},
-  "devDependencies": {}
+  "devDependencies": {},
+  "author": "Nitin Kaushal <nkcodedev.chd@gmail.com>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nkcodedev/resili.git"
+  },
+  "bugs": {
+    "url": "https://github.com/nkcodedev/resili/issues"
+  },
+  "homepage": "https://github.com/nkcodedev/resili"
 }
