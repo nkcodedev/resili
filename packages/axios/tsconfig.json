@@ -5,7 +5,8 @@
     "composite": true,
     "rootDir": "src",
     "outDir": "dist",
-    "tsBuildInfoFile": "dist/tsconfig.tsbuildinfo"
+    "tsBuildInfoFile": "dist/tsconfig.tsbuildinfo",
+    "paths": {}
   },
   "files": ["src/index.ts"],
   "include": ["src/**/*.ts"],
