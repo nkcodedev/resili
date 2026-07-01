@@ -8,9 +8,7 @@
     "packages/*/src/**/*.ts",
     "packages/*/src/**/*.test.ts",
     "packages/*/tsup.config.ts",
-    "eslint.config.js",
-    "vitest.config.ts",
-    "typedoc.config.ts"
+    "*.config.ts"
   ],
   "exclude": ["node_modules", "**/dist/**", "**/coverage/**", "**/temp/**", "docs/api/**"]
 }
