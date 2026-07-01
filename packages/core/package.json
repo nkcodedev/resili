@@ -48,5 +48,27 @@
   "bugs": {
     "url": "https://github.com/nkcodedev/resili/issues"
   },
-  "homepage": "https://github.com/nkcodedev/resili"
+  "homepage": "https://github.com/nkcodedev/resili",
+  "keywords": [
+    "resili",
+    "resilience",
+    "typescript",
+    "nodejs",
+    "retry",
+    "timeout",
+    "circuit-breaker",
+    "bulkhead",
+    "rate-limiter",
+    "fallback",
+    "resilience-patterns",
+    "distributed-systems",
+    "microservices",
+    "fault-tolerance",
+    "reliability",
+    "cloud",
+    "serverless",
+    "middleware",
+    "plugin",
+    "observability"
+  ]
 }
