@@ -4,6 +4,15 @@
   "references": [
     {
       "path": "./packages/core"
+    },
+    {
+      "path": "./packages/fetch"
+    },
+    {
+      "path": "./packages/axios"
+    },
+    {
+      "path": "./packages/undici"
     }
   ]
 }
