@@ -2,10 +2,15 @@
   "$schema": "https://json.schemastore.org/tsconfig",
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
-    "allowJs": true,
-    "checkJs": false,
     "noEmit": true
   },
-  "include": ["*.js", "*.ts", "packages/**/*.ts", "tests/**/*.ts"],
-  "exclude": ["node_modules", "dist", "coverage", "temp", ".corepack", ".corepack-*", "docs/api"]
+  "include": [
+    "packages/*/src/**/*.ts",
+    "packages/*/src/**/*.test.ts",
+    "packages/*/tsup.config.ts",
+    "eslint.config.js",
+    "vitest.config.ts",
+    "typedoc.config.ts"
+  ],
+  "exclude": ["node_modules", "**/dist/**", "**/coverage/**", "**/temp/**", "docs/api/**"]
 }
