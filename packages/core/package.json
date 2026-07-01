@@ -33,7 +33,7 @@
     "build": "tsup",
     "clean": "rm -rf dist coverage temp",
     "dev": "tsup --watch",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "typecheck": "tsc -b --pretty false",
     "api:extract": "api-extractor run --local",
     "api:check": "api-extractor run --local --verbose",
     "pack:check": "npm pack --pack-destination temp --ignore-scripts"
