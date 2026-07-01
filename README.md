@@ -425,6 +425,15 @@ pnpm --filter @resili/core api:check
 
 Development rules are documented in [`AGENTS.md`](AGENTS.md). Architecture and API decisions live in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md), [`docs/API_SPECIFICATION.md`](docs/API_SPECIFICATION.md), and [`docs/INTERNAL_DESIGN.md`](docs/INTERNAL_DESIGN.md).
 
+## Maintainer
+
+Created and maintained by **Nitin Kaushal**.
+
+- GitHub: https://github.com/nkcodedev
+- Email: nkcodedev.chd@gmail.com
+
+If you find the project useful, please consider starring the repository.
+
 ## License
 
 MIT © Nitin Kaushal and contributors.
