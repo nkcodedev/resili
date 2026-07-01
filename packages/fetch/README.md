@@ -199,6 +199,15 @@ policy that matches your application contract.
 - [Architecture](../../docs/ARCHITECTURE.md)
 - [API specification](../../docs/API_SPECIFICATION.md)
 
+## Maintainer
+
+Created and maintained by **Nitin Kaushal**.
+
+- GitHub: https://github.com/nkcodedev
+- Email: nkcodedev.chd@gmail.com
+
+If you find the project useful, please consider starring the repository.
+
 ## License
 
 MIT © Nitin Kaushal and contributors.
