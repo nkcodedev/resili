@@ -427,4 +427,4 @@ Development rules are documented in [`AGENTS.md`](AGENTS.md). Architecture and A
 
 ## License
 
-MIT © Resili contributors.
+MIT © Nitin Kaushal and contributors.

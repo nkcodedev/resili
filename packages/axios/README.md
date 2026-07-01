@@ -199,4 +199,4 @@ for behavior beyond request wrapping.
 
 ## License
 
-MIT © Resili contributors.
+MIT © Nitin Kaushal and contributors.
