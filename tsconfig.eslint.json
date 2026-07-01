@@ -2,9 +2,18 @@
   "$schema": "https://json.schemastore.org/tsconfig",
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
-    "noEmit": true
+    "allowJs": true,
+    "checkJs": false,
+    "noEmit": true,
+    "baseUrl": ".",
+    "paths": {
+      "@resili/core": ["packages/core/src/index.ts"]
+    }
   },
   "include": [
+    "eslint.config.js",
+    "vitest.config.ts",
+    "tsup.config.ts",
     "packages/*/src/**/*.ts",
     "packages/*/src/**/*.test.ts",
     "packages/*/tsup.config.ts",

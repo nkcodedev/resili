@@ -33,7 +33,7 @@
     "build": "tsup",
     "clean": "rm -rf dist coverage temp",
     "dev": "tsup --watch",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "typecheck": "tsc -b --pretty false"
   },
   "dependencies": {
     "@resili/core": "workspace:*"
