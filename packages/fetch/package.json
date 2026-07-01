@@ -47,5 +47,17 @@
   "bugs": {
     "url": "https://github.com/nkcodedev/resili/issues"
   },
-  "homepage": "https://github.com/nkcodedev/resili"
+  "homepage": "https://github.com/nkcodedev/resili",
+  "keywords": [
+    "resili",
+    "fetch",
+    "native-fetch",
+    "http-client",
+    "typescript",
+    "nodejs",
+    "resilience",
+    "retry",
+    "timeout",
+    "circuit-breaker"
+  ]
 }
