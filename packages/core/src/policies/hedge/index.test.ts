@@ -767,6 +767,43 @@ describe("hedgePolicy", () => {
     ).toBe(0);
   });
 
+  it("records late loser settlement metrics when abortLosers is false", async () => {
+    const clock = new FakeClock();
+    const metrics = new RecordingMetrics();
+    const policy = hedgePolicy.create(createServices({ clock, metrics }), {
+      delay: 10,
+      abortLosers: false,
+    });
+    const first = createGate<string>();
+    let calls = 0;
+    const result = policy.execute(createTestContext(), () => {
+      calls += 1;
+
+      return calls === 1 ? first.promise : Promise.resolve("hedge");
+    });
+
+    await flushMicrotasks();
+    clock.tick(10);
+
+    await expect(result).resolves.toBe("hedge");
+    expect(
+      metrics.counterValue("resili_hedge_attempts_total", { ...baseLabels(), result: "success" }),
+    ).toBe(1);
+    expect(
+      metrics.counterValue("resili_hedge_attempts_total", { ...baseLabels(), result: "error" }),
+    ).toBe(0);
+
+    first.reject(new Error("late original"));
+    await flushMicrotasks();
+
+    expect(
+      metrics.counterValue("resili_hedge_attempts_total", { ...baseLabels(), result: "success" }),
+    ).toBe(1);
+    expect(
+      metrics.counterValue("resili_hedge_attempts_total", { ...baseLabels(), result: "error" }),
+    ).toBe(1);
+  });
+
   it("records failed, unacceptable, and aborted metrics without duplicate counting", async () => {
     const clock = new FakeClock();
     const metrics = new RecordingMetrics();

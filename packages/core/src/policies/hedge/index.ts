@@ -88,6 +88,11 @@ type AttemptResult = "success" | "error" | "unacceptable" | "aborted";
 type LogicalStatus = "success" | "failed" | "aborted";
 type WinnerLabel = "original" | "hedge";
 
+// TODO(adaptive-hedging): allow delay to be derived from observed latency once
+// the metrics model supports adaptive policy state.
+// TODO(multiple-hedges): relax the maxAttempts=2 invariant after the coordinator
+// supports more than one delayed hedge attempt.
+
 interface HedgeAttempt {
   readonly hedgeAttempt: 1 | 2;
   readonly controller: AbortController;
@@ -97,12 +102,22 @@ interface HedgeAttempt {
   result?: AttemptResult;
 }
 
+/**
+ * Per-logical-call coordinator.
+ *
+ * Invariants:
+ * - `#settled` gates the single externally visible resolution/rejection.
+ * - Every started attempt owns exactly one child context released in `finally`.
+ * - Every started attempt promise is observed, including losing attempts.
+ * - Terminal cleanup clears the hedge timer and parent abort listener once.
+ */
 class HedgeCoordinator<T> {
   readonly #parentContext: Context;
   readonly #next: Next<T>;
   readonly #services: PolicyServices;
   readonly #options: NormalizedHedgeOptions;
   readonly #startedAt: number;
+  readonly #metricLabels: Labels;
   readonly #metrics: HedgeMetrics;
   readonly #attempts: HedgeAttempt[] = [];
   readonly #result: Promise<T>;
@@ -125,6 +140,10 @@ class HedgeCoordinator<T> {
     this.#services = services;
     this.#options = options;
     this.#startedAt = services.clock.now();
+    this.#metricLabels = Object.freeze({
+      service: parentContext.serviceName,
+      operation: parentContext.operationName,
+    });
     this.#metrics = createHedgeMetrics(services);
     this.#result = new Promise<T>((resolve, reject) => {
       this.#resolve = resolve;
@@ -151,26 +170,37 @@ class HedgeCoordinator<T> {
       return;
     }
 
+    const attempt = this.#createAttempt(hedgeAttempt);
+    this.#attempts.push(attempt);
+    attempt.promise = this.#runAttempt(attempt);
+    void attempt.promise;
+  }
+
+  #createAttempt(hedgeAttempt: 1 | 2): HedgeAttempt {
     const controller = new AbortController();
     const context = this.#parentContext.fork({
       attemptNumber: this.#parentContext.attemptNumber,
       signal: controller.signal,
       metadata: { "resili.hedgeAttempt": hedgeAttempt },
     });
-    const attempt: HedgeAttempt = {
+
+    return {
       hedgeAttempt,
       controller,
       context,
       state: "running",
     };
-    attempt.promise = Promise.resolve()
+  }
+
+  #runAttempt(attempt: HedgeAttempt): Promise<void> {
+    return Promise.resolve()
       .then(() => {
-        if (hedgeAttempt === 2) {
+        if (attempt.hedgeAttempt === 2) {
           this.#recordHedgeStarted();
           this.#emitStarted();
         }
 
-        return this.#next(context);
+        return this.#next(attempt.context);
       })
       .then(
         (value) => {
@@ -183,11 +213,8 @@ class HedgeCoordinator<T> {
         },
       )
       .finally(() => {
-        releaseContext(context);
+        releaseContext(attempt.context);
       });
-
-    this.#attempts.push(attempt);
-    void attempt.promise;
   }
 
   #scheduleHedge(): void {
@@ -220,6 +247,10 @@ class HedgeCoordinator<T> {
 
   #handleAttemptSuccess(attempt: HedgeAttempt, value: T): void {
     if (this.#settled) {
+      if (attempt.result === undefined && this.#options.shouldAccept === undefined) {
+        this.#recordAttemptResult(attempt, "success");
+      }
+
       return;
     }
 
@@ -240,7 +271,7 @@ class HedgeCoordinator<T> {
   }
 
   #handleAttemptFailure(attempt: HedgeAttempt, error: unknown): void {
-    if (!this.#settled && attempt.result === undefined) {
+    if (attempt.result === undefined) {
       this.#recordAttemptResult(attempt, attempt.context.signal.aborted ? "aborted" : "error");
     }
 
@@ -282,6 +313,8 @@ class HedgeCoordinator<T> {
 
     this.#settled = true;
     this.#cleanupTerminal();
+    // Exhaustion is reached only after all started attempts have settled and
+    // no hedge timer remains possible, so there is nothing active to abort.
     this.#recordDuration("failed");
     this.#emitFailed(error);
     this.#reject(error);
@@ -301,6 +334,8 @@ class HedgeCoordinator<T> {
   }
 
   #cleanupTerminal(): void {
+    // Terminal cleanup is intentionally idempotent: every settlement path uses
+    // this single method to clear the hedge timer and parent abort listener.
     if (this.#hedgeTimer !== undefined) {
       this.#services.clock.clearTimeout(this.#hedgeTimer);
       this.#hedgeTimer = undefined;
@@ -312,28 +347,25 @@ class HedgeCoordinator<T> {
   }
 
   #abortLosers(winner: HedgeAttempt): boolean {
+    return this.#abortMatchingAttempts((attempt) => attempt !== winner, this.#abortError());
+  }
+
+  #abortActiveAttempts(): void {
+    this.#abortMatchingAttempts(() => true, this.#abortError());
+  }
+
+  #abortMatchingAttempts(shouldAbort: (attempt: HedgeAttempt) => boolean, reason: Error): boolean {
     let aborted = false;
 
     for (const attempt of this.#attempts) {
-      if (attempt !== winner && attempt.state === "running") {
+      if (attempt.state === "running" && shouldAbort(attempt)) {
         this.#recordAttemptResult(attempt, "aborted");
-        attempt.controller.abort(this.#abortError());
+        attempt.controller.abort(reason);
         aborted = true;
       }
     }
 
     return aborted;
-  }
-
-  #abortActiveAttempts(): void {
-    const reason = this.#abortError();
-
-    for (const attempt of this.#attempts) {
-      if (attempt.state === "running") {
-        this.#recordAttemptResult(attempt, "aborted");
-        attempt.controller.abort(reason);
-      }
-    }
   }
 
   #hasRunningAttempts(): boolean {
@@ -366,29 +398,29 @@ class HedgeCoordinator<T> {
 
     attempt.result = result;
     safeRecordCounter(this.#metrics.attemptsTotal, 1, {
-      ...this.#metricLabels(),
+      ...this.#metricLabels,
       result,
     });
   }
 
   #recordDelay(): void {
-    safeRecordHistogram(this.#metrics.delayMs, this.#options.delay, this.#metricLabels());
+    safeRecordHistogram(this.#metrics.delayMs, this.#options.delay, this.#metricLabels);
   }
 
   #recordDuration(status: LogicalStatus): void {
     safeRecordHistogram(this.#metrics.durationMs, this.#durationMs(), {
-      ...this.#metricLabels(),
+      ...this.#metricLabels,
       status,
     });
   }
 
   #recordHedgeStarted(): void {
-    safeRecordCounter(this.#metrics.hedgesStartedTotal, 1, this.#metricLabels());
+    safeRecordCounter(this.#metrics.hedgesStartedTotal, 1, this.#metricLabels);
   }
 
   #recordWinner(winner: WinnerLabel): void {
     safeRecordCounter(this.#metrics.hedgesWonTotal, 1, {
-      ...this.#metricLabels(),
+      ...this.#metricLabels,
       winner,
     });
   }
@@ -502,13 +534,6 @@ class HedgeCoordinator<T> {
 
   #hedgeStarted(): boolean {
     return this.#attempts.some((attempt) => attempt.hedgeAttempt === 2);
-  }
-
-  #metricLabels(): Labels {
-    return {
-      service: this.#parentContext.serviceName,
-      operation: this.#parentContext.operationName,
-    };
   }
 }
 
