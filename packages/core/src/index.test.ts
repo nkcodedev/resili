@@ -15,6 +15,7 @@ import {
   createClient,
   definePlugin,
   fallbackPolicy,
+  hedgePolicy,
   httpClassifier,
   isResiliError,
   memoryStore,
@@ -35,6 +36,7 @@ import {
   type FailureVerdict,
   type Context,
   type FallbackOptions,
+  type HedgeOptions,
   type Outcome,
   type Operation,
   type Policy,
@@ -155,6 +157,12 @@ describe("@resili/core package entry", () => {
     const rateLimiter: RateLimiterOptions = { limit: 1, intervalMs: 100 };
     const circuitBreaker: CircuitBreakerOptions = { minimumThroughput: 1 };
     const retry: RetryOptions = { maxAttempts: 1, jitter: "none" };
+    const hedge: HedgeOptions<string> = {
+      delay: 10,
+      shouldAccept(value) {
+        return value.length > 0;
+      },
+    };
     const fallback: FallbackOptions<string> = {
       handler() {
         return "fallback";
@@ -166,8 +174,17 @@ describe("@resili/core package entry", () => {
     expect(rateLimiterPolicy.name).toBe("rate-limiter");
     expect(circuitBreakerPolicy.name).toBe("circuit-breaker");
     expect(retryPolicy.name).toBe("retry");
+    expect(hedgePolicy.name).toBe("hedge");
     expect(fallbackPolicy.name).toBe("fallback");
-    expect({ timeout, bulkhead, rateLimiter, circuitBreaker, retry, fallback }).toBeDefined();
+    expect({
+      timeout,
+      bulkhead,
+      rateLimiter,
+      circuitBreaker,
+      retry,
+      hedge,
+      fallback,
+    }).toBeDefined();
   });
 
   it("creates a fluent builder with resili", async () => {
@@ -181,6 +198,7 @@ describe("@resili/core package entry", () => {
   it("creates a client from supported declarative config", async () => {
     const config: ResiliConfig<string> = {
       timeout: { perAttemptMs: 100 },
+      hedge: { delay: 10 },
       bulkhead: { maxConcurrent: 1 },
       rateLimiter: { limit: 2, intervalMs: 100 },
       circuitBreaker: { minimumThroughput: 1 },
@@ -208,6 +226,16 @@ describe("@resili/core package entry", () => {
     });
 
     await expect(client.call()).resolves.toBe("fallback");
+  });
+
+  it("accepts hedge config through createClient", async () => {
+    const client = createClient(() => Promise.resolve("ok"), {
+      hedge: {
+        delay: 0,
+      },
+    });
+
+    await expect(client.call()).resolves.toBe("ok");
   });
 
   it("applies custom policy config through createClient", async () => {
