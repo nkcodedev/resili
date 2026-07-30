@@ -44,6 +44,8 @@ import {
   type PolicyServices,
   type PolicyState,
   type RateLimiterOptions,
+  type ResiliEventMap,
+  type ResiliEventType,
   type ResiliConfig,
   type ResiliPlugin,
   type RetryOptions,
@@ -136,6 +138,25 @@ describe("@resili/core package entry", () => {
 
     expect(errors.every((error) => error instanceof ResiliError)).toBe(true);
     expect(errors.every((error) => isResiliError(error))).toBe(true);
+  });
+
+  it("exposes hedge events through the public event types", () => {
+    const type: ResiliEventType = "HedgeCompleted";
+    const event: ResiliEventMap["HedgeCompleted"] = {
+      type,
+      timestamp: 1,
+      requestId: "request",
+      operationName: "operation",
+      serviceName: "service",
+      attemptNumber: 1,
+      winningHedgeAttempt: 2,
+      hedged: true,
+      startedAttempts: 2,
+      durationMs: 10,
+      losersAborted: true,
+    };
+
+    expect(event.type).toBe("HedgeCompleted");
   });
 
   it("exposes plugin contracts", () => {

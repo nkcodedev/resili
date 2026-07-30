@@ -11,7 +11,13 @@ import {
   RetryExceededError,
   TimeoutError,
 } from "../../core/errors";
-import { noopMetrics } from "../../core/metrics";
+import {
+  noopMetrics,
+  type Counter,
+  type Gauge,
+  type Histogram,
+  type MetricsRecorder,
+} from "../../core/metrics";
 import type { Next, PolicyServices } from "../../core/policy";
 import { memoryStore } from "../../core/state";
 import { hedgePolicy } from "./index";
@@ -511,6 +517,333 @@ describe("hedgePolicy", () => {
     releaseContext(parent);
   });
 
+  it("emits scheduled then completed when original wins before delay", async () => {
+    const clock = new FakeClock();
+    const events: ResiliEvent[] = [];
+    const policy = hedgePolicy.create(
+      createServices({ clock, emit: (event) => events.push(event) }),
+      {
+        delay: 50,
+      },
+    );
+
+    await expect(
+      policy.execute(createTestContext(), () => Promise.resolve("original")),
+    ).resolves.toBe("original");
+
+    expect(events.map((event) => event.type)).toEqual(["HedgeScheduled", "HedgeCompleted"]);
+    expect(events[0]).toMatchObject({
+      type: "HedgeScheduled",
+      timestamp: 0,
+      attemptNumber: 1,
+      hedgeAttempt: 2,
+      delayMs: 50,
+      scheduledAt: 0,
+    });
+    expect(events[1]).toMatchObject({
+      type: "HedgeCompleted",
+      winningHedgeAttempt: 1,
+      hedged: false,
+      startedAttempts: 1,
+      durationMs: 0,
+      losersAborted: false,
+    });
+  });
+
+  it("emits scheduled, started, and completed when hedge wins", async () => {
+    const clock = new FakeClock();
+    const events: ResiliEvent[] = [];
+    const policy = hedgePolicy.create(
+      createServices({ clock, emit: (event) => events.push(event) }),
+      {
+        delay: 10,
+      },
+    );
+    const first = createGate<string>();
+    let calls = 0;
+    const result = policy.execute(createTestContext(), () => {
+      calls += 1;
+
+      return calls === 1 ? first.promise : Promise.resolve("hedge");
+    });
+
+    await flushMicrotasks();
+    clock.tick(10);
+
+    await expect(result).resolves.toBe("hedge");
+
+    expect(events.map((event) => event.type)).toEqual([
+      "HedgeScheduled",
+      "HedgeStarted",
+      "HedgeCompleted",
+    ]);
+    expect(events[1]).toMatchObject({
+      type: "HedgeStarted",
+      timestamp: 10,
+      hedgeAttempt: 2,
+      delayMs: 10,
+      startedAt: 10,
+    });
+    expect(events[2]).toMatchObject({
+      type: "HedgeCompleted",
+      winningHedgeAttempt: 2,
+      hedged: true,
+      startedAttempts: 2,
+      durationMs: 10,
+      losersAborted: true,
+    });
+
+    first.resolve("late");
+  });
+
+  it("emits skipped then completed when deadline prevents hedge scheduling", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(0);
+
+    const clock = new FakeClock();
+    const events: ResiliEvent[] = [];
+    const policy = hedgePolicy.create(
+      createServices({ clock, emit: (event) => events.push(event) }),
+      {
+        delay: 100,
+      },
+    );
+    const parent = createTestContext({ deadline: 50 });
+
+    await expect(policy.execute(parent, () => Promise.resolve("original"))).resolves.toBe(
+      "original",
+    );
+
+    expect(events.map((event) => event.type)).toEqual(["HedgeSkipped", "HedgeCompleted"]);
+    expect(events[0]).toMatchObject({
+      type: "HedgeSkipped",
+      reason: "deadline",
+      delayMs: 100,
+      remainingMs: 50,
+    });
+    releaseContext(parent);
+  });
+
+  it("emits scheduled, started, and failed with last Resili error code", async () => {
+    const clock = new FakeClock();
+    const events: ResiliEvent[] = [];
+    const policy = hedgePolicy.create(
+      createServices({ clock, emit: (event) => events.push(event) }),
+      {
+        delay: 10,
+      },
+    );
+    const result = policy.execute(createTestContext(), (ctx) =>
+      Number(ctx.metadata.get("resili.hedgeAttempt")) === 1
+        ? Promise.reject(new Error("original"))
+        : Promise.reject(new TimeoutError({ timeoutMs: 1 })),
+    );
+
+    await flushMicrotasks();
+    clock.tick(10);
+
+    await expect(result).rejects.toBeInstanceOf(TimeoutError);
+    expect(events.map((event) => event.type)).toEqual([
+      "HedgeScheduled",
+      "HedgeStarted",
+      "HedgeFailed",
+    ]);
+    expect(events[2]).toMatchObject({
+      type: "HedgeFailed",
+      startedAttempts: 2,
+      hedged: true,
+      durationMs: 10,
+      lastErrorCode: "ERR_TIMEOUT",
+    });
+  });
+
+  it("emits scheduled then aborted for parent abort before delay", async () => {
+    const clock = new FakeClock();
+    const events: ResiliEvent[] = [];
+    const controller = new AbortController();
+    const policy = hedgePolicy.create(
+      createServices({ clock, emit: (event) => events.push(event) }),
+      {
+        delay: 10,
+      },
+    );
+    const result = policy.execute(createTestContext({ signal: controller.signal }), (ctx) =>
+      rejectOnAbort(ctx.signal),
+    );
+
+    await flushMicrotasks();
+    clock.tick(5);
+    controller.abort(new AbortError());
+
+    await expect(result).rejects.toBeInstanceOf(AbortError);
+    expect(events.map((event) => event.type)).toEqual(["HedgeScheduled", "HedgeAborted"]);
+    expect(events[1]).toMatchObject({
+      type: "HedgeAborted",
+      startedAttempts: 1,
+      hedgeStarted: false,
+      durationMs: 5,
+      reasonCode: "ERR_ABORTED",
+    });
+  });
+
+  it("emits aborted without scheduled when parent is already aborted", async () => {
+    const events: ResiliEvent[] = [];
+    const controller = new AbortController();
+    controller.abort(new AbortError());
+    const policy = hedgePolicy.create(createServices({ emit: (event) => events.push(event) }), {
+      delay: 10,
+    });
+
+    await expect(
+      policy.execute(createTestContext({ signal: controller.signal }), () => Promise.resolve("ok")),
+    ).rejects.toBeInstanceOf(AbortError);
+
+    expect(events.map((event) => event.type)).toEqual(["HedgeAborted"]);
+    expect(events[0]).toMatchObject({
+      type: "HedgeAborted",
+      startedAttempts: 0,
+      hedgeStarted: false,
+    });
+  });
+
+  it("records success metrics when original wins before hedge starts", async () => {
+    const clock = new FakeClock();
+    const metrics = new RecordingMetrics();
+    const policy = hedgePolicy.create(createServices({ clock, metrics }), { delay: 50 });
+
+    await expect(
+      policy.execute(createTestContext(), () => Promise.resolve("original")),
+    ).resolves.toBe("original");
+
+    expect(metrics.counterValue("resili_hedges_started_total", baseLabels())).toBe(0);
+    expect(
+      metrics.counterValue("resili_hedges_won_total", { ...baseLabels(), winner: "original" }),
+    ).toBe(1);
+    expect(
+      metrics.counterValue("resili_hedge_attempts_total", { ...baseLabels(), result: "success" }),
+    ).toBe(1);
+    expect(
+      metrics.histogramValues("resili_hedge_duration_ms", { ...baseLabels(), status: "success" }),
+    ).toEqual([0]);
+    expect(metrics.histogramValues("resili_hedge_delay_ms", baseLabels())).toEqual([50]);
+    expect(metrics.allLabels()).not.toContain("requestId");
+  });
+
+  it("records hedge winner and aborted loser metrics", async () => {
+    const clock = new FakeClock();
+    const metrics = new RecordingMetrics();
+    const policy = hedgePolicy.create(createServices({ clock, metrics }), { delay: 10 });
+    const first = createGate<string>();
+    let calls = 0;
+    const result = policy.execute(createTestContext(), () => {
+      calls += 1;
+
+      return calls === 1 ? first.promise : Promise.resolve("hedge");
+    });
+
+    await flushMicrotasks();
+    clock.tick(10);
+
+    await expect(result).resolves.toBe("hedge");
+
+    expect(metrics.counterValue("resili_hedges_started_total", baseLabels())).toBe(1);
+    expect(
+      metrics.counterValue("resili_hedges_won_total", { ...baseLabels(), winner: "hedge" }),
+    ).toBe(1);
+    expect(
+      metrics.counterValue("resili_hedge_attempts_total", { ...baseLabels(), result: "success" }),
+    ).toBe(1);
+    expect(
+      metrics.counterValue("resili_hedge_attempts_total", { ...baseLabels(), result: "aborted" }),
+    ).toBe(1);
+    expect(
+      metrics.histogramValues("resili_hedge_duration_ms", { ...baseLabels(), status: "success" }),
+    ).toEqual([10]);
+
+    first.reject(new Error("late"));
+    await flushMicrotasks();
+    expect(
+      metrics.counterValue("resili_hedge_attempts_total", { ...baseLabels(), result: "error" }),
+    ).toBe(0);
+  });
+
+  it("records failed, unacceptable, and aborted metrics without duplicate counting", async () => {
+    const clock = new FakeClock();
+    const metrics = new RecordingMetrics();
+    const failed = hedgePolicy.create(createServices({ clock, metrics }), { delay: 0 });
+
+    const failedResult = failed.execute(createTestContext(), () =>
+      Promise.reject(new Error("failed")),
+    );
+
+    clock.tick(0);
+    await expect(failedResult).rejects.toThrow("failed");
+
+    expect(
+      metrics.counterValue("resili_hedge_attempts_total", { ...baseLabels(), result: "error" }),
+    ).toBe(2);
+    expect(
+      metrics.histogramValues("resili_hedge_duration_ms", { ...baseLabels(), status: "failed" }),
+    ).toEqual([0]);
+
+    const unacceptable = hedgePolicy.create(createServices({ clock, metrics }), {
+      delay: 0,
+      shouldAccept: () => false,
+    });
+    const unacceptableResult = unacceptable.execute(createTestContext(), () =>
+      Promise.resolve("no"),
+    );
+
+    clock.tick(0);
+    await expect(unacceptableResult).rejects.toThrow("No acceptable hedged result completed.");
+
+    expect(
+      metrics.counterValue("resili_hedge_attempts_total", {
+        ...baseLabels(),
+        result: "unacceptable",
+      }),
+    ).toBe(2);
+
+    const controller = new AbortController();
+    const aborted = hedgePolicy.create(createServices({ clock, metrics }), { delay: 0 });
+    const abortedResult = aborted.execute(createTestContext({ signal: controller.signal }), (ctx) =>
+      rejectOnAbort(ctx.signal),
+    );
+
+    clock.tick(0);
+    await flushMicrotasks();
+    controller.abort("cancelled");
+
+    await expect(abortedResult).rejects.toBeInstanceOf(AbortError);
+    expect(
+      metrics.counterValue("resili_hedge_attempts_total", { ...baseLabels(), result: "aborted" }),
+    ).toBe(2);
+    expect(
+      metrics.histogramValues("resili_hedge_duration_ms", { ...baseLabels(), status: "aborted" }),
+    ).toEqual([0]);
+  });
+
+  it("does not record scheduled or hedge-started metrics when deadline skips scheduling", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(0);
+
+    const clock = new FakeClock();
+    const metrics = new RecordingMetrics();
+    const policy = hedgePolicy.create(createServices({ clock, metrics }), { delay: 100 });
+    const parent = createTestContext({ deadline: 50 });
+
+    await expect(policy.execute(parent, () => Promise.resolve("original"))).resolves.toBe(
+      "original",
+    );
+
+    expect(metrics.counterValue("resili_hedges_started_total", baseLabels())).toBe(0);
+    expect(metrics.histogramValues("resili_hedge_delay_ms", baseLabels())).toEqual([]);
+    expect(
+      metrics.counterValue("resili_hedge_attempts_total", { ...baseLabels(), result: "success" }),
+    ).toBe(1);
+    releaseContext(parent);
+  });
+
   it("rejects missing and invalid delay options with field paths", () => {
     const services = createServices();
 
@@ -667,17 +1000,25 @@ describe("hedgePolicy", () => {
   });
 });
 
-function createServices(overrides: Partial<Pick<PolicyServices, "clock">> = {}): PolicyServices {
+function createServices(
+  overrides: Partial<Pick<PolicyServices, "clock" | "emit" | "metrics">> = {},
+): PolicyServices {
   return Object.freeze({
     clock: overrides.clock ?? new FakeClock(),
-    metrics: noopMetrics,
-    emit(event: ResiliEvent): void {
-      void event;
-      // Hedge Phase 2 does not emit events.
-    },
+    metrics: overrides.metrics ?? noopMetrics,
+    emit:
+      overrides.emit ??
+      ((event: ResiliEvent): void => {
+        void event;
+        // Test double.
+      }),
     store: memoryStore(),
     classifier: httpClassifier,
   });
+}
+
+function baseLabels(): Readonly<Record<string, string>> {
+  return { service: "service", operation: "operation" };
 }
 
 function createTestContext(
@@ -751,6 +1092,121 @@ function expectConfigurationField(action: () => unknown, field: string): void {
   }
 
   throw new Error("Expected ConfigurationError.");
+}
+
+class RecordingMetrics implements MetricsRecorder {
+  readonly #counters = new Map<string, RecordingCounter>();
+  readonly #histograms = new Map<string, RecordingHistogram>();
+
+  counter(name: string): Counter {
+    let counter = this.#counters.get(name);
+
+    if (counter === undefined) {
+      counter = new RecordingCounter();
+      this.#counters.set(name, counter);
+    }
+
+    return counter;
+  }
+
+  gauge(): Gauge {
+    return noopMetrics.gauge("unused");
+  }
+
+  histogram(name: string): Histogram {
+    let histogram = this.#histograms.get(name);
+
+    if (histogram === undefined) {
+      histogram = new RecordingHistogram();
+      this.#histograms.set(name, histogram);
+    }
+
+    return histogram;
+  }
+
+  counterValue(name: string, labels: Readonly<Record<string, string>>): number {
+    return this.#counters.get(name)?.value(labels) ?? 0;
+  }
+
+  histogramValues(name: string, labels: Readonly<Record<string, string>>): readonly number[] {
+    return this.#histograms.get(name)?.values(labels) ?? [];
+  }
+
+  allLabels(): readonly string[] {
+    const labels = new Set<string>();
+
+    for (const counter of this.#counters.values()) {
+      for (const key of counter.labelKeys()) {
+        labels.add(key);
+      }
+    }
+
+    for (const histogram of this.#histograms.values()) {
+      for (const key of histogram.labelKeys()) {
+        labels.add(key);
+      }
+    }
+
+    return [...labels].sort();
+  }
+}
+
+class RecordingCounter implements Counter {
+  readonly #values = new Map<string, number>();
+  readonly #labelKeys = new Set<string>();
+
+  add(value: number, labels?: Readonly<Record<string, string>>): void {
+    for (const key of Object.keys(labels ?? {})) {
+      this.#labelKeys.add(key);
+    }
+
+    const key = labelKey(labels);
+    this.#values.set(key, (this.#values.get(key) ?? 0) + value);
+  }
+
+  value(labels: Readonly<Record<string, string>>): number {
+    return this.#values.get(labelKey(labels)) ?? 0;
+  }
+
+  labelKeys(): readonly string[] {
+    return [...this.#labelKeys];
+  }
+}
+
+class RecordingHistogram implements Histogram {
+  readonly #values = new Map<string, number[]>();
+  readonly #labelKeys = new Set<string>();
+
+  record(value: number, labels?: Readonly<Record<string, string>>): void {
+    for (const key of Object.keys(labels ?? {})) {
+      this.#labelKeys.add(key);
+    }
+
+    const key = labelKey(labels);
+    const values = this.#values.get(key);
+
+    if (values === undefined) {
+      this.#values.set(key, [value]);
+      return;
+    }
+
+    values.push(value);
+  }
+
+  values(labels: Readonly<Record<string, string>>): readonly number[] {
+    return this.#values.get(labelKey(labels)) ?? [];
+  }
+
+  labelKeys(): readonly string[] {
+    return [...this.#labelKeys];
+  }
+}
+
+function labelKey(labels: Readonly<Record<string, string>> | undefined): string {
+  return Object.entries(labels ?? {})
+    .sort(([left], [right]) => (left < right ? -1 : left > right ? 1 : 0))
+    .map(([key, value]) => `${key}=${value}`)
+    .join("\u0000");
 }
 
 class FakeClock implements Clock {
