@@ -18,6 +18,7 @@ export class AbortError extends ResiliError {
 export interface Builder<Args extends readonly unknown[], R> {
     build(): Client<Args, R>;
     bulkhead(options: number | BulkheadOptions): this;
+    cache(options: CacheOptions<Args>): this;
     circuitBreaker(options?: CircuitBreakerOptions): this;
     dedupe(options: DedupeOptions<Args>): this;
     fallback(options: FallbackOptions<R> | FallbackFn<R>): this;
@@ -57,6 +58,18 @@ export class BulkheadRejectedError extends ResiliError {
     readonly queueSize: number;
     readonly waitedMs: number;
 }
+
+// @public
+export interface CacheOptions<Args extends readonly unknown[] = readonly unknown[]> {
+    readonly cacheNull?: boolean;
+    readonly cacheUndefined?: boolean;
+    readonly key: (...args: Args) => DedupeKey;
+    readonly maxEntries?: number;
+    readonly ttl: number;
+}
+
+// @public
+export const cachePolicy: PolicyFactory;
 
 // @public
 export interface CircuitBreakerOptions {
@@ -360,9 +373,9 @@ export interface PolicyFactory {
 
 // @public
 export type PolicyOrder = number | {
-    readonly before: "fallback" | "retry" | "circuit-breaker" | "timeout" | "dedupe" | "hedge" | "rate-limiter" | "bulkhead";
+    readonly before: "fallback" | "cache" | "retry" | "circuit-breaker" | "timeout" | "dedupe" | "hedge" | "rate-limiter" | "bulkhead";
 } | {
-    readonly after: "fallback" | "retry" | "circuit-breaker" | "timeout" | "dedupe" | "hedge" | "rate-limiter" | "bulkhead";
+    readonly after: "fallback" | "cache" | "retry" | "circuit-breaker" | "timeout" | "dedupe" | "hedge" | "rate-limiter" | "bulkhead";
 };
 
 // @public
@@ -413,6 +426,8 @@ export const RESILI_VERSION = "0.0.0";
 export interface ResiliConfig<R = unknown, Args extends readonly unknown[] = readonly unknown[]> {
     // (undocumented)
     readonly bulkhead?: number | BulkheadOptions;
+    // (undocumented)
+    readonly cache?: CacheOptions<Args>;
     // (undocumented)
     readonly circuitBreaker?: CircuitBreakerOptions;
     // (undocumented)

@@ -174,6 +174,7 @@ describe("createBuilder", () => {
     const builder = createBuilder(() => Promise.resolve("ok"));
     const snapshots = [
       builder.timeout(10),
+      builder.cache({ key: () => "key", ttl: 100 }),
       builder.dedupe({ key: () => "key" }),
       builder.hedge({ delay: 10 }),
       builder.bulkhead(1),
@@ -200,6 +201,7 @@ describe("createBuilder", () => {
   it("builds built-in policies from their options", async () => {
     const client = createBuilder(() => Promise.resolve("ok"))
       .timeout({ perAttemptMs: 100 })
+      .cache({ key: () => "key", ttl: 100 })
       .dedupe({ key: () => "key" })
       .hedge({ delay: 10 })
       .bulkhead({ maxConcurrent: 1 })
@@ -233,6 +235,48 @@ describe("createBuilder", () => {
     expect(key).toHaveBeenCalledWith("tenant", "42");
   });
 
+  it("adds cache as an immutable type-safe builder method", async () => {
+    const key = vi.fn((tenantId: string, userId: string) => `${tenantId}:${userId}`);
+    const operation = vi.fn((tenantId: string, userId: string) =>
+      Promise.resolve({ tenantId, userId }),
+    );
+    const builder: Builder<
+      readonly [string, string],
+      { readonly tenantId: string; readonly userId: string }
+    > = createBuilder(operation);
+    const cached: Builder<
+      readonly [string, string],
+      { readonly tenantId: string; readonly userId: string }
+    > = builder.cache({ key, ttl: 100 });
+
+    expect(cached).not.toBe(builder);
+    expect(Object.isFrozen(cached)).toBe(true);
+
+    const first = await cached.build().call("tenant", "42");
+    const second = await cached.build().call("tenant", "42");
+
+    expect(first).toEqual({ tenantId: "tenant", userId: "42" });
+    expect(second).toEqual({ tenantId: "tenant", userId: "42" });
+    expect(key).toHaveBeenCalledWith("tenant", "42");
+  });
+
+  it("passes operation args to cache keys and stores client call results", async () => {
+    const key = vi.fn((id: string) => id);
+    const result = { id: "42" };
+    const operation = vi.fn<(id: string) => Promise<typeof result>>((id) => {
+      void id;
+
+      return Promise.resolve(result);
+    });
+    const client = createBuilder(operation).cache({ key, ttl: 100 }).build();
+
+    await expect(client.call("42")).resolves.toBe(result);
+    await expect(client.call("42")).resolves.toBe(result);
+    expect(key).toHaveBeenCalledTimes(2);
+    expect(key).toHaveBeenCalledWith("42");
+    expect(operation).toHaveBeenCalledTimes(1);
+  });
+
   it("passes operation args to dedupe keys and shares client calls", async () => {
     const key = vi.fn((id: string) => id);
     const gate = createGate<string>();
@@ -253,6 +297,177 @@ describe("createBuilder", () => {
     gate.resolve("user:42");
     await expect(first).resolves.toBe("user:42");
     await expect(second).resolves.toBe("user:42");
+  });
+
+  it("runs the normal downstream pipeline on cache misses and skips it on hits", async () => {
+    const events: string[] = [];
+    const operation = vi.fn<(id: string) => Promise<string>>((id) => Promise.resolve(`user:${id}`));
+    const client = createBuilder(operation)
+      .cache({ key: (id) => id, ttl: 100 })
+      .policy(observerFactory("downstream", 200, events))
+      .build();
+
+    await expect(client.call("42")).resolves.toBe("user:42");
+    await expect(client.call("42")).resolves.toBe("user:42");
+
+    expect(operation).toHaveBeenCalledTimes(1);
+    expect(events).toEqual(["downstream:before", "downstream:after"]);
+  });
+
+  it("shares concurrent cache misses through dedupe and stores the shared result", async () => {
+    const cacheKey = vi.fn((id: string) => id);
+    const dedupeKey = vi.fn((id: string) => id);
+    const gate = createGate<{ readonly id: string }>();
+    const operation = vi.fn<(id: string) => Promise<{ readonly id: string }>>((id) => {
+      void id;
+
+      return gate.promise;
+    });
+    const client = createBuilder(operation)
+      .cache({ key: cacheKey, ttl: 100 })
+      .dedupe({ key: dedupeKey })
+      .build();
+    const first = client.call("42");
+    const second = client.call("42");
+
+    await flushMicrotasks();
+    expect(operation).toHaveBeenCalledTimes(1);
+    expect(cacheKey).toHaveBeenCalledTimes(2);
+    expect(dedupeKey).toHaveBeenCalledTimes(2);
+
+    const value = { id: "42" };
+    gate.resolve(value);
+
+    await expect(first).resolves.toBe(value);
+    await expect(second).resolves.toBe(value);
+    await expect(client.call("42")).resolves.toBe(value);
+    expect(operation).toHaveBeenCalledTimes(1);
+    expect(cacheKey).toHaveBeenCalledTimes(3);
+    expect(dedupeKey).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not cache failed retry executions", async () => {
+    let calls = 0;
+    const client = createBuilder(() => {
+      calls += 1;
+
+      return Promise.reject(new Error(`failed:${String(calls)}`));
+    })
+      .cache({ key: () => "key", ttl: 100 })
+      .retry({
+        maxAttempts: 2,
+        baseDelayMs: 0,
+        maxDelayMs: 0,
+        jitter: "none",
+        retryOn(outcome) {
+          return outcome.status === "error";
+        },
+      })
+      .build();
+
+    await expect(client.call()).rejects.toThrow("Retry attempts exhausted");
+    await expect(client.call()).rejects.toThrow("Retry attempts exhausted");
+    expect(calls).toBe(4);
+  });
+
+  it("applies timeout on cache miss and skips timeout on cache hit", async () => {
+    const clock = createManualClock();
+    const setTimeoutSpy = vi.spyOn(clock, "setTimeout");
+    const operation = vi.fn(() => Promise.resolve("ok"));
+    const client = createBuilder(operation)
+      .withClock(clock)
+      .cache({ key: () => "key", ttl: 100 })
+      .timeout(10)
+      .build();
+
+    await expect(client.call()).resolves.toBe("ok");
+    expect(setTimeoutSpy).toHaveBeenCalledTimes(1);
+    await expect(client.call()).resolves.toBe("ok");
+    expect(setTimeoutSpy).toHaveBeenCalledTimes(1);
+    expect(operation).toHaveBeenCalledTimes(1);
+  });
+
+  it("bypasses hedge scheduling on cache hit", async () => {
+    const clock = createManualClock();
+    const setTimeoutSpy = vi.spyOn(clock, "setTimeout");
+    const operation = vi.fn(() => Promise.resolve("ok"));
+    const client = createBuilder(operation)
+      .withClock(clock)
+      .cache({ key: () => "key", ttl: 100 })
+      .hedge({ delay: 10 })
+      .build();
+
+    await expect(client.call()).resolves.toBe("ok");
+    expect(setTimeoutSpy).toHaveBeenCalledTimes(1);
+    await expect(client.call()).resolves.toBe("ok");
+    expect(setTimeoutSpy).toHaveBeenCalledTimes(1);
+    expect(operation).toHaveBeenCalledTimes(1);
+  });
+
+  it("bypasses bulkhead admission on cache hit", async () => {
+    const gate = createGate<string>();
+    const operation = vi.fn((id: string) =>
+      id === "a" ? Promise.resolve("cached") : gate.promise,
+    );
+    const client = createBuilder(operation)
+      .cache({ key: (id) => id, ttl: 100 })
+      .bulkhead(1)
+      .build();
+
+    await expect(client.call("a")).resolves.toBe("cached");
+    const held = client.call("b");
+    await flushMicrotasks();
+    await expect(client.call("a")).resolves.toBe("cached");
+    expect(operation).toHaveBeenCalledTimes(2);
+
+    gate.resolve("held");
+    await expect(held).resolves.toBe("held");
+  });
+
+  it("bypasses rate limiter permits on cache hit", async () => {
+    const operation = vi.fn((id: string) => Promise.resolve(`user:${id}`));
+    const client = createBuilder(operation)
+      .cache({ key: (id) => id, ttl: 100 })
+      .rateLimiter({ limit: 1, intervalMs: 1_000 })
+      .build();
+
+    await expect(client.call("a")).resolves.toBe("user:a");
+    await expect(client.call("a")).resolves.toBe("user:a");
+    await expect(client.call("b")).rejects.toThrow("Rate limit exceeded");
+    expect(operation).toHaveBeenCalledTimes(1);
+  });
+
+  it("bypasses an open circuit breaker on cache hit", async () => {
+    const operation = vi.fn((id: string) =>
+      id === "hit" ? Promise.resolve("cached") : Promise.reject(new Error("boom")),
+    );
+    const client = createBuilder(operation)
+      .cache({ key: (id) => id, ttl: 100 })
+      .circuitBreaker({ minimumThroughput: 1, failureRateThreshold: 1, resetTimeoutMs: 1_000 })
+      .build();
+
+    await expect(client.call("hit")).resolves.toBe("cached");
+    await expect(client.call("miss")).rejects.toThrow("boom");
+    await expect(client.call("hit")).resolves.toBe("cached");
+    expect(operation).toHaveBeenCalledTimes(2);
+  });
+
+  it("bypasses fallback handling on cache hit", async () => {
+    let calls = 0;
+    const fallback = vi.fn(() => "fallback");
+    const client = createBuilder(() => {
+      calls += 1;
+
+      return calls === 1 ? Promise.resolve("cached") : Promise.reject(new Error("failed"));
+    })
+      .cache({ key: () => "key", ttl: 100 })
+      .fallback(fallback)
+      .build();
+
+    await expect(client.call()).resolves.toBe("cached");
+    await expect(client.call()).resolves.toBe("cached");
+    expect(calls).toBe(1);
+    expect(fallback).not.toHaveBeenCalled();
   });
 
   it("adds hedge as an immutable type-safe builder method", async () => {
@@ -526,6 +741,11 @@ describe("createBuilder", () => {
     expect(() =>
       createBuilder(() => Promise.resolve("ok"))
         .hedge({ delay: -1 })
+        .build(),
+    ).toThrow(ConfigurationError);
+    expect(() =>
+      createBuilder(() => Promise.resolve("ok"))
+        .cache({ key: () => "key", ttl: 0 })
         .build(),
     ).toThrow(ConfigurationError);
     expect(() =>

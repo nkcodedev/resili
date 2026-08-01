@@ -4,9 +4,10 @@ import { httpClassifier } from "../../core/classification";
 import { createContext, releaseContext, type Context } from "../../core/context";
 import { AbortError, ConfigurationError } from "../../core/errors";
 import { noopMetrics } from "../../core/metrics";
+import { OPERATION_ARGS_METADATA_KEY } from "../../core/metadata";
 import type { Next, PolicyServices } from "../../core/policy";
 import { memoryStore } from "../../core/state";
-import { DEDUPE_OPERATION_ARGS_METADATA_KEY, type DedupeKey } from "../dedupe";
+import type { DedupeKey } from "../dedupe";
 import { cachePolicy } from "./index";
 import type { Clock } from "../../core/clock";
 
@@ -415,7 +416,7 @@ describe("cachePolicy", () => {
     expect(observedContext).toBe(context);
     expect(observedContext?.attemptNumber).toBe(3);
     expect(context.metadata.get("tenant")).toBe("acme");
-    expect(context.metadata.get(DEDUPE_OPERATION_ARGS_METADATA_KEY)).toBe(args);
+    expect(context.metadata.get(OPERATION_ARGS_METADATA_KEY)).toBe(args);
     releaseContext(context);
   });
 
@@ -494,7 +495,7 @@ function createTestContext(
     attemptNumber: options.attemptNumber,
     metadata: {
       ...(options.metadata ?? {}),
-      ...(options.args === undefined ? {} : { [DEDUPE_OPERATION_ARGS_METADATA_KEY]: options.args }),
+      ...(options.args === undefined ? {} : { [OPERATION_ARGS_METADATA_KEY]: options.args }),
     },
     signal: options.signal,
     startedAt: 0,

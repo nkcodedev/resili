@@ -1,12 +1,13 @@
 import type { Context } from "../../core/context";
 import { AbortError, ConfigurationError } from "../../core/errors";
+import { getOperationArgs } from "../../core/metadata";
 import {
   definePolicy,
   type Next,
   type PolicyFactory,
   type PolicyServices,
 } from "../../core/policy";
-import { DEDUPE_OPERATION_ARGS_METADATA_KEY, type DedupeKey } from "../dedupe";
+import type { DedupeKey } from "../dedupe";
 
 /**
  * Memory cache policy options.
@@ -126,12 +127,6 @@ function resolveKey(options: NormalizedCacheOptions, ctx: Context): DedupeKey {
   validateCacheKey(key);
 
   return key;
-}
-
-function getOperationArgs(ctx: Context): readonly unknown[] {
-  const args = ctx.metadata.get(DEDUPE_OPERATION_ARGS_METADATA_KEY);
-
-  return Array.isArray(args) ? args : [];
 }
 
 function isExpired(entry: CacheEntry<unknown>, now: number): boolean {

@@ -11,6 +11,7 @@ import { ConfigurationError } from "./core/errors/index";
 import type { PolicyFactory } from "./core/policy/index";
 import type { StateStore } from "./core/state/index";
 import type { BulkheadOptions } from "./policies/bulkhead/index";
+import type { CacheOptions } from "./policies/cache/index";
 import type { CircuitBreakerOptions } from "./policies/circuit-breaker/index";
 import type { DedupeOptions } from "./policies/dedupe/index";
 import type { FallbackFn, FallbackOptions } from "./policies/fallback/index";
@@ -29,6 +30,7 @@ export const RESILI_VERSION = "0.0.0";
 export interface ResiliConfig<R = unknown, Args extends readonly unknown[] = readonly unknown[]> {
   readonly retry?: RetryOptions;
   readonly timeout?: number | TimeoutOptions;
+  readonly cache?: CacheOptions<Args>;
   readonly dedupe?: DedupeOptions<Args>;
   readonly hedge?: HedgeOptions<R>;
   readonly circuitBreaker?: CircuitBreakerOptions;
@@ -88,6 +90,10 @@ export function createClient<Args extends readonly unknown[], R>(
     builder = builder.timeout(config.timeout);
   }
 
+  if (config.cache !== undefined) {
+    builder = builder.cache(config.cache);
+  }
+
   if (config.dedupe !== undefined) {
     builder = builder.dedupe(config.dedupe);
   }
@@ -122,6 +128,7 @@ export function createClient<Args extends readonly unknown[], R>(
 const SUPPORTED_CONFIG_KEYS = new Set<string>([
   "retry",
   "timeout",
+  "cache",
   "dedupe",
   "hedge",
   "circuitBreaker",
@@ -185,6 +192,8 @@ export type { PolicyState, StateStore } from "./core/state/index";
 export { memoryStore } from "./core/state/index";
 export type { BulkheadOptions } from "./policies/bulkhead/index";
 export { bulkheadPolicy } from "./policies/bulkhead/index";
+export type { CacheOptions } from "./policies/cache/index";
+export { cachePolicy } from "./policies/cache/index";
 export type { CircuitBreakerOptions, KeyResolver } from "./policies/circuit-breaker/index";
 export { circuitBreakerPolicy } from "./policies/circuit-breaker/index";
 export type { DedupeKey, DedupeOptions } from "./policies/dedupe/index";
