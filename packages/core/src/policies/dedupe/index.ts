@@ -1,5 +1,6 @@
 import { createContext, releaseContext, type Context } from "../../core/context";
 import { AbortError, ConfigurationError, isResiliError } from "../../core/errors";
+import { getOperationArgs } from "../../core/metadata";
 import {
   noopMetrics,
   type Counter,
@@ -13,12 +14,6 @@ import {
   type PolicyFactory,
   type PolicyServices,
 } from "../../core/policy";
-
-/**
- * Internal metadata key used by client.call(...) to pass operation arguments to
- * the dedupe policy without changing the public Context API.
- */
-export const DEDUPE_OPERATION_ARGS_METADATA_KEY = "resili.dedupe.args";
 
 /**
  * Stable identifier used to share concurrent in-flight executions.
@@ -422,12 +417,6 @@ function resolveKey(options: NormalizedDedupeOptions, ctx: Context): DedupeKey {
   validateDedupeKey(key);
 
   return key;
-}
-
-function getOperationArgs(ctx: Context): readonly unknown[] {
-  const args = ctx.metadata.get(DEDUPE_OPERATION_ARGS_METADATA_KEY);
-
-  return Array.isArray(args) ? args : [];
 }
 
 function recordMiss(entry: InFlightEntry, services: PolicyServices, metrics: DedupeMetrics): void {

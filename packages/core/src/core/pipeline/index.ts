@@ -50,6 +50,7 @@ interface OrderedPolicy {
 
 const BUILTIN_POLICY_ORDER: Readonly<Record<string, number>> = Object.freeze({
   fallback: 100,
+  cache: 150,
   retry: 200,
   "circuit-breaker": 300,
   timeout: 400,

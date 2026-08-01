@@ -13,9 +13,10 @@ import {
   type Histogram,
   type MetricsRecorder,
 } from "../../core/metrics";
+import { OPERATION_ARGS_METADATA_KEY } from "../../core/metadata";
 import type { Next, PolicyServices } from "../../core/policy";
 import { memoryStore } from "../../core/state";
-import { DEDUPE_OPERATION_ARGS_METADATA_KEY, dedupePolicy, type DedupeKey } from "./index";
+import { dedupePolicy, type DedupeKey } from "./index";
 
 describe("dedupePolicy", () => {
   it("creates an immutable policy from valid options", () => {
@@ -123,7 +124,7 @@ describe("dedupePolicy", () => {
       policy.execute(
         createTestContext({
           metadata: {
-            [DEDUPE_OPERATION_ARGS_METADATA_KEY]: ["tenant", "42"],
+            [OPERATION_ARGS_METADATA_KEY]: ["tenant", "42"],
           },
         }),
         () => Promise.resolve("ok"),

@@ -70,6 +70,26 @@ describe("compilePipeline", () => {
     expect(policyNames(pipeline.policies)).toEqual(["before-retry", "retry", "after-retry"]);
   });
 
+  it("sorts cache between fallback and retry in the built-in order", () => {
+    const pipeline = compilePipeline([
+      passThroughPolicy("retry", 200),
+      passThroughPolicy("cache", 150),
+      passThroughPolicy("fallback", 100),
+    ]);
+
+    expect(policyNames(pipeline.policies)).toEqual(["fallback", "cache", "retry"]);
+  });
+
+  it("supports relative anchors around cache", () => {
+    const pipeline = compilePipeline([
+      passThroughPolicy("cache", 150),
+      passThroughPolicy("before-cache", { before: "cache" }),
+      passThroughPolicy("after-cache", { after: "cache" }),
+    ]);
+
+    expect(policyNames(pipeline.policies)).toEqual(["before-cache", "cache", "after-cache"]);
+  });
+
   it("sorts hedge between timeout and rate limiter in the built-in order", () => {
     const pipeline = compilePipeline([
       passThroughPolicy("rate-limiter", 500),
