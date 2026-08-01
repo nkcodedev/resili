@@ -163,6 +163,8 @@ export type { Clock } from "./core/clock/index";
 export { systemClock } from "./core/clock/index";
 export type { Context, ContextForkPatch, ContextInit, ContextSnapshot } from "./core/context";
 export type {
+  CacheEventKeyType,
+  CacheEventValueType,
   EventHandler,
   ResiliEvent,
   ResiliEventBase,

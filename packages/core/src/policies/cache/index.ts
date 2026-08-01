@@ -1,6 +1,14 @@
 import type { Context } from "../../core/context";
+import type { CacheEventKeyType, CacheEventValueType } from "../../core/events";
 import { AbortError, ConfigurationError } from "../../core/errors";
 import { getOperationArgs } from "../../core/metadata";
+import {
+  noopMetrics,
+  type Counter,
+  type Gauge,
+  type Histogram,
+  type Labels,
+} from "../../core/metrics";
 import {
   definePolicy,
   type Next,
@@ -78,12 +86,13 @@ export const cachePolicy: PolicyFactory = definePolicy({
   create(services: PolicyServices, options?: unknown) {
     const cacheOptions = normalizeOptions(options);
     const entries = new Map<DedupeKey, CacheEntry<unknown>>();
+    const metrics = createCacheMetrics(services);
 
     return {
       name: "cache",
       order: 150,
       execute<T>(ctx: Context, next: Next<T>): Promise<T> {
-        return executeWithCache(ctx, next, services, cacheOptions, entries);
+        return executeWithCache(ctx, next, services, cacheOptions, entries, metrics);
       },
     };
   },
@@ -95,27 +104,51 @@ async function executeWithCache<T>(
   services: PolicyServices,
   options: NormalizedCacheOptions,
   entries: Map<DedupeKey, CacheEntry<unknown>>,
+  metrics: CacheMetrics,
 ): Promise<T> {
   if (ctx.signal.aborted) {
     throw createAbortError(ctx);
   }
 
+  const lookupStartedAt = services.clock.now();
   const key = resolveKey(options, ctx);
+  const keyType = getKeyType(key);
+  const labels = createMetricLabels(ctx);
   const now = services.clock.now();
   const entry = entries.get(key);
 
   if (entry !== undefined) {
     if (!isExpired(entry, now)) {
+      recordHit(ctx, services, metrics, labels, keyType, entry, lookupStartedAt, now);
+
       return entry.value as T;
     }
 
     entries.delete(key);
+    recordExpired(ctx, services, metrics, labels, keyType, entry, entries.size, now);
+    recordMiss(ctx, services, metrics, labels, keyType, "expired", lookupStartedAt, now);
+  } else {
+    recordMiss(ctx, services, metrics, labels, keyType, "absent", lookupStartedAt, now);
   }
 
   const value = await next(ctx);
+  const valueType = getValueType(value);
 
   if (shouldCacheValue(value, options)) {
-    storeValue(entries, key, value, services.clock.now(), options);
+    storeValue(
+      entries,
+      key,
+      keyType,
+      value,
+      services.clock.now(),
+      ctx,
+      services,
+      options,
+      metrics,
+      labels,
+    );
+  } else {
+    recordSkipped(ctx, services, metrics, labels, keyType, valueType, skipReason(value));
   }
 
   return value;
@@ -148,15 +181,22 @@ function shouldCacheValue(value: unknown, options: NormalizedCacheOptions): bool
 function storeValue(
   entries: Map<DedupeKey, CacheEntry<unknown>>,
   key: DedupeKey,
+  keyType: CacheEventKeyType,
   value: unknown,
   now: number,
+  ctx: Context,
+  services: PolicyServices,
   options: NormalizedCacheOptions,
+  metrics: CacheMetrics,
+  labels: Labels,
 ): void {
-  if (entries.has(key)) {
+  const replacedExisting = entries.has(key);
+
+  if (replacedExisting) {
     entries.delete(key);
   }
 
-  removeExpiredEntries(entries, now);
+  removeExpiredEntriesDuringCleanup(entries, now, ctx, services, metrics, labels);
 
   while (entries.size >= options.maxEntries) {
     const oldestKey = entries.keys().next().value;
@@ -166,6 +206,7 @@ function storeValue(
     }
 
     entries.delete(oldestKey);
+    recordEvicted(ctx, services, metrics, labels, getKeyType(oldestKey), "capacity", entries.size);
   }
 
   entries.set(
@@ -176,12 +217,39 @@ function storeValue(
       expiresAt: resolveExpiresAt(now, options.ttl),
     }),
   );
+  recordStored(
+    ctx,
+    services,
+    metrics,
+    labels,
+    keyType,
+    value,
+    options.ttl,
+    replacedExisting,
+    entries.size,
+  );
 }
 
-function removeExpiredEntries(entries: Map<DedupeKey, CacheEntry<unknown>>, now: number): void {
+function removeExpiredEntriesDuringCleanup(
+  entries: Map<DedupeKey, CacheEntry<unknown>>,
+  now: number,
+  ctx: Context,
+  services: PolicyServices,
+  metrics: CacheMetrics,
+  labels: Labels,
+): void {
   for (const [key, entry] of entries) {
     if (isExpired(entry, now)) {
       entries.delete(key);
+      recordEvicted(
+        ctx,
+        services,
+        metrics,
+        labels,
+        getKeyType(key),
+        "expired-cleanup",
+        entries.size,
+      );
     }
   }
 }
@@ -189,7 +257,7 @@ function removeExpiredEntries(entries: Map<DedupeKey, CacheEntry<unknown>>, now:
 function resolveExpiresAt(createdAt: number, ttl: number): number {
   const expiresAt = createdAt + ttl;
 
-  return Number.isFinite(expiresAt) ? expiresAt : Number.MAX_VALUE;
+  return Number.isFinite(expiresAt) ? expiresAt : Number.POSITIVE_INFINITY;
 }
 
 function createAbortError(ctx: Context): Error {
@@ -270,4 +338,330 @@ function validateCacheKey(key: unknown): asserts key is DedupeKey {
   throw new ConfigurationError("cache.key must return a string, finite number, or symbol.", {
     field: "cache.key",
   });
+}
+
+type CacheMissReason = "absent" | "expired";
+type CacheSkipReason = "null-disabled" | "undefined-disabled";
+type CacheEvictionReason = "capacity" | "expired-cleanup";
+type CacheMetricSkipReason = "null_disabled" | "undefined_disabled";
+type CacheLookupResult = "hit" | "miss_absent" | "miss_expired";
+
+interface CacheMetrics {
+  readonly hitsTotal: Counter;
+  readonly missesTotal: Counter;
+  readonly storesTotal: Counter;
+  readonly skippedTotal: Counter;
+  readonly expiredTotal: Counter;
+  readonly evictionsTotal: Counter;
+  readonly entries: Gauge;
+  readonly lookupDurationMs: Histogram;
+}
+
+function recordHit(
+  ctx: Context,
+  services: PolicyServices,
+  metrics: CacheMetrics,
+  labels: Labels,
+  keyType: CacheEventKeyType,
+  entry: CacheEntry<unknown>,
+  lookupStartedAt: number,
+  now: number,
+): void {
+  const ageMs = elapsedMs(now, entry.createdAt);
+  const remainingTtlMs = Math.max(0, entry.expiresAt - now);
+
+  safeRecordCounter(metrics.hitsTotal, 1, labels);
+  recordLookupDuration(metrics, labels, "hit", lookupStartedAt, now);
+  services.emit({
+    ...eventBase("CacheHit", ctx, now),
+    keyType,
+    ageMs,
+    remainingTtlMs,
+    valueType: getValueType(entry.value),
+  });
+}
+
+function recordMiss(
+  ctx: Context,
+  services: PolicyServices,
+  metrics: CacheMetrics,
+  labels: Labels,
+  keyType: CacheEventKeyType,
+  reason: CacheMissReason,
+  lookupStartedAt: number,
+  now: number,
+): void {
+  safeRecordCounter(metrics.missesTotal, 1, {
+    ...labels,
+    reason,
+  });
+  recordLookupDuration(
+    metrics,
+    labels,
+    reason === "absent" ? "miss_absent" : "miss_expired",
+    lookupStartedAt,
+    now,
+  );
+  services.emit({
+    ...eventBase("CacheMiss", ctx, now),
+    keyType,
+    reason,
+  });
+}
+
+function recordStored(
+  ctx: Context,
+  services: PolicyServices,
+  metrics: CacheMetrics,
+  labels: Labels,
+  keyType: CacheEventKeyType,
+  value: unknown,
+  ttlMs: number,
+  replacedExisting: boolean,
+  cacheSize: number,
+): void {
+  const valueType = getValueType(value);
+
+  safeRecordCounter(metrics.storesTotal, 1, {
+    ...labels,
+    value_type: valueType,
+  });
+  safeSetGauge(metrics.entries, cacheSize, labels);
+  services.emit({
+    ...eventBase("CacheStored", ctx, services.clock.now()),
+    keyType,
+    ttlMs,
+    valueType,
+    replacedExisting,
+    cacheSize,
+  });
+}
+
+function recordExpired(
+  ctx: Context,
+  services: PolicyServices,
+  metrics: CacheMetrics,
+  labels: Labels,
+  keyType: CacheEventKeyType,
+  entry: CacheEntry<unknown>,
+  cacheSizeAfterRemoval: number,
+  now: number,
+): void {
+  safeRecordCounter(metrics.expiredTotal, 1, labels);
+  safeSetGauge(metrics.entries, cacheSizeAfterRemoval, labels);
+  services.emit({
+    ...eventBase("CacheExpired", ctx, now),
+    keyType,
+    ageMs: elapsedMs(now, entry.createdAt),
+    expiredByMs: Math.max(0, now - entry.expiresAt),
+    cacheSizeAfterRemoval,
+  });
+}
+
+function recordEvicted(
+  ctx: Context,
+  services: PolicyServices,
+  metrics: CacheMetrics,
+  labels: Labels,
+  keyType: CacheEventKeyType,
+  reason: CacheEvictionReason,
+  cacheSizeAfterRemoval: number,
+): void {
+  safeRecordCounter(metrics.evictionsTotal, 1, {
+    ...labels,
+    reason: reason === "expired-cleanup" ? "expired_cleanup" : "capacity",
+  });
+  safeSetGauge(metrics.entries, cacheSizeAfterRemoval, labels);
+  services.emit({
+    ...eventBase("CacheEvicted", ctx, services.clock.now()),
+    reason,
+    keyType,
+    cacheSizeAfterRemoval,
+  });
+}
+
+function recordSkipped(
+  ctx: Context,
+  services: PolicyServices,
+  metrics: CacheMetrics,
+  labels: Labels,
+  keyType: CacheEventKeyType,
+  valueType: CacheEventValueType,
+  reason: CacheSkipReason,
+): void {
+  safeRecordCounter(metrics.skippedTotal, 1, {
+    ...labels,
+    reason: metricSkipReason(reason),
+  });
+  services.emit({
+    ...eventBase("CacheSkipped", ctx, services.clock.now()),
+    reason,
+    keyType,
+    valueType,
+  });
+}
+
+function recordLookupDuration(
+  metrics: CacheMetrics,
+  labels: Labels,
+  result: CacheLookupResult,
+  lookupStartedAt: number,
+  now: number,
+): void {
+  safeRecordHistogram(metrics.lookupDurationMs, elapsedMs(now, lookupStartedAt), {
+    ...labels,
+    result,
+  });
+}
+
+function eventBase<Type extends string>(
+  type: Type,
+  ctx: Context,
+  timestamp: number,
+): {
+  readonly type: Type;
+  readonly timestamp: number;
+  readonly requestId: string;
+  readonly operationName: string;
+  readonly serviceName: string;
+} {
+  return {
+    type,
+    timestamp,
+    requestId: ctx.requestId,
+    operationName: ctx.operationName,
+    serviceName: ctx.serviceName,
+  };
+}
+
+function getKeyType(key: DedupeKey): CacheEventKeyType {
+  if (typeof key === "string") {
+    return "string";
+  }
+
+  if (typeof key === "number") {
+    return "number";
+  }
+
+  return "symbol";
+}
+
+function getValueType(value: unknown): CacheEventValueType {
+  if (value === null) {
+    return "null";
+  }
+
+  if (value === undefined) {
+    return "undefined";
+  }
+
+  return typeof value === "object" || typeof value === "function" ? "object" : "primitive";
+}
+
+function skipReason(value: unknown): CacheSkipReason {
+  return value === null ? "null-disabled" : "undefined-disabled";
+}
+
+function metricSkipReason(reason: CacheSkipReason): CacheMetricSkipReason {
+  return reason === "null-disabled" ? "null_disabled" : "undefined_disabled";
+}
+
+function createMetricLabels(ctx: Context): Labels {
+  return Object.freeze({
+    service: ctx.serviceName,
+    operation: ctx.operationName,
+  });
+}
+
+function elapsedMs(now: number, startedAt: number): number {
+  return Math.max(0, now - startedAt);
+}
+
+function createCacheMetrics(services: PolicyServices): CacheMetrics {
+  return Object.freeze({
+    hitsTotal: safeCounter(
+      services,
+      "resili_cache_hits_total",
+      "Memory cache hits returned without downstream execution.",
+    ),
+    missesTotal: safeCounter(
+      services,
+      "resili_cache_misses_total",
+      "Memory cache misses that executed downstream.",
+    ),
+    storesTotal: safeCounter(
+      services,
+      "resili_cache_stores_total",
+      "Memory cache successful values stored.",
+    ),
+    skippedTotal: safeCounter(
+      services,
+      "resili_cache_skipped_total",
+      "Memory cache successful values intentionally not stored.",
+    ),
+    expiredTotal: safeCounter(
+      services,
+      "resili_cache_expired_total",
+      "Memory cache entries removed during lookup because they expired.",
+    ),
+    evictionsTotal: safeCounter(
+      services,
+      "resili_cache_evictions_total",
+      "Memory cache entries evicted while enforcing capacity.",
+    ),
+    entries: safeGauge(services, "resili_cache_entries", "Current memory cache entry count."),
+    lookupDurationMs: safeHistogram(
+      services,
+      "resili_cache_lookup_duration_ms",
+      "Memory cache lookup duration in milliseconds.",
+    ),
+  });
+}
+
+function safeCounter(services: PolicyServices, name: string, help: string): Counter {
+  try {
+    return services.metrics.counter(name, help);
+  } catch {
+    return noopMetrics.counter(name, help);
+  }
+}
+
+function safeGauge(services: PolicyServices, name: string, help: string): Gauge {
+  try {
+    return services.metrics.gauge(name, help);
+  } catch {
+    return noopMetrics.gauge(name, help);
+  }
+}
+
+function safeHistogram(services: PolicyServices, name: string, help: string): Histogram {
+  try {
+    return services.metrics.histogram(name, help);
+  } catch {
+    return noopMetrics.histogram(name, help);
+  }
+}
+
+function safeRecordCounter(counter: Counter, value: number, labels?: Labels): void {
+  try {
+    counter.add(value, labels);
+  } catch {
+    // Metrics recorders must not affect request execution.
+  }
+}
+
+function safeSetGauge(gauge: Gauge, value: number, labels?: Labels): void {
+  try {
+    gauge.set(value, labels);
+  } catch {
+    // Metrics recorders must not affect request execution.
+  }
+}
+
+function safeRecordHistogram(histogram: Histogram, value: number, labels?: Labels): void {
+  try {
+    histogram.record(value, labels);
+  } catch {
+    // Metrics recorders must not affect request execution.
+  }
 }

@@ -2,8 +2,16 @@ import { describe, expect, it, vi } from "vitest";
 
 import { httpClassifier } from "../../core/classification";
 import { createContext, releaseContext, type Context } from "../../core/context";
+import type { ResiliEvent } from "../../core/events";
 import { AbortError, ConfigurationError } from "../../core/errors";
-import { noopMetrics } from "../../core/metrics";
+import {
+  noopMetrics,
+  type Counter,
+  type Gauge,
+  type Histogram,
+  type Labels,
+  type MetricsRecorder,
+} from "../../core/metrics";
 import { OPERATION_ARGS_METADATA_KEY } from "../../core/metadata";
 import type { Next, PolicyServices } from "../../core/policy";
 import { memoryStore } from "../../core/state";
@@ -436,6 +444,302 @@ describe("cachePolicy", () => {
     await expect(first).resolves.toBe("first");
     await expect(second).resolves.toBe("second");
   });
+
+  it("emits deterministic hit, miss, stored, expired, skipped, and eviction events", async () => {
+    const events: ResiliEvent[] = [];
+    const clock = new ManualClock();
+    const policy = cachePolicy.create(
+      createServices({
+        clock,
+        emit: (event) => events.push(event),
+      }),
+      {
+        key: (key: unknown) => key as DedupeKey,
+        ttl: 10,
+        cacheNull: false,
+        maxEntries: 2,
+      },
+    );
+
+    await policy.execute(createTestContext({ args: ["secret-a"] }), () =>
+      Promise.resolve({ ok: true }),
+    );
+    clock.tick(4);
+    await policy.execute(createTestContext({ args: ["secret-a"] }), () =>
+      Promise.resolve("unused"),
+    );
+    clock.tick(6);
+    await policy.execute(createTestContext({ args: ["secret-a"] }), () => Promise.resolve("new-a"));
+    await policy.execute(createTestContext({ args: ["secret-null"] }), () => Promise.resolve(null));
+    await policy.execute(createTestContext({ args: ["secret-b"] }), () => Promise.resolve("b"));
+    await policy.execute(createTestContext({ args: ["secret-c"] }), () => Promise.resolve("c"));
+
+    expect(events.map((event) => event.type)).toEqual([
+      "CacheMiss",
+      "CacheStored",
+      "CacheHit",
+      "CacheExpired",
+      "CacheMiss",
+      "CacheStored",
+      "CacheMiss",
+      "CacheSkipped",
+      "CacheMiss",
+      "CacheStored",
+      "CacheMiss",
+      "CacheEvicted",
+      "CacheStored",
+    ]);
+    expect(events[0]).toMatchObject({ type: "CacheMiss", keyType: "string", reason: "absent" });
+    expect(events[1]).toMatchObject({
+      type: "CacheStored",
+      keyType: "string",
+      ttlMs: 10,
+      valueType: "object",
+      replacedExisting: false,
+      cacheSize: 1,
+    });
+    expect(events[2]).toMatchObject({
+      type: "CacheHit",
+      ageMs: 4,
+      remainingTtlMs: 6,
+      valueType: "object",
+    });
+    expect(events[3]).toMatchObject({
+      type: "CacheExpired",
+      ageMs: 10,
+      expiredByMs: 0,
+      cacheSizeAfterRemoval: 0,
+    });
+    expect(events[4]).toMatchObject({ type: "CacheMiss", reason: "expired" });
+    expect(events[7]).toMatchObject({
+      type: "CacheSkipped",
+      reason: "null-disabled",
+      valueType: "null",
+    });
+    expect(events[11]).toMatchObject({
+      type: "CacheEvicted",
+      reason: "capacity",
+      cacheSizeAfterRemoval: 1,
+    });
+    expect(JSON.stringify(events)).not.toContain("secret");
+  });
+
+  it("emits undefined skipped and replacement stored events", async () => {
+    const events: ResiliEvent[] = [];
+    const firstGate = createGate<string>();
+    const secondGate = createGate<string>();
+    const gates = [firstGate, secondGate];
+    const policy = cachePolicy.create(createServices({ emit: (event) => events.push(event) }), {
+      key: () => "secret-key",
+      ttl: 100,
+    });
+    const first = policy.execute(
+      createTestContext(),
+      () => gates.shift()?.promise ?? Promise.resolve("extra"),
+    );
+    const second = policy.execute(
+      createTestContext(),
+      () => gates.shift()?.promise ?? Promise.resolve("extra"),
+    );
+
+    firstGate.resolve("first");
+    secondGate.resolve("second");
+    await expect(first).resolves.toBe("first");
+    await expect(second).resolves.toBe("second");
+
+    const skipped = cachePolicy.create(createServices({ emit: (event) => events.push(event) }), {
+      key: () => "undefined-key",
+      ttl: 100,
+    });
+    await skipped.execute(createTestContext(), () => Promise.resolve(undefined));
+
+    expect(events.filter((event) => event.type === "CacheStored")).toEqual([
+      expect.objectContaining({ type: "CacheStored", replacedExisting: false, cacheSize: 1 }),
+      expect.objectContaining({ type: "CacheStored", replacedExisting: true, cacheSize: 1 }),
+    ]);
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        type: "CacheSkipped",
+        reason: "undefined-disabled",
+        valueType: "undefined",
+      }),
+    );
+    expect(JSON.stringify(events)).not.toContain("secret-key");
+  });
+
+  it("records low-cardinality metrics for cache lifecycle", async () => {
+    const metrics = new RecordingMetrics();
+    const clock = new ManualClock();
+    const policy = cachePolicy.create(createServices({ clock, metrics }), {
+      key: (key: unknown) => key as DedupeKey,
+      ttl: 10,
+      maxEntries: 2,
+    });
+
+    await policy.execute(createTestContext({ args: ["a"] }), () => Promise.resolve("a"));
+    clock.tick(5);
+    await policy.execute(createTestContext({ args: ["a"] }), () => Promise.resolve("unused"));
+    clock.tick(5);
+    await policy.execute(createTestContext({ args: ["a"] }), () => Promise.resolve(null));
+    await policy.execute(createTestContext({ args: ["b"] }), () => Promise.resolve(1));
+    await policy.execute(createTestContext({ args: ["c"] }), () =>
+      Promise.resolve(() => undefined),
+    );
+    await policy.execute(createTestContext({ args: ["d"] }), () => Promise.resolve("d"));
+
+    expect(metrics.counterValue("resili_cache_hits_total", baseLabels())).toBe(1);
+    expect(
+      metrics.counterValue("resili_cache_misses_total", { ...baseLabels(), reason: "absent" }),
+    ).toBe(4);
+    expect(
+      metrics.counterValue("resili_cache_misses_total", { ...baseLabels(), reason: "expired" }),
+    ).toBe(1);
+    expect(
+      metrics.counterValue("resili_cache_stores_total", {
+        ...baseLabels(),
+        value_type: "primitive",
+      }),
+    ).toBe(3);
+    expect(
+      metrics.counterValue("resili_cache_stores_total", { ...baseLabels(), value_type: "object" }),
+    ).toBe(1);
+    expect(
+      metrics.counterValue("resili_cache_skipped_total", {
+        ...baseLabels(),
+        reason: "null_disabled",
+      }),
+    ).toBe(1);
+    expect(metrics.counterValue("resili_cache_expired_total", baseLabels())).toBe(1);
+    expect(
+      metrics.counterValue("resili_cache_evictions_total", { ...baseLabels(), reason: "capacity" }),
+    ).toBe(1);
+    expect(metrics.gaugeValue("resili_cache_entries", baseLabels())).toBe(2);
+    expect(
+      metrics.histogramValues("resili_cache_lookup_duration_ms", {
+        ...baseLabels(),
+        result: "hit",
+      }),
+    ).toEqual([0]);
+    expect(
+      metrics.histogramValues("resili_cache_lookup_duration_ms", {
+        ...baseLabels(),
+        result: "miss_absent",
+      }),
+    ).toEqual([0, 0, 0, 0]);
+    expect(
+      metrics.histogramValues("resili_cache_lookup_duration_ms", {
+        ...baseLabels(),
+        result: "miss_expired",
+      }),
+    ).toEqual([0]);
+    expect(metrics.labels()).not.toContain("secret");
+    expect(metrics.labels()).not.toContain("request");
+  });
+
+  it("classifies expired capacity cleanup without double-counting expired removals", async () => {
+    const metrics = new RecordingMetrics();
+    const events: ResiliEvent[] = [];
+    const clock = new ManualClock();
+    const policy = cachePolicy.create(
+      createServices({ clock, metrics, emit: (event) => events.push(event) }),
+      {
+        key: (key: unknown) => key as DedupeKey,
+        ttl: 5,
+        maxEntries: 3,
+      },
+    );
+
+    await policy.execute(createTestContext({ args: ["a"] }), () => Promise.resolve("a"));
+    await policy.execute(createTestContext({ args: ["b"] }), () => Promise.resolve("b"));
+    clock.tick(5);
+    await policy.execute(createTestContext({ args: ["c"] }), () => Promise.resolve("c"));
+
+    expect(events.filter((event) => event.type === "CacheExpired")).toHaveLength(0);
+    expect(events.filter((event) => event.type === "CacheEvicted")).toEqual([
+      expect.objectContaining({
+        type: "CacheEvicted",
+        reason: "expired-cleanup",
+        cacheSizeAfterRemoval: 1,
+      }),
+      expect.objectContaining({
+        type: "CacheEvicted",
+        reason: "expired-cleanup",
+        cacheSizeAfterRemoval: 0,
+      }),
+    ]);
+    expect(metrics.counterValue("resili_cache_expired_total", baseLabels())).toBe(0);
+    expect(
+      metrics.counterValue("resili_cache_evictions_total", {
+        ...baseLabels(),
+        reason: "expired_cleanup",
+      }),
+    ).toBe(2);
+    expect(metrics.gaugeValue("resili_cache_entries", baseLabels())).toBe(1);
+  });
+
+  it("keeps gauge stable for replacement at capacity", async () => {
+    const metrics = new RecordingMetrics();
+    const firstGate = createGate<string>();
+    const secondGate = createGate<string>();
+    const gates = [firstGate, secondGate];
+    const policy = cachePolicy.create(createServices({ metrics }), {
+      key: (key: unknown) => key as DedupeKey,
+      ttl: 100,
+      maxEntries: 1,
+    });
+    const first = policy.execute(
+      createTestContext({ args: ["a"] }),
+      () => gates.shift()?.promise ?? Promise.resolve("extra"),
+    );
+    const second = policy.execute(
+      createTestContext({ args: ["a"] }),
+      () => gates.shift()?.promise ?? Promise.resolve("extra"),
+    );
+
+    firstGate.resolve("first");
+    secondGate.resolve("second");
+    await expect(first).resolves.toBe("first");
+    await expect(second).resolves.toBe("second");
+
+    expect(
+      metrics.counterValue("resili_cache_evictions_total", { ...baseLabels(), reason: "capacity" }),
+    ).toBe(0);
+    expect(metrics.gaugeValue("resili_cache_entries", baseLabels())).toBe(1);
+  });
+
+  it("isolates metric recording failures without changing results", async () => {
+    const policy = cachePolicy.create(createServices({ metrics: new ThrowingMetrics() }), {
+      key: () => "key",
+      ttl: 100,
+    });
+
+    await expect(policy.execute(createTestContext(), () => Promise.resolve("ok"))).resolves.toBe(
+      "ok",
+    );
+    await expect(
+      policy.execute(createTestContext(), () => Promise.resolve("unused")),
+    ).resolves.toBe("ok");
+  });
+
+  it("handles TTL overflow deterministically", async () => {
+    const clock = new ManualClock(Number.MAX_VALUE);
+    const policy = cachePolicy.create(createServices({ clock }), {
+      key: () => "key",
+      ttl: Number.MAX_VALUE,
+    });
+    let calls = 0;
+
+    await policy.execute(createTestContext(), () => {
+      calls += 1;
+
+      return Promise.resolve("ok");
+    });
+    clock.set(Number.MAX_VALUE);
+    await expect(
+      policy.execute(createTestContext(), () => Promise.resolve("unused")),
+    ).resolves.toBe("ok");
+    expect(calls).toBe(1);
+  });
 });
 
 async function expectValueCached(
@@ -515,6 +819,13 @@ function createServices(overrides: Partial<PolicyServices> = {}): PolicyServices
   };
 }
 
+function baseLabels(): Labels {
+  return Object.freeze({
+    service: "service",
+    operation: "operation",
+  });
+}
+
 class ManualClock implements Clock {
   setTimeoutCalls = 0;
   clearTimeoutCalls = 0;
@@ -560,4 +871,157 @@ function createGate<T>(): {
   });
 
   return { promise, resolve, reject };
+}
+
+class RecordingMetrics implements MetricsRecorder {
+  readonly #counters = new Map<string, RecordingCounter>();
+  readonly #gauges = new Map<string, RecordingGauge>();
+  readonly #histograms = new Map<string, RecordingHistogram>();
+
+  counter(name: string): Counter {
+    let counter = this.#counters.get(name);
+
+    if (counter === undefined) {
+      counter = new RecordingCounter();
+      this.#counters.set(name, counter);
+    }
+
+    return counter;
+  }
+
+  gauge(name: string): Gauge {
+    let gauge = this.#gauges.get(name);
+
+    if (gauge === undefined) {
+      gauge = new RecordingGauge();
+      this.#gauges.set(name, gauge);
+    }
+
+    return gauge;
+  }
+
+  histogram(name: string): Histogram {
+    let histogram = this.#histograms.get(name);
+
+    if (histogram === undefined) {
+      histogram = new RecordingHistogram();
+      this.#histograms.set(name, histogram);
+    }
+
+    return histogram;
+  }
+
+  counterValue(name: string, labels?: Labels): number {
+    return this.#counters.get(name)?.value(labels) ?? 0;
+  }
+
+  gaugeValue(name: string, labels?: Labels): number | undefined {
+    return this.#gauges.get(name)?.value(labels);
+  }
+
+  histogramValues(name: string, labels?: Labels): readonly number[] {
+    return this.#histograms.get(name)?.values(labels) ?? [];
+  }
+
+  labels(): string {
+    return [
+      ...[...this.#counters.values()].flatMap((counter) => counter.labels()),
+      ...[...this.#gauges.values()].flatMap((gauge) => gauge.labels()),
+      ...[...this.#histograms.values()].flatMap((histogram) => histogram.labels()),
+    ].join("\n");
+  }
+}
+
+class RecordingCounter implements Counter {
+  readonly #values = new Map<string, number>();
+
+  add(value: number, labels?: Labels): void {
+    const key = labelsKey(labels);
+    this.#values.set(key, (this.#values.get(key) ?? 0) + value);
+  }
+
+  value(labels?: Labels): number {
+    return this.#values.get(labelsKey(labels)) ?? 0;
+  }
+
+  labels(): string[] {
+    return [...this.#values.keys()];
+  }
+}
+
+class RecordingGauge implements Gauge {
+  readonly #values = new Map<string, number>();
+
+  set(value: number, labels?: Labels): void {
+    this.#values.set(labelsKey(labels), value);
+  }
+
+  value(labels?: Labels): number | undefined {
+    return this.#values.get(labelsKey(labels));
+  }
+
+  labels(): string[] {
+    return [...this.#values.keys()];
+  }
+}
+
+class RecordingHistogram implements Histogram {
+  readonly #values = new Map<string, number[]>();
+
+  record(value: number, labels?: Labels): void {
+    const key = labelsKey(labels);
+    const values = this.#values.get(key);
+
+    if (values === undefined) {
+      this.#values.set(key, [value]);
+      return;
+    }
+
+    values.push(value);
+  }
+
+  values(labels?: Labels): readonly number[] {
+    return this.#values.get(labelsKey(labels)) ?? [];
+  }
+
+  labels(): string[] {
+    return [...this.#values.keys()];
+  }
+}
+
+class ThrowingMetrics implements MetricsRecorder {
+  counter(): Counter {
+    return {
+      add(): void {
+        throw new Error("counter failed");
+      },
+    };
+  }
+
+  gauge(): Gauge {
+    return {
+      set(): void {
+        throw new Error("gauge failed");
+      },
+    };
+  }
+
+  histogram(): Histogram {
+    return {
+      record(): void {
+        throw new Error("histogram failed");
+      },
+    };
+  }
+}
+
+function labelsKey(labels: Labels | undefined): string {
+  if (labels === undefined) {
+    return "";
+  }
+
+  return Object.entries(labels)
+    .sort(([left], [right]) => (left < right ? -1 : left > right ? 1 : 0))
+    .map(([key, value]) => `${key}=${value}`)
+    .join("\u0000");
 }

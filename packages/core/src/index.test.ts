@@ -30,6 +30,8 @@ import {
   timeoutPolicy,
   type Builder,
   type BulkheadOptions,
+  type CacheEventKeyType,
+  type CacheEventValueType,
   type CacheOptions,
   type CircuitBreakerOptions,
   type Client,
@@ -162,6 +164,24 @@ describe("@resili/core package entry", () => {
     };
 
     expect(event.type).toBe("HedgeCompleted");
+  });
+
+  it("exposes cache events through the public event types", () => {
+    const keyType: CacheEventKeyType = "string";
+    const valueType: CacheEventValueType = "object";
+    const event: ResiliEventMap["CacheHit"] = {
+      type: "CacheHit",
+      timestamp: 1,
+      requestId: "request",
+      operationName: "operation",
+      serviceName: "service",
+      keyType,
+      ageMs: 10,
+      remainingTtlMs: 90,
+      valueType,
+    };
+
+    expect(event.type).toBe("CacheHit");
   });
 
   it("exposes plugin contracts", () => {
