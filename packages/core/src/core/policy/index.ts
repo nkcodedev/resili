@@ -16,6 +16,7 @@ export type PolicyOrder =
   | {
       readonly before:
         | "fallback"
+        | "cache"
         | "retry"
         | "circuit-breaker"
         | "timeout"
@@ -27,6 +28,7 @@ export type PolicyOrder =
   | {
       readonly after:
         | "fallback"
+        | "cache"
         | "retry"
         | "circuit-breaker"
         | "timeout"

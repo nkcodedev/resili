@@ -18,6 +18,7 @@ export class AbortError extends ResiliError {
 export interface Builder<Args extends readonly unknown[], R> {
     build(): Client<Args, R>;
     bulkhead(options: number | BulkheadOptions): this;
+    cache(options: CacheOptions<Args>): this;
     circuitBreaker(options?: CircuitBreakerOptions): this;
     dedupe(options: DedupeOptions<Args>): this;
     fallback(options: FallbackOptions<R> | FallbackFn<R>): this;
@@ -57,6 +58,24 @@ export class BulkheadRejectedError extends ResiliError {
     readonly queueSize: number;
     readonly waitedMs: number;
 }
+
+// @public
+export type CacheEventKeyType = "string" | "number" | "symbol";
+
+// @public
+export type CacheEventValueType = "null" | "undefined" | "primitive" | "object";
+
+// @public
+export interface CacheOptions<Args extends readonly unknown[] = readonly unknown[]> {
+    readonly cacheNull?: boolean;
+    readonly cacheUndefined?: boolean;
+    readonly key: (...args: Args) => DedupeKey;
+    readonly maxEntries?: number;
+    readonly ttl: number;
+}
+
+// @public
+export const cachePolicy: PolicyFactory;
 
 // @public
 export interface CircuitBreakerOptions {
@@ -360,9 +379,9 @@ export interface PolicyFactory {
 
 // @public
 export type PolicyOrder = number | {
-    readonly before: "fallback" | "retry" | "circuit-breaker" | "timeout" | "dedupe" | "hedge" | "rate-limiter" | "bulkhead";
+    readonly before: "fallback" | "cache" | "retry" | "circuit-breaker" | "timeout" | "dedupe" | "hedge" | "rate-limiter" | "bulkhead";
 } | {
-    readonly after: "fallback" | "retry" | "circuit-breaker" | "timeout" | "dedupe" | "hedge" | "rate-limiter" | "bulkhead";
+    readonly after: "fallback" | "cache" | "retry" | "circuit-breaker" | "timeout" | "dedupe" | "hedge" | "rate-limiter" | "bulkhead";
 };
 
 // @public
@@ -413,6 +432,8 @@ export const RESILI_VERSION = "0.0.0";
 export interface ResiliConfig<R = unknown, Args extends readonly unknown[] = readonly unknown[]> {
     // (undocumented)
     readonly bulkhead?: number | BulkheadOptions;
+    // (undocumented)
+    readonly cache?: CacheOptions<Args>;
     // (undocumented)
     readonly circuitBreaker?: CircuitBreakerOptions;
     // (undocumented)
@@ -471,6 +492,45 @@ export interface ResiliEventMap {
         readonly maxConcurrent: number;
         readonly queueSize: number;
         readonly waitedMs: number;
+    };
+    readonly CacheEvicted: ResiliEventBase & {
+        readonly type: "CacheEvicted";
+        readonly reason: "capacity" | "expired-cleanup";
+        readonly keyType: CacheEventKeyType;
+        readonly cacheSizeAfterRemoval: number;
+    };
+    readonly CacheExpired: ResiliEventBase & {
+        readonly type: "CacheExpired";
+        readonly keyType: CacheEventKeyType;
+        readonly ageMs: number;
+        readonly expiredByMs: number;
+        readonly cacheSizeAfterRemoval: number;
+    };
+    readonly CacheHit: ResiliEventBase & {
+        readonly type: "CacheHit";
+        readonly keyType: CacheEventKeyType;
+        readonly ageMs: number;
+        readonly remainingTtlMs: number;
+        readonly valueType: CacheEventValueType;
+    };
+    readonly CacheMiss: ResiliEventBase & {
+        readonly type: "CacheMiss";
+        readonly keyType: CacheEventKeyType;
+        readonly reason: "absent" | "expired";
+    };
+    readonly CacheSkipped: ResiliEventBase & {
+        readonly type: "CacheSkipped";
+        readonly reason: "null-disabled" | "undefined-disabled";
+        readonly keyType: CacheEventKeyType;
+        readonly valueType: CacheEventValueType;
+    };
+    readonly CacheStored: ResiliEventBase & {
+        readonly type: "CacheStored";
+        readonly keyType: CacheEventKeyType;
+        readonly ttlMs: number;
+        readonly valueType: CacheEventValueType;
+        readonly replacedExisting: boolean;
+        readonly cacheSize: number;
     };
     readonly CircuitClosed: ResiliEventBase & {
         readonly type: "CircuitClosed";
@@ -619,7 +679,7 @@ export interface ResiliEventMap {
 }
 
 // @public
-export type ResiliEventType = "RequestStarted" | "RequestCompleted" | "RetryStarted" | "RetryCompleted" | "RetryFailed" | "CircuitOpened" | "CircuitHalfOpened" | "CircuitClosed" | "TimeoutTriggered" | "DedupeMiss" | "DedupeJoined" | "DedupeCompleted" | "DedupeFailed" | "DedupeCallerAborted" | "DedupeSharedAborted" | "HedgeScheduled" | "HedgeStarted" | "HedgeCompleted" | "HedgeFailed" | "HedgeAborted" | "HedgeSkipped" | "BulkheadRejected" | "RateLimited";
+export type ResiliEventType = "RequestStarted" | "RequestCompleted" | "RetryStarted" | "RetryCompleted" | "RetryFailed" | "CircuitOpened" | "CircuitHalfOpened" | "CircuitClosed" | "TimeoutTriggered" | "DedupeMiss" | "DedupeJoined" | "DedupeCompleted" | "DedupeFailed" | "DedupeCallerAborted" | "DedupeSharedAborted" | "HedgeScheduled" | "HedgeStarted" | "HedgeCompleted" | "HedgeFailed" | "HedgeAborted" | "HedgeSkipped" | "CacheHit" | "CacheMiss" | "CacheStored" | "CacheExpired" | "CacheEvicted" | "CacheSkipped" | "BulkheadRejected" | "RateLimited";
 
 // @public
 export interface ResiliPlugin<O = void> {

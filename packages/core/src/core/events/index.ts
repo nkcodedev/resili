@@ -27,8 +27,28 @@ export type ResiliEventType =
   | "HedgeFailed"
   | "HedgeAborted"
   | "HedgeSkipped"
+  | "CacheHit"
+  | "CacheMiss"
+  | "CacheStored"
+  | "CacheExpired"
+  | "CacheEvicted"
+  | "CacheSkipped"
   | "BulkheadRejected"
   | "RateLimited";
+
+/**
+ * Primitive cache key type emitted in cache observability events.
+ *
+ * @public
+ */
+export type CacheEventKeyType = "string" | "number" | "symbol";
+
+/**
+ * Coarse cache value type emitted in cache observability events.
+ *
+ * @public
+ */
+export type CacheEventValueType = "null" | "undefined" | "primitive" | "object";
 
 /**
  * Common immutable fields present on every Resili event.
@@ -287,6 +307,69 @@ export interface ResiliEventMap {
     readonly reason: "deadline";
     readonly delayMs: number;
     readonly remainingMs?: number;
+  };
+
+  /**
+   * Memory cache returned a valid unexpired entry.
+   */
+  readonly CacheHit: ResiliEventBase & {
+    readonly type: "CacheHit";
+    readonly keyType: CacheEventKeyType;
+    readonly ageMs: number;
+    readonly remainingTtlMs: number;
+    readonly valueType: CacheEventValueType;
+  };
+
+  /**
+   * Memory cache found no usable entry and downstream execution will run.
+   */
+  readonly CacheMiss: ResiliEventBase & {
+    readonly type: "CacheMiss";
+    readonly keyType: CacheEventKeyType;
+    readonly reason: "absent" | "expired";
+  };
+
+  /**
+   * Memory cache stored a successful downstream value.
+   */
+  readonly CacheStored: ResiliEventBase & {
+    readonly type: "CacheStored";
+    readonly keyType: CacheEventKeyType;
+    readonly ttlMs: number;
+    readonly valueType: CacheEventValueType;
+    readonly replacedExisting: boolean;
+    readonly cacheSize: number;
+  };
+
+  /**
+   * Memory cache removed an expired entry during lookup.
+   */
+  readonly CacheExpired: ResiliEventBase & {
+    readonly type: "CacheExpired";
+    readonly keyType: CacheEventKeyType;
+    readonly ageMs: number;
+    readonly expiredByMs: number;
+    readonly cacheSizeAfterRemoval: number;
+  };
+
+  /**
+   * Memory cache removed an entry while enforcing capacity.
+   */
+  readonly CacheEvicted: ResiliEventBase & {
+    readonly type: "CacheEvicted";
+    readonly reason: "capacity" | "expired-cleanup";
+    readonly keyType: CacheEventKeyType;
+    readonly cacheSizeAfterRemoval: number;
+  };
+
+  /**
+   * Memory cache intentionally did not store a successful value.
+   */
+  readonly CacheSkipped: ResiliEventBase & {
+    readonly type: "CacheSkipped";
+    readonly reason: "null-disabled" | "undefined-disabled";
+    readonly keyType: CacheEventKeyType;
+    readonly valueType: CacheEventValueType;
   };
 
   /**

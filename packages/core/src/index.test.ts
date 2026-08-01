@@ -10,6 +10,7 @@ import {
   RetryExceededError,
   TimeoutError,
   bulkheadPolicy,
+  cachePolicy,
   circuitBreakerPolicy,
   composeClassifier,
   createClient,
@@ -29,6 +30,9 @@ import {
   timeoutPolicy,
   type Builder,
   type BulkheadOptions,
+  type CacheEventKeyType,
+  type CacheEventValueType,
+  type CacheOptions,
   type CircuitBreakerOptions,
   type Client,
   type ClientHealth,
@@ -162,6 +166,24 @@ describe("@resili/core package entry", () => {
     expect(event.type).toBe("HedgeCompleted");
   });
 
+  it("exposes cache events through the public event types", () => {
+    const keyType: CacheEventKeyType = "string";
+    const valueType: CacheEventValueType = "object";
+    const event: ResiliEventMap["CacheHit"] = {
+      type: "CacheHit",
+      timestamp: 1,
+      requestId: "request",
+      operationName: "operation",
+      serviceName: "service",
+      keyType,
+      ageMs: 10,
+      remainingTtlMs: 90,
+      valueType,
+    };
+
+    expect(event.type).toBe("CacheHit");
+  });
+
   it("exposes plugin contracts", () => {
     const plugin: ResiliPlugin = definePlugin({
       name: "test-plugin",
@@ -181,6 +203,7 @@ describe("@resili/core package entry", () => {
     const rateLimiter: RateLimiterOptions = { limit: 1, intervalMs: 100 };
     const circuitBreaker: CircuitBreakerOptions = { minimumThroughput: 1 };
     const retry: RetryOptions = { maxAttempts: 1, jitter: "none" };
+    const cache: CacheOptions<readonly [string]> = { key: (id) => id, ttl: 100 };
     const dedupe: DedupeOptions<readonly [string]> = { key: (id) => id };
     const dedupeKey: DedupeKey = "user:42";
     const hedge: HedgeOptions<string> = {
@@ -200,6 +223,7 @@ describe("@resili/core package entry", () => {
     expect(rateLimiterPolicy.name).toBe("rate-limiter");
     expect(circuitBreakerPolicy.name).toBe("circuit-breaker");
     expect(retryPolicy.name).toBe("retry");
+    expect(cachePolicy.name).toBe("cache");
     expect(dedupePolicy.name).toBe("dedupe");
     expect(hedgePolicy.name).toBe("hedge");
     expect(fallbackPolicy.name).toBe("fallback");
@@ -209,6 +233,7 @@ describe("@resili/core package entry", () => {
       rateLimiter,
       circuitBreaker,
       retry,
+      cache,
       dedupe,
       dedupeKey,
       hedge,
@@ -227,6 +252,7 @@ describe("@resili/core package entry", () => {
   it("creates a client from supported declarative config", async () => {
     const config: ResiliConfig<string> = {
       timeout: { perAttemptMs: 100 },
+      cache: { key: () => "key", ttl: 100 },
       dedupe: { key: () => "key" },
       hedge: { delay: 10 },
       bulkhead: { maxConcurrent: 1 },
@@ -290,6 +316,25 @@ describe("@resili/core package entry", () => {
     gate.resolve("user:42");
     await expect(first).resolves.toBe("user:42");
     await expect(second).resolves.toBe("user:42");
+  });
+
+  it("accepts cache config through createClient and passes operation args to key", async () => {
+    const key = vi.fn((id: string) => id);
+    const value = { id: "42" };
+    const operation = vi.fn<(id: string) => Promise<typeof value>>((id) => {
+      void id;
+
+      return Promise.resolve(value);
+    });
+    const client = createClient(operation, {
+      cache: { key, ttl: 100 },
+    });
+
+    await expect(client.call("42")).resolves.toBe(value);
+    await expect(client.call("42")).resolves.toBe(value);
+    expect(key).toHaveBeenCalledTimes(2);
+    expect(key).toHaveBeenCalledWith("42");
+    expect(operation).toHaveBeenCalledTimes(1);
   });
 
   it("applies custom policy config through createClient", async () => {
