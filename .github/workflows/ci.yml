@@ -39,6 +39,9 @@ jobs:
       - name: Lint
         run: pnpm lint
 
+      - name: Build Core
+        run: pnpm --filter @resili/core build
+
       - name: Typecheck
         run: pnpm -r typecheck
 
