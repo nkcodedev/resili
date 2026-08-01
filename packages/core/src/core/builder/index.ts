@@ -21,6 +21,11 @@ import {
 import { memoryStore, type StateStore } from "../state";
 import { bulkheadPolicy, type BulkheadOptions } from "../../policies/bulkhead";
 import { circuitBreakerPolicy, type CircuitBreakerOptions } from "../../policies/circuit-breaker";
+import {
+  DEDUPE_OPERATION_ARGS_METADATA_KEY,
+  dedupePolicy,
+  type DedupeOptions,
+} from "../../policies/dedupe";
 import { fallbackPolicy, type FallbackFn, type FallbackOptions } from "../../policies/fallback";
 import { hedgePolicy, type HedgeOptions } from "../../policies/hedge";
 import { rateLimiterPolicy, type RateLimiterOptions } from "../../policies/rate-limiter";
@@ -53,6 +58,11 @@ export interface Builder<Args extends readonly unknown[], R> {
    * Adds the built-in timeout policy.
    */
   timeout(options: number | TimeoutOptions): this;
+
+  /**
+   * Adds the built-in request deduplication policy.
+   */
+  dedupe(options: DedupeOptions<Args>): this;
 
   /**
    * Adds the built-in hedged request policy.
@@ -177,6 +187,10 @@ class ImmutableBuilder<Args extends readonly unknown[], R> implements Builder<Ar
     return this.policy(timeoutPolicy, options);
   }
 
+  dedupe(options: DedupeOptions<Args>): this {
+    return this.policy(dedupePolicy, options);
+  }
+
   hedge(options: HedgeOptions<R>): this {
     return this.policy(hedgePolicy, options);
   }
@@ -280,11 +294,25 @@ class ImmutableBuilder<Args extends readonly unknown[], R> implements Builder<Ar
       factory.create(services, options),
     );
     const pipeline = compilePipeline(policies);
+    const hasDedupePolicy = policyRegistrations.some(
+      (registration) => registration.factory.name === dedupePolicy.name,
+    );
 
     return createCoreClient({
       operation: this.#state.operation,
       pipeline,
       events,
+      ...(hasDedupePolicy
+        ? {
+            createCallContextInit(args: Args) {
+              return {
+                metadata: {
+                  [DEDUPE_OPERATION_ARGS_METADATA_KEY]: args,
+                },
+              };
+            },
+          }
+        : {}),
       dispose: createPluginDisposer(installedPlugins.instances),
     });
   }

@@ -97,6 +97,7 @@ export interface CoreClientInit<Args extends readonly unknown[], R> {
   readonly operation: (...args: Args) => Promise<R>;
   readonly pipeline: Pipeline;
   readonly events?: EventBus;
+  readonly createCallContextInit?: (args: Args) => ContextInit;
   readonly dispose?: () => void | Promise<void>;
 }
 
@@ -128,6 +129,7 @@ class ImmutableClient<Args extends readonly unknown[], R> implements Client<Args
   readonly #operation: (...args: Args) => Promise<R>;
   readonly #pipeline: Pipeline;
   readonly #events: EventBus;
+  readonly #createCallContextInit?: (args: Args) => ContextInit;
   readonly #dispose?: () => void | Promise<void>;
   readonly #totals: ClientTotals = {
     calls: 0,
@@ -141,6 +143,9 @@ class ImmutableClient<Args extends readonly unknown[], R> implements Client<Args
     this.#operation = init.operation;
     this.#pipeline = init.pipeline;
     this.#events = init.events ?? new DefaultEventBus();
+    if (init.createCallContextInit !== undefined) {
+      this.#createCallContextInit = init.createCallContextInit;
+    }
     if (init.dispose !== undefined) {
       this.#dispose = init.dispose;
     }
@@ -149,7 +154,9 @@ class ImmutableClient<Args extends readonly unknown[], R> implements Client<Args
   }
 
   call(...args: Args): Promise<R> {
-    return this.#run(() => this.#pipeline.execute(() => this.#operation(...args)));
+    return this.#run(() =>
+      this.#pipeline.execute(() => this.#operation(...args), this.#createCallContextInit?.(args)),
+    );
   }
 
   execute<T = R>(operation: (ctx: Context) => Promise<T>, init?: ContextInit): Promise<T> {

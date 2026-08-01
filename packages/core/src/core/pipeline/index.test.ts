@@ -80,6 +80,16 @@ describe("compilePipeline", () => {
     expect(policyNames(pipeline.policies)).toEqual(["timeout", "hedge", "rate-limiter"]);
   });
 
+  it("sorts dedupe between timeout and hedge in the built-in order", () => {
+    const pipeline = compilePipeline([
+      passThroughPolicy("hedge", 450),
+      passThroughPolicy("dedupe", 425),
+      passThroughPolicy("timeout", 400),
+    ]);
+
+    expect(policyNames(pipeline.policies)).toEqual(["timeout", "dedupe", "hedge"]);
+  });
+
   it("supports relative anchors around hedge", () => {
     const pipeline = compilePipeline([
       passThroughPolicy("hedge", 450),
@@ -88,6 +98,16 @@ describe("compilePipeline", () => {
     ]);
 
     expect(policyNames(pipeline.policies)).toEqual(["before-hedge", "hedge", "after-hedge"]);
+  });
+
+  it("supports relative anchors around dedupe", () => {
+    const pipeline = compilePipeline([
+      passThroughPolicy("dedupe", 425),
+      passThroughPolicy("before-dedupe", { before: "dedupe" }),
+      passThroughPolicy("after-dedupe", { after: "dedupe" }),
+    ]);
+
+    expect(policyNames(pipeline.policies)).toEqual(["before-dedupe", "dedupe", "after-dedupe"]);
   });
 
   it("preserves original input order for equal resolved orders", () => {

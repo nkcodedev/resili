@@ -53,6 +53,7 @@ const BUILTIN_POLICY_ORDER: Readonly<Record<string, number>> = Object.freeze({
   retry: 200,
   "circuit-breaker": 300,
   timeout: 400,
+  dedupe: 425,
   hedge: 450,
   "rate-limiter": 500,
   bulkhead: 600,

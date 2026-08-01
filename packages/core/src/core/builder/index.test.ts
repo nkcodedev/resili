@@ -174,6 +174,7 @@ describe("createBuilder", () => {
     const builder = createBuilder(() => Promise.resolve("ok"));
     const snapshots = [
       builder.timeout(10),
+      builder.dedupe({ key: () => "key" }),
       builder.hedge({ delay: 10 }),
       builder.bulkhead(1),
       builder.rateLimiter({ limit: 1, intervalMs: 100 }),
@@ -199,6 +200,7 @@ describe("createBuilder", () => {
   it("builds built-in policies from their options", async () => {
     const client = createBuilder(() => Promise.resolve("ok"))
       .timeout({ perAttemptMs: 100 })
+      .dedupe({ key: () => "key" })
       .hedge({ delay: 10 })
       .bulkhead({ maxConcurrent: 1 })
       .rateLimiter({ limit: 1, intervalMs: 100 })
@@ -212,6 +214,45 @@ describe("createBuilder", () => {
       .build();
 
     await expect(client.call()).resolves.toBe("ok");
+  });
+
+  it("adds dedupe as an immutable type-safe builder method", async () => {
+    const key = vi.fn((tenantId: string, userId: string) => `${tenantId}:${userId}`);
+    const operation = vi.fn((tenantId: string, userId: string) =>
+      Promise.resolve(`${tenantId}:${userId}`),
+    );
+    const builder: Builder<readonly [string, string], string> = createBuilder(operation);
+    const deduped: Builder<readonly [string, string], string> = builder.dedupe({ key });
+    const first = deduped.build().call("tenant", "42");
+    const second = deduped.build().call("tenant", "42");
+
+    expect(deduped).not.toBe(builder);
+    expect(Object.isFrozen(deduped)).toBe(true);
+    await expect(first).resolves.toBe("tenant:42");
+    await expect(second).resolves.toBe("tenant:42");
+    expect(key).toHaveBeenCalledWith("tenant", "42");
+  });
+
+  it("passes operation args to dedupe keys and shares client calls", async () => {
+    const key = vi.fn((id: string) => id);
+    const gate = createGate<string>();
+    const operation = vi.fn((id: string) => {
+      void id;
+
+      return gate.promise;
+    });
+    const client = createBuilder(operation).dedupe({ key }).build();
+    const first = client.call("42");
+    const second = client.call("42");
+
+    await flushMicrotasks();
+    expect(key).toHaveBeenCalledTimes(2);
+    expect(key).toHaveBeenCalledWith("42");
+    expect(operation).toHaveBeenCalledTimes(1);
+
+    gate.resolve("user:42");
+    await expect(first).resolves.toBe("user:42");
+    await expect(second).resolves.toBe("user:42");
   });
 
   it("adds hedge as an immutable type-safe builder method", async () => {
@@ -628,6 +669,26 @@ async function advanceManualClock(clock: ManualClock, ms: number): Promise<void>
   await Promise.resolve();
   await Promise.resolve();
   clock.tick(ms);
+  await Promise.resolve();
+}
+
+function createGate<T>(): {
+  readonly promise: Promise<T>;
+  readonly resolve: (value: T) => void;
+  readonly reject: (error: unknown) => void;
+} {
+  let resolve!: (value: T) => void;
+  let reject!: (error: unknown) => void;
+  const promise = new Promise<T>((innerResolve, innerReject) => {
+    resolve = innerResolve;
+    reject = innerReject;
+  });
+
+  return { promise, resolve, reject };
+}
+
+async function flushMicrotasks(): Promise<void> {
+  await Promise.resolve();
   await Promise.resolve();
 }
 
