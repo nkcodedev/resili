@@ -1,0 +1,18 @@
+{
+  "name": "@resili/benchmarks",
+  "version": "0.0.0-development",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "benchmark": "tsx src/index.ts",
+    "benchmark:baseline": "tsx src/baseline.ts",
+    "benchmark:cache": "tsx src/cache.ts",
+    "benchmark:dedupe": "tsx src/dedupe.ts",
+    "benchmark:hedge": "tsx src/hedge.ts",
+    "benchmark:combined": "tsx src/combined.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@resili/core": "workspace:*"
+  }
+}
