@@ -14,6 +14,7 @@
     "eslint.config.js",
     "vitest.config.ts",
     "tsup.config.ts",
+    "benchmarks/src/**/*.ts",
     "packages/*/src/**/*.ts",
     "packages/*/src/**/*.test.ts",
     "packages/*/tsup.config.ts",
