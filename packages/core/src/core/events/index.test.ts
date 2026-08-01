@@ -34,6 +34,18 @@ const hedgeStartedEvent: ResiliEvent = {
   startedAt: 1_050,
 };
 
+const dedupeJoinedEvent: ResiliEvent = {
+  type: "DedupeJoined",
+  timestamp: 1_060,
+  requestId: "req-1",
+  operationName: "getUser",
+  serviceName: "users",
+  role: "joiner",
+  activeCallers: 2,
+  sharedAgeMs: 10,
+  keyType: "string",
+};
+
 describe("DefaultEventBus", () => {
   it("publishes events to type-specific listeners synchronously", () => {
     const bus = new DefaultEventBus();
@@ -75,6 +87,19 @@ describe("DefaultEventBus", () => {
     bus.emit(hedgeStartedEvent);
 
     expect(listener).toHaveBeenCalledWith(hedgeStartedEvent);
+  });
+
+  it("supports typed dedupe event subscriptions", () => {
+    const bus = new DefaultEventBus();
+    const listener = vi.fn((event: ResiliEventMap["DedupeJoined"]) => {
+      expect(event.role).toBe("joiner");
+      expect(event.keyType).toBe("string");
+    });
+
+    bus.on("DedupeJoined", listener);
+    bus.emit(dedupeJoinedEvent);
+
+    expect(listener).toHaveBeenCalledWith(dedupeJoinedEvent);
   });
 
   it("publishes to onAny listeners after type-specific listeners", () => {

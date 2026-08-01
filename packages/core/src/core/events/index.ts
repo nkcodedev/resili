@@ -15,6 +15,12 @@ export type ResiliEventType =
   | "CircuitHalfOpened"
   | "CircuitClosed"
   | "TimeoutTriggered"
+  | "DedupeMiss"
+  | "DedupeJoined"
+  | "DedupeCompleted"
+  | "DedupeFailed"
+  | "DedupeCallerAborted"
+  | "DedupeSharedAborted"
   | "HedgeScheduled"
   | "HedgeStarted"
   | "HedgeCompleted"
@@ -143,6 +149,74 @@ export interface ResiliEventMap {
     readonly type: "TimeoutTriggered";
     readonly attemptNumber: number;
     readonly timeoutMs: number;
+  };
+
+  /**
+   * Request deduplication created a new in-flight shared execution.
+   */
+  readonly DedupeMiss: ResiliEventBase & {
+    readonly type: "DedupeMiss";
+    readonly role: "owner";
+    readonly activeCallers: number;
+    readonly createdAt: number;
+    readonly keyType: "string" | "number" | "symbol";
+  };
+
+  /**
+   * Request deduplication joined an existing in-flight shared execution.
+   */
+  readonly DedupeJoined: ResiliEventBase & {
+    readonly type: "DedupeJoined";
+    readonly role: "joiner";
+    readonly activeCallers: number;
+    readonly sharedAgeMs: number;
+    readonly keyType: "string" | "number" | "symbol";
+  };
+
+  /**
+   * Request deduplication shared execution completed successfully.
+   */
+  readonly DedupeCompleted: ResiliEventBase & {
+    readonly type: "DedupeCompleted";
+    readonly activeCallersAtCompletion: number;
+    readonly totalCallers: number;
+    readonly joinedCallers: number;
+    readonly durationMs: number;
+    readonly sharedAborted: false;
+  };
+
+  /**
+   * Request deduplication shared execution failed.
+   */
+  readonly DedupeFailed: ResiliEventBase & {
+    readonly type: "DedupeFailed";
+    readonly activeCallersAtFailure: number;
+    readonly totalCallers: number;
+    readonly joinedCallers: number;
+    readonly durationMs: number;
+    readonly lastErrorCode?: ResiliErrorCode;
+  };
+
+  /**
+   * One logical request deduplication caller aborted while waiting.
+   */
+  readonly DedupeCallerAborted: ResiliEventBase & {
+    readonly type: "DedupeCallerAborted";
+    readonly role: "owner" | "joiner";
+    readonly activeCallersAfterDetach: number;
+    readonly sharedStillRunning: boolean;
+    readonly reasonCode?: ResiliErrorCode;
+  };
+
+  /**
+   * Request deduplication aborted shared work after every active caller detached.
+   */
+  readonly DedupeSharedAborted: ResiliEventBase & {
+    readonly type: "DedupeSharedAborted";
+    readonly totalCallers: number;
+    readonly joinedCallers: number;
+    readonly durationMs: number;
+    readonly reason: "unused";
   };
 
   /**

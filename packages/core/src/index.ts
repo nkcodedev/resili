@@ -12,6 +12,7 @@ import type { PolicyFactory } from "./core/policy/index";
 import type { StateStore } from "./core/state/index";
 import type { BulkheadOptions } from "./policies/bulkhead/index";
 import type { CircuitBreakerOptions } from "./policies/circuit-breaker/index";
+import type { DedupeOptions } from "./policies/dedupe/index";
 import type { FallbackFn, FallbackOptions } from "./policies/fallback/index";
 import type { HedgeOptions } from "./policies/hedge/index";
 import type { RateLimiterOptions } from "./policies/rate-limiter/index";
@@ -25,9 +26,10 @@ export const RESILI_VERSION = "0.0.0";
  *
  * @public
  */
-export interface ResiliConfig<R = unknown> {
+export interface ResiliConfig<R = unknown, Args extends readonly unknown[] = readonly unknown[]> {
   readonly retry?: RetryOptions;
   readonly timeout?: number | TimeoutOptions;
+  readonly dedupe?: DedupeOptions<Args>;
   readonly hedge?: HedgeOptions<R>;
   readonly circuitBreaker?: CircuitBreakerOptions;
   readonly bulkhead?: number | BulkheadOptions;
@@ -60,7 +62,7 @@ export function resili<Args extends readonly unknown[], R>(
  */
 export function createClient<Args extends readonly unknown[], R>(
   operation: Operation<Args, R>,
-  config: ResiliConfig<R> = {},
+  config: ResiliConfig<R, Args> = {},
 ): Client<Args, R> {
   validateConfig(config);
 
@@ -84,6 +86,10 @@ export function createClient<Args extends readonly unknown[], R>(
 
   if (config.timeout !== undefined) {
     builder = builder.timeout(config.timeout);
+  }
+
+  if (config.dedupe !== undefined) {
+    builder = builder.dedupe(config.dedupe);
   }
 
   if (config.hedge !== undefined) {
@@ -116,6 +122,7 @@ export function createClient<Args extends readonly unknown[], R>(
 const SUPPORTED_CONFIG_KEYS = new Set<string>([
   "retry",
   "timeout",
+  "dedupe",
   "hedge",
   "circuitBreaker",
   "bulkhead",
@@ -180,6 +187,8 @@ export type { BulkheadOptions } from "./policies/bulkhead/index";
 export { bulkheadPolicy } from "./policies/bulkhead/index";
 export type { CircuitBreakerOptions, KeyResolver } from "./policies/circuit-breaker/index";
 export { circuitBreakerPolicy } from "./policies/circuit-breaker/index";
+export type { DedupeKey, DedupeOptions } from "./policies/dedupe/index";
+export { dedupePolicy } from "./policies/dedupe/index";
 export type { FallbackFn, FallbackOptions } from "./policies/fallback/index";
 export { fallbackPolicy } from "./policies/fallback/index";
 export type { HedgeOptions } from "./policies/hedge/index";
