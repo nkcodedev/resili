@@ -1,6 +1,6 @@
 import { performance } from "node:perf_hooks";
 
-import { resili, type ResiliEvent } from "../../packages/core/src/index";
+import { resili, type ResiliEvent } from "@resili/core";
 import {
   environmentInfo,
   percentile,

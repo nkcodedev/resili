@@ -11,5 +11,8 @@
     "benchmark:hedge": "tsx src/hedge.ts",
     "benchmark:combined": "tsx src/combined.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@resili/core": "workspace:*"
   }
 }

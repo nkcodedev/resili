@@ -1,6 +1,6 @@
 import { performance } from "node:perf_hooks";
 
-import { resili } from "../../packages/core/src/index";
+import { resili } from "@resili/core";
 import {
   createDeferred,
   environmentInfo,

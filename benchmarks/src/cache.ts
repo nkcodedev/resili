@@ -1,4 +1,4 @@
-import { resili } from "../../packages/core/src/index";
+import { resili } from "@resili/core";
 import {
   environmentInfo,
   measureAsync,
