@@ -1,7 +1,7 @@
 {
   "name": "@resili/core",
-  "version": "0.1.0-alpha.1",
-  "description": "Core Resili resilience toolkit package.",
+  "version": "0.2.0-alpha.2",
+  "description": "TypeScript-first resilience toolkit for production Node.js applications.",
   "type": "module",
   "license": "MIT",
   "sideEffects": false,
@@ -40,35 +40,36 @@
   },
   "dependencies": {},
   "devDependencies": {},
-  "author": "Nitin Kaushal <nkcodedev.chd@gmail.com>",
+  "author": {
+    "name": "Nitin Kaushal",
+    "email": "nkcodedev.chd@gmail.com",
+    "url": "https://github.com/nkcodedev"
+  },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/nkcodedev/resili.git"
+    "url": "https://github.com/nkcodedev/resili.git"
   },
   "bugs": {
     "url": "https://github.com/nkcodedev/resili/issues"
   },
-  "homepage": "https://github.com/nkcodedev/resili",
+  "homepage": "https://resili.nkcode.dev/",
   "keywords": [
     "resili",
-    "resilience",
-    "typescript",
     "nodejs",
+    "typescript",
+    "resilience",
     "retry",
     "timeout",
     "circuit-breaker",
     "bulkhead",
     "rate-limiter",
     "fallback",
-    "resilience-patterns",
-    "distributed-systems",
-    "microservices",
-    "fault-tolerance",
-    "reliability",
-    "cloud",
-    "serverless",
+    "cache",
+    "request-deduplication",
+    "hedged-requests",
+    "observability",
     "middleware",
-    "plugin",
-    "observability"
+    "fault-tolerance",
+    "plugin"
   ]
 }

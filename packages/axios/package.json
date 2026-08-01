@@ -1,7 +1,7 @@
 {
   "name": "@resili/axios",
-  "version": "0.1.0-alpha.1",
-  "description": "Axios-compatible adapter for Resili.",
+  "version": "0.2.0-alpha.2",
+  "description": "Axios-compatible adapter for the Resili resilience toolkit.",
   "type": "module",
   "license": "MIT",
   "sideEffects": false,
@@ -39,25 +39,30 @@
     "@resili/core": "workspace:*"
   },
   "devDependencies": {},
-  "author": "Nitin Kaushal <nkcodedev.chd@gmail.com>",
+  "author": {
+    "name": "Nitin Kaushal",
+    "email": "nkcodedev.chd@gmail.com",
+    "url": "https://github.com/nkcodedev"
+  },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/nkcodedev/resili.git"
+    "url": "https://github.com/nkcodedev/resili.git"
   },
   "bugs": {
     "url": "https://github.com/nkcodedev/resili/issues"
   },
-  "homepage": "https://github.com/nkcodedev/resili",
+  "homepage": "https://resili.nkcode.dev/",
   "keywords": [
     "resili",
+    "nodejs",
+    "typescript",
+    "resilience",
     "axios",
     "http-client",
-    "typescript",
-    "nodejs",
-    "resilience",
     "retry",
     "timeout",
     "circuit-breaker",
-    "axios-interceptor"
+    "axios-interceptor",
+    "fault-tolerance"
   ]
 }
