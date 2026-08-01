@@ -70,6 +70,26 @@ describe("compilePipeline", () => {
     expect(policyNames(pipeline.policies)).toEqual(["before-retry", "retry", "after-retry"]);
   });
 
+  it("sorts hedge between timeout and rate limiter in the built-in order", () => {
+    const pipeline = compilePipeline([
+      passThroughPolicy("rate-limiter", 500),
+      passThroughPolicy("hedge", 450),
+      passThroughPolicy("timeout", 400),
+    ]);
+
+    expect(policyNames(pipeline.policies)).toEqual(["timeout", "hedge", "rate-limiter"]);
+  });
+
+  it("supports relative anchors around hedge", () => {
+    const pipeline = compilePipeline([
+      passThroughPolicy("hedge", 450),
+      passThroughPolicy("before-hedge", { before: "hedge" }),
+      passThroughPolicy("after-hedge", { after: "hedge" }),
+    ]);
+
+    expect(policyNames(pipeline.policies)).toEqual(["before-hedge", "hedge", "after-hedge"]);
+  });
+
   it("preserves original input order for equal resolved orders", () => {
     const pipeline = compilePipeline([
       passThroughPolicy("first", 100),

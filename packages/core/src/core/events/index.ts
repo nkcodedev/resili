@@ -15,6 +15,12 @@ export type ResiliEventType =
   | "CircuitHalfOpened"
   | "CircuitClosed"
   | "TimeoutTriggered"
+  | "HedgeScheduled"
+  | "HedgeStarted"
+  | "HedgeCompleted"
+  | "HedgeFailed"
+  | "HedgeAborted"
+  | "HedgeSkipped"
   | "BulkheadRejected"
   | "RateLimited";
 
@@ -137,6 +143,76 @@ export interface ResiliEventMap {
     readonly type: "TimeoutTriggered";
     readonly attemptNumber: number;
     readonly timeoutMs: number;
+  };
+
+  /**
+   * Hedged request duplicate attempt timer was scheduled.
+   */
+  readonly HedgeScheduled: ResiliEventBase & {
+    readonly type: "HedgeScheduled";
+    readonly attemptNumber: number;
+    readonly hedgeAttempt: 2;
+    readonly delayMs: number;
+    readonly scheduledAt: number;
+  };
+
+  /**
+   * Hedged request duplicate attempt started.
+   */
+  readonly HedgeStarted: ResiliEventBase & {
+    readonly type: "HedgeStarted";
+    readonly attemptNumber: number;
+    readonly hedgeAttempt: 2;
+    readonly delayMs: number;
+    readonly startedAt: number;
+  };
+
+  /**
+   * Hedged request policy completed with an acceptable result.
+   */
+  readonly HedgeCompleted: ResiliEventBase & {
+    readonly type: "HedgeCompleted";
+    readonly attemptNumber: number;
+    readonly winningHedgeAttempt: 1 | 2;
+    readonly hedged: boolean;
+    readonly startedAttempts: 1 | 2;
+    readonly durationMs: number;
+    readonly losersAborted: boolean;
+  };
+
+  /**
+   * Hedged request policy failed without an acceptable result.
+   */
+  readonly HedgeFailed: ResiliEventBase & {
+    readonly type: "HedgeFailed";
+    readonly attemptNumber: number;
+    readonly startedAttempts: 1 | 2;
+    readonly hedged: boolean;
+    readonly durationMs: number;
+    readonly lastErrorCode?: ResiliErrorCode;
+  };
+
+  /**
+   * Hedged request policy was terminated by parent cancellation.
+   */
+  readonly HedgeAborted: ResiliEventBase & {
+    readonly type: "HedgeAborted";
+    readonly attemptNumber: number;
+    readonly startedAttempts: 0 | 1 | 2;
+    readonly hedgeStarted: boolean;
+    readonly durationMs: number;
+    readonly reasonCode?: ResiliErrorCode;
+  };
+
+  /**
+   * Hedged request duplicate attempt was intentionally not scheduled.
+   */
+  readonly HedgeSkipped: ResiliEventBase & {
+    readonly type: "HedgeSkipped";
+    readonly attemptNumber: number;
+    readonly reason: "deadline";
+    readonly delayMs: number;
+    readonly remainingMs?: number;
   };
 
   /**

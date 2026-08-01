@@ -5,6 +5,97 @@
 ```ts
 
 // @public
+export class AbortError extends ResiliError {
+    // Warning: (ae-forgotten-export) The symbol "ResiliErrorOptions" needs to be exported by the entry point index.d.ts
+    constructor(options?: ResiliErrorOptions & {
+        readonly reason?: unknown;
+    });
+    readonly code = "ERR_ABORTED";
+    readonly reason?: unknown;
+}
+
+// @public
+export interface Builder<Args extends readonly unknown[], R> {
+    build(): Client<Args, R>;
+    bulkhead(options: number | BulkheadOptions): this;
+    circuitBreaker(options?: CircuitBreakerOptions): this;
+    fallback(options: FallbackOptions<R> | FallbackFn<R>): this;
+    hedge(options: HedgeOptions<R>): this;
+    on<T extends ResiliEventType>(type: T, handler: EventHandler<T>): this;
+    policy(factory: PolicyFactory, options?: unknown): this;
+    rateLimiter(options: RateLimiterOptions): this;
+    retry(options?: RetryOptions): this;
+    timeout(options: number | TimeoutOptions): this;
+    use<O = void>(plugin: ResiliPlugin<O>, options?: O): this;
+    withClassifier(classifier: FailureClassifier): this;
+    withClock(clock: Clock): this;
+    withStore(store: StateStore): this;
+}
+
+// @public
+export interface BulkheadOptions {
+    // Warning: (ae-forgotten-export) The symbol "KeyResolver$2" needs to be exported by the entry point index.d.ts
+    readonly key?: string | KeyResolver$2;
+    readonly maxConcurrent: number;
+    readonly maxQueue?: number;
+    readonly queueTimeoutMs?: number;
+}
+
+// @public
+export const bulkheadPolicy: PolicyFactory;
+
+// @public
+export class BulkheadRejectedError extends ResiliError {
+    constructor(options: ResiliErrorOptions & {
+        readonly maxConcurrent: number;
+        readonly queueSize: number;
+        readonly waitedMs?: number;
+    });
+    readonly code = "ERR_BULKHEAD_FULL";
+    readonly maxConcurrent: number;
+    readonly queueSize: number;
+    readonly waitedMs: number;
+}
+
+// @public
+export interface CircuitBreakerOptions {
+    // (undocumented)
+    readonly failureRateThreshold?: number;
+    // (undocumented)
+    readonly halfOpenMaxCalls?: number;
+    // (undocumented)
+    readonly key?: string | KeyResolver;
+    // (undocumented)
+    readonly minimumThroughput?: number;
+    // (undocumented)
+    readonly resetTimeoutMs?: number;
+    // (undocumented)
+    readonly slowCallDurationMs?: number;
+    // (undocumented)
+    readonly slowCallRateThreshold?: number;
+    // (undocumented)
+    readonly successThreshold?: number;
+    // Warning: (ae-forgotten-export) The symbol "CircuitBreakerWindow" needs to be exported by the entry point index.d.ts
+    //
+    // (undocumented)
+    readonly window?: CircuitBreakerWindow;
+}
+
+// @public
+export const circuitBreakerPolicy: PolicyFactory;
+
+// @public
+export class CircuitOpenError extends ResiliError {
+    constructor(options: ResiliErrorOptions & {
+        readonly key: string;
+        readonly retryAfterMs: number;
+    });
+    readonly code = "ERR_CIRCUIT_OPEN";
+    readonly key: string;
+    readonly retryAfterMs: number;
+}
+
+// @public
 export type CircuitState = "closed" | "open" | "half_open";
 
 // @public
@@ -64,6 +155,15 @@ export interface Clock {
 export function composeClassifier(base: FailureClassifier, overrides: Partial<FailureClassifier>): FailureClassifier;
 
 // @public
+export class ConfigurationError extends ResiliError {
+    constructor(message: string, options?: ResiliErrorOptions & {
+        readonly field?: string;
+    });
+    readonly code = "ERR_CONFIG";
+    readonly field?: string;
+}
+
+// @public
 export interface Context {
     readonly attemptNumber: number;
     readonly deadline: number;
@@ -111,6 +211,12 @@ export interface Counter {
 }
 
 // @public
+export function createClient<Args extends readonly unknown[], R>(operation: Operation<Args, R>, config?: ResiliConfig<R>): Client<Args, R>;
+
+// @public
+export function definePlugin<O = void>(plugin: ResiliPlugin<O>): ResiliPlugin<O>;
+
+// @public
 export function definePolicy(factory: PolicyFactory): PolicyFactory;
 
 // @public
@@ -131,9 +237,32 @@ export interface FailureVerdict {
 }
 
 // @public
+export type FallbackFn<R> = (error: unknown, ctx: Context) => R | Promise<R>;
+
+// @public
+export interface FallbackOptions<R> {
+    readonly fallbackOn?: (error: unknown, ctx: Context) => boolean;
+    readonly handler: FallbackFn<R>;
+}
+
+// @public
+export const fallbackPolicy: PolicyFactory;
+
+// @public
 export interface Gauge {
     set(value: number, labels?: Labels): void;
 }
+
+// @public
+export interface HedgeOptions<T = unknown> {
+    readonly abortLosers?: boolean;
+    readonly delay: number;
+    readonly maxAttempts?: 2;
+    readonly shouldAccept?: (value: T, ctx: Context) => boolean;
+}
+
+// @public
+export const hedgePolicy: PolicyFactory;
 
 // @public
 export interface Histogram {
@@ -142,6 +271,12 @@ export interface Histogram {
 
 // @public
 export const httpClassifier: FailureClassifier;
+
+// @public
+export function isResiliError(error: unknown): error is ResiliError;
+
+// @public
+export type KeyResolver = (ctx: Context) => string;
 
 // @public
 export type Labels = Readonly<Record<string, string>>;
@@ -163,6 +298,9 @@ export type Next<T> = (ctx: Context) => Promise<T>;
 export const noopMetrics: MetricsRecorder;
 
 // @public
+export type Operation<Args extends readonly unknown[], R> = (...args: Args) => Promise<R>;
+
+// @public
 export type Outcome<T = unknown> = {
     readonly status: "success";
     readonly value: T;
@@ -172,6 +310,26 @@ export type Outcome<T = unknown> = {
     readonly error: unknown;
     readonly durationMs: number;
 };
+
+// @public
+export interface PluginContext {
+    readonly apiVersion: string;
+    getPlugin(name: string): PluginInstance | undefined;
+    readonly logger: {
+        warn(message: string): void;
+    };
+    on<T extends ResiliEventType>(type: T, handler: EventHandler<T>): void;
+    registerPolicy(factory: PolicyFactory, options?: unknown): void;
+    useClock(clock: Clock): void;
+    useMetrics(recorder: MetricsRecorder): void;
+    useStore(store: StateStore): void;
+}
+
+// @public
+export interface PluginInstance {
+    dispose?(): void | Promise<void>;
+    readonly name: string;
+}
 
 // @public
 export interface Policy {
@@ -189,9 +347,9 @@ export interface PolicyFactory {
 
 // @public
 export type PolicyOrder = number | {
-    readonly before: "fallback" | "retry" | "circuit-breaker" | "timeout" | "rate-limiter" | "bulkhead";
+    readonly before: "fallback" | "retry" | "circuit-breaker" | "timeout" | "hedge" | "rate-limiter" | "bulkhead";
 } | {
-    readonly after: "fallback" | "retry" | "circuit-breaker" | "timeout" | "rate-limiter" | "bulkhead";
+    readonly after: "fallback" | "retry" | "circuit-breaker" | "timeout" | "hedge" | "rate-limiter" | "bulkhead";
 };
 
 // @public
@@ -207,7 +365,73 @@ export interface PolicyServices {
 export type PolicyState = Readonly<Record<string, unknown>>;
 
 // @public
+export interface RateLimiterOptions {
+    readonly burst?: number;
+    readonly intervalMs: number;
+    // Warning: (ae-forgotten-export) The symbol "KeyResolver_2" needs to be exported by the entry point index.d.ts
+    readonly key?: string | KeyResolver_2;
+    readonly limit: number;
+    readonly maxWaitMs?: number;
+    // Warning: (ae-forgotten-export) The symbol "RateLimiterLimitBehavior" needs to be exported by the entry point index.d.ts
+    readonly onLimit?: RateLimiterLimitBehavior;
+    // Warning: (ae-forgotten-export) The symbol "RateLimiterStrategy" needs to be exported by the entry point index.d.ts
+    readonly strategy?: RateLimiterStrategy;
+}
+
+// @public
+export const rateLimiterPolicy: PolicyFactory;
+
+// @public
+export class RateLimitExceededError extends ResiliError {
+    constructor(options: ResiliErrorOptions & {
+        readonly retryAfterMs: number;
+    });
+    readonly code = "ERR_RATE_LIMITED";
+    readonly retryAfterMs: number;
+}
+
+// @public
+export function resili<Args extends readonly unknown[], R>(operation: Operation<Args, R>): Builder<Args, R>;
+
+// @public
 export const RESILI_VERSION = "0.0.0";
+
+// @public
+export interface ResiliConfig<R = unknown> {
+    // (undocumented)
+    readonly bulkhead?: number | BulkheadOptions;
+    // (undocumented)
+    readonly circuitBreaker?: CircuitBreakerOptions;
+    // (undocumented)
+    readonly classifier?: FailureClassifier;
+    // (undocumented)
+    readonly clock?: Clock;
+    // (undocumented)
+    readonly fallback?: FallbackOptions<R> | FallbackFn<R>;
+    // (undocumented)
+    readonly hedge?: HedgeOptions<R>;
+    // (undocumented)
+    readonly policies?: readonly {
+        readonly factory: PolicyFactory;
+        readonly options?: unknown;
+    }[];
+    // (undocumented)
+    readonly rateLimiter?: RateLimiterOptions;
+    // (undocumented)
+    readonly retry?: RetryOptions;
+    // (undocumented)
+    readonly store?: StateStore;
+    // (undocumented)
+    readonly timeout?: number | TimeoutOptions;
+}
+
+// @public
+export abstract class ResiliError extends Error {
+    protected constructor(message: string, options?: ResiliErrorOptions);
+    abstract readonly code: ResiliErrorCode;
+    readonly context?: ContextSnapshot;
+    readonly isResili = true;
+}
 
 // @public
 export type ResiliErrorCode = "ERR_CONFIG" | "ERR_CIRCUIT_OPEN" | "ERR_TIMEOUT" | "ERR_RETRY_EXCEEDED" | "ERR_BULKHEAD_FULL" | "ERR_RATE_LIMITED" | "ERR_ABORTED";
@@ -247,6 +471,52 @@ export interface ResiliEventMap {
         readonly key: string;
         readonly failureRate: number;
         readonly resetAt: number;
+    };
+    readonly HedgeAborted: ResiliEventBase & {
+        readonly type: "HedgeAborted";
+        readonly attemptNumber: number;
+        readonly startedAttempts: 0 | 1 | 2;
+        readonly hedgeStarted: boolean;
+        readonly durationMs: number;
+        readonly reasonCode?: ResiliErrorCode;
+    };
+    readonly HedgeCompleted: ResiliEventBase & {
+        readonly type: "HedgeCompleted";
+        readonly attemptNumber: number;
+        readonly winningHedgeAttempt: 1 | 2;
+        readonly hedged: boolean;
+        readonly startedAttempts: 1 | 2;
+        readonly durationMs: number;
+        readonly losersAborted: boolean;
+    };
+    readonly HedgeFailed: ResiliEventBase & {
+        readonly type: "HedgeFailed";
+        readonly attemptNumber: number;
+        readonly startedAttempts: 1 | 2;
+        readonly hedged: boolean;
+        readonly durationMs: number;
+        readonly lastErrorCode?: ResiliErrorCode;
+    };
+    readonly HedgeScheduled: ResiliEventBase & {
+        readonly type: "HedgeScheduled";
+        readonly attemptNumber: number;
+        readonly hedgeAttempt: 2;
+        readonly delayMs: number;
+        readonly scheduledAt: number;
+    };
+    readonly HedgeSkipped: ResiliEventBase & {
+        readonly type: "HedgeSkipped";
+        readonly attemptNumber: number;
+        readonly reason: "deadline";
+        readonly delayMs: number;
+        readonly remainingMs?: number;
+    };
+    readonly HedgeStarted: ResiliEventBase & {
+        readonly type: "HedgeStarted";
+        readonly attemptNumber: number;
+        readonly hedgeAttempt: 2;
+        readonly delayMs: number;
+        readonly startedAt: number;
     };
     readonly RateLimited: ResiliEventBase & {
         readonly type: "RateLimited";
@@ -290,7 +560,62 @@ export interface ResiliEventMap {
 }
 
 // @public
-export type ResiliEventType = "RequestStarted" | "RequestCompleted" | "RetryStarted" | "RetryCompleted" | "RetryFailed" | "CircuitOpened" | "CircuitHalfOpened" | "CircuitClosed" | "TimeoutTriggered" | "BulkheadRejected" | "RateLimited";
+export type ResiliEventType = "RequestStarted" | "RequestCompleted" | "RetryStarted" | "RetryCompleted" | "RetryFailed" | "CircuitOpened" | "CircuitHalfOpened" | "CircuitClosed" | "TimeoutTriggered" | "HedgeScheduled" | "HedgeStarted" | "HedgeCompleted" | "HedgeFailed" | "HedgeAborted" | "HedgeSkipped" | "BulkheadRejected" | "RateLimited";
+
+// @public
+export interface ResiliPlugin<O = void> {
+    readonly apiVersion: string;
+    readonly dependencies?: readonly string[];
+    readonly name: string;
+    readonly priority?: number;
+    setup(ctx: PluginContext, options: O): PluginInstance | undefined;
+    readonly version: string;
+}
+
+// @public
+export class RetryExceededError extends ResiliError {
+    constructor(options: Omit<ResiliErrorOptions, "cause"> & {
+        readonly attempts: number;
+        readonly lastError: unknown;
+    });
+    readonly attempts: number;
+    readonly code = "ERR_RETRY_EXCEEDED";
+    readonly lastError: unknown;
+}
+
+// @public
+export interface RetryOptions {
+    // Warning: (ae-forgotten-export) The symbol "RetryBackoff" needs to be exported by the entry point index.d.ts
+    //
+    // (undocumented)
+    readonly backoff?: RetryBackoff;
+    // (undocumented)
+    readonly baseDelayMs?: number;
+    // (undocumented)
+    readonly factor?: number;
+    // (undocumented)
+    readonly idempotentOnly?: boolean;
+    // Warning: (ae-forgotten-export) The symbol "RetryJitter" needs to be exported by the entry point index.d.ts
+    //
+    // (undocumented)
+    readonly jitter?: RetryJitter;
+    // (undocumented)
+    readonly maxAttempts?: number;
+    // (undocumented)
+    readonly maxDelayMs?: number;
+    // (undocumented)
+    readonly maxTotalDelayMs?: number;
+    // (undocumented)
+    readonly respectRetryAfter?: boolean;
+    // (undocumented)
+    readonly retryOn?: RetryPredicate;
+}
+
+// @public
+export const retryPolicy: PolicyFactory;
+
+// @public
+export type RetryPredicate = (outcome: Outcome, ctx: Context) => boolean;
 
 // @public
 export interface StateStore {
@@ -302,6 +627,26 @@ export interface StateStore {
 
 // @public
 export const systemClock: Clock;
+
+// @public
+export class TimeoutError extends ResiliError {
+    constructor(options: ResiliErrorOptions & {
+        readonly timeoutMs: number;
+        readonly attemptNumber?: number;
+    });
+    readonly attemptNumber?: number;
+    readonly code = "ERR_TIMEOUT";
+    readonly timeoutMs: number;
+}
+
+// @public
+export interface TimeoutOptions {
+    readonly deadlineMs?: number;
+    readonly perAttemptMs: number;
+}
+
+// @public
+export const timeoutPolicy: PolicyFactory;
 
 // @public
 export type Unsubscribe = () => void;

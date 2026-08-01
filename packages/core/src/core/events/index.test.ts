@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { DefaultEventBus, type ResiliEvent, type Unsubscribe } from "./index";
+import { DefaultEventBus, type ResiliEvent, type ResiliEventMap, type Unsubscribe } from "./index";
 
 const requestStartedEvent: ResiliEvent = {
   type: "RequestStarted",
@@ -20,6 +20,18 @@ const requestCompletedEvent: ResiliEvent = {
   durationMs: 100,
   status: "success",
   attempts: 1,
+};
+
+const hedgeStartedEvent: ResiliEvent = {
+  type: "HedgeStarted",
+  timestamp: 1_050,
+  requestId: "req-1",
+  operationName: "getUser",
+  serviceName: "users",
+  attemptNumber: 1,
+  hedgeAttempt: 2,
+  delayMs: 50,
+  startedAt: 1_050,
 };
 
 describe("DefaultEventBus", () => {
@@ -50,6 +62,19 @@ describe("DefaultEventBus", () => {
     bus.emit(requestStartedEvent);
 
     expect(listener).not.toHaveBeenCalled();
+  });
+
+  it("supports typed hedge event subscriptions", () => {
+    const bus = new DefaultEventBus();
+    const listener = vi.fn((event: ResiliEventMap["HedgeStarted"]) => {
+      expect(event.hedgeAttempt).toBe(2);
+      expect(event.delayMs).toBe(50);
+    });
+
+    bus.on("HedgeStarted", listener);
+    bus.emit(hedgeStartedEvent);
+
+    expect(listener).toHaveBeenCalledWith(hedgeStartedEvent);
   });
 
   it("publishes to onAny listeners after type-specific listeners", () => {

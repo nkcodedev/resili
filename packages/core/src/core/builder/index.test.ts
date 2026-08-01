@@ -174,6 +174,7 @@ describe("createBuilder", () => {
     const builder = createBuilder(() => Promise.resolve("ok"));
     const snapshots = [
       builder.timeout(10),
+      builder.hedge({ delay: 10 }),
       builder.bulkhead(1),
       builder.rateLimiter({ limit: 1, intervalMs: 100 }),
       builder.circuitBreaker(),
@@ -198,6 +199,7 @@ describe("createBuilder", () => {
   it("builds built-in policies from their options", async () => {
     const client = createBuilder(() => Promise.resolve("ok"))
       .timeout({ perAttemptMs: 100 })
+      .hedge({ delay: 10 })
       .bulkhead({ maxConcurrent: 1 })
       .rateLimiter({ limit: 1, intervalMs: 100 })
       .circuitBreaker({ minimumThroughput: 1 })
@@ -210,6 +212,26 @@ describe("createBuilder", () => {
       .build();
 
     await expect(client.call()).resolves.toBe("ok");
+  });
+
+  it("adds hedge as an immutable type-safe builder method", async () => {
+    const builder: Builder<readonly [string], string> = createBuilder((id: string) =>
+      Promise.resolve(`user:${id}`),
+    );
+    const hedged: Builder<readonly [string], string> = builder.hedge({
+      delay: 0,
+      shouldAccept(value, ctx) {
+        return value.startsWith("user:") && ctx.operationName.length > 0;
+      },
+    });
+    const invalidHedged = builder.hedge({ delay: -1 });
+
+    expect(hedged).not.toBe(builder);
+    expect(Object.isFrozen(hedged)).toBe(true);
+    expect(() => invalidHedged.build()).toThrow(ConfigurationError);
+
+    await expect(builder.build().call("42")).resolves.toBe("user:42");
+    await expect(hedged.build().call("42")).resolves.toBe("user:42");
   });
 
   it("registers plugins immutably and runs setup during build", async () => {
@@ -458,6 +480,11 @@ describe("createBuilder", () => {
     expect(() =>
       createBuilder(() => Promise.resolve("ok"))
         .timeout(0)
+        .build(),
+    ).toThrow(ConfigurationError);
+    expect(() =>
+      createBuilder(() => Promise.resolve("ok"))
+        .hedge({ delay: -1 })
         .build(),
     ).toThrow(ConfigurationError);
     expect(() =>
