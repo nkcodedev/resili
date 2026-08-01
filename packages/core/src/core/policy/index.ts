@@ -254,12 +254,20 @@ function validatePolicyOrder(order: unknown): asserts order is PolicyOrder {
 function isBuiltinPolicyAnchor(
   value: unknown,
 ): value is
-  "fallback" | "retry" | "circuit-breaker" | "timeout" | "hedge" | "rate-limiter" | "bulkhead" {
+  | "fallback"
+  | "retry"
+  | "circuit-breaker"
+  | "timeout"
+  | "dedupe"
+  | "hedge"
+  | "rate-limiter"
+  | "bulkhead" {
   return (
     value === "fallback" ||
     value === "retry" ||
     value === "circuit-breaker" ||
     value === "timeout" ||
+    value === "dedupe" ||
     value === "hedge" ||
     value === "rate-limiter" ||
     value === "bulkhead"

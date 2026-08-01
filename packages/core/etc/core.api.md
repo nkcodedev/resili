@@ -487,6 +487,50 @@ export interface ResiliEventMap {
         readonly failureRate: number;
         readonly resetAt: number;
     };
+    readonly DedupeCallerAborted: ResiliEventBase & {
+        readonly type: "DedupeCallerAborted";
+        readonly role: "owner" | "joiner";
+        readonly activeCallersAfterDetach: number;
+        readonly sharedStillRunning: boolean;
+        readonly reasonCode?: ResiliErrorCode;
+    };
+    readonly DedupeCompleted: ResiliEventBase & {
+        readonly type: "DedupeCompleted";
+        readonly activeCallersAtCompletion: number;
+        readonly totalCallers: number;
+        readonly joinedCallers: number;
+        readonly durationMs: number;
+        readonly sharedAborted: false;
+    };
+    readonly DedupeFailed: ResiliEventBase & {
+        readonly type: "DedupeFailed";
+        readonly activeCallersAtFailure: number;
+        readonly totalCallers: number;
+        readonly joinedCallers: number;
+        readonly durationMs: number;
+        readonly lastErrorCode?: ResiliErrorCode;
+    };
+    readonly DedupeJoined: ResiliEventBase & {
+        readonly type: "DedupeJoined";
+        readonly role: "joiner";
+        readonly activeCallers: number;
+        readonly sharedAgeMs: number;
+        readonly keyType: "string" | "number" | "symbol";
+    };
+    readonly DedupeMiss: ResiliEventBase & {
+        readonly type: "DedupeMiss";
+        readonly role: "owner";
+        readonly activeCallers: number;
+        readonly createdAt: number;
+        readonly keyType: "string" | "number" | "symbol";
+    };
+    readonly DedupeSharedAborted: ResiliEventBase & {
+        readonly type: "DedupeSharedAborted";
+        readonly totalCallers: number;
+        readonly joinedCallers: number;
+        readonly durationMs: number;
+        readonly reason: "unused";
+    };
     readonly HedgeAborted: ResiliEventBase & {
         readonly type: "HedgeAborted";
         readonly attemptNumber: number;
@@ -575,7 +619,7 @@ export interface ResiliEventMap {
 }
 
 // @public
-export type ResiliEventType = "RequestStarted" | "RequestCompleted" | "RetryStarted" | "RetryCompleted" | "RetryFailed" | "CircuitOpened" | "CircuitHalfOpened" | "CircuitClosed" | "TimeoutTriggered" | "HedgeScheduled" | "HedgeStarted" | "HedgeCompleted" | "HedgeFailed" | "HedgeAborted" | "HedgeSkipped" | "BulkheadRejected" | "RateLimited";
+export type ResiliEventType = "RequestStarted" | "RequestCompleted" | "RetryStarted" | "RetryCompleted" | "RetryFailed" | "CircuitOpened" | "CircuitHalfOpened" | "CircuitClosed" | "TimeoutTriggered" | "DedupeMiss" | "DedupeJoined" | "DedupeCompleted" | "DedupeFailed" | "DedupeCallerAborted" | "DedupeSharedAborted" | "HedgeScheduled" | "HedgeStarted" | "HedgeCompleted" | "HedgeFailed" | "HedgeAborted" | "HedgeSkipped" | "BulkheadRejected" | "RateLimited";
 
 // @public
 export interface ResiliPlugin<O = void> {

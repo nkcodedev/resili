@@ -69,6 +69,21 @@ describe("definePolicy", () => {
     }).toThrow(TypeError);
   });
 
+  it("accepts dedupe as a relative order anchor at runtime", () => {
+    const factory = definePolicy({
+      name: "around-dedupe",
+      order: { after: "dedupe" },
+      create() {
+        return passThroughPolicy("around-dedupe", { before: "dedupe" });
+      },
+    });
+
+    const policy = factory.create(createServices());
+
+    expect(factory.order).toEqual({ after: "dedupe" });
+    expect(policy.order).toEqual({ before: "dedupe" });
+  });
+
   it("forwards services and options to the original factory", () => {
     const services = createServices();
     const options = { enabled: true };
