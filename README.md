@@ -1,15 +1,17 @@
 # Resili
 
-> TypeScript-first resilience primitives for modern Node.js services.
+> TypeScript-first resilience toolkit for production Node.js services.
 
 [![CI](https://img.shields.io/badge/ci-placeholder-lightgrey.svg)](#)
-[![npm](https://img.shields.io/badge/npm-0.0.0-blue.svg)](#)
+[![version](https://img.shields.io/badge/version-0.1.0--alpha.1-blue.svg)](packages/core/package.json)
 [![license](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![typescript](https://img.shields.io/badge/types-TypeScript-blue.svg)](#)
+[![node](https://img.shields.io/badge/node-%3E%3D20-brightgreen.svg)](packages/core/package.json)
+[![core dependencies](https://img.shields.io/badge/core%20dependencies-zero-brightgreen.svg)](packages/core/package.json)
 
-Resili helps you wrap unreliable work — HTTP calls, SDK calls, database calls, queues, or any async operation — with predictable retry, timeout, circuit breaker, bulkhead, rate limiting, and fallback behavior.
+Resili wraps unreliable work — HTTP calls, SDK calls, database calls, queues, or any async operation — with composable reliability policies.
 
-It is built around small composable policies, immutable clients, typed events, and zero-runtime-dependency core abstractions.
+Use it to bound latency, retry transient failures, stop calls to unhealthy dependencies, isolate concurrency, reduce duplicate work, cache safe reads, and observe policy behavior through typed events and metrics.
 
 ```ts
 import { resili } from "@resili/core";
@@ -27,10 +29,12 @@ const response = await users.call("42");
 
 - [Why Resili](#why-resili)
 - [Features](#features)
+- [Built-in Policies at a glance](#built-in-policies-at-a-glance)
 - [Installation](#installation)
 - [30-second Quick Start](#30-second-quick-start)
 - [Builder API](#builder-api)
 - [Built-in Policies](#built-in-policies)
+- [Policy Execution Order](#policy-execution-order)
 - [Adapters](#adapters)
 - [Plugins](#plugins)
 - [Architecture](#architecture)
@@ -41,11 +45,14 @@ const response = await users.call("42");
 
 ## Why Resili
 
-Distributed systems fail in boring, repetitive ways: slow downstreams, transient network errors, overload, cascading failures, and partial outages. Resili gives those failure modes explicit, typed, testable policy boundaries.
+Distributed systems fail in ordinary, repeatable ways: slow downstreams, transient network errors, overload, cascading failures, duplicate in-flight requests, repeated reads, and partial outages.
+
+Resili gives those failure modes explicit, typed, testable policy boundaries.
 
 - **One abstraction:** wrap any async operation, not just HTTP.
-- **Typed by default:** generic argument and return types flow through clients.
-- **Policy composition:** canonical ordering prevents retry/timeout/circuit-breaker footguns.
+- **TypeScript-first:** operation argument and return types flow through clients.
+- **Composable policies:** retry, timeout, circuit breaker, cache, dedupe, hedge, rate limit, bulkhead, and fallback policies can run together in a deterministic order.
+- **Observable by design:** policies emit typed lifecycle events and record low-cardinality metrics through a framework-neutral contract.
 - **Small core:** no provider SDKs, exporters, or transport dependencies in `@resili/core`.
 - **Adapter packages:** fetch, Axios-compatible, and Undici-compatible wrappers live outside core.
 
@@ -61,12 +68,29 @@ Distributed systems fail in boring, repetitive ways: slow downstreams, transient
 | Bulkhead                   | `@resili/core`   | Available | In-memory concurrency and queue limits                    |
 | Rate limiter               | `@resili/core`   | Available | Token bucket and sliding window, reject mode              |
 | Fallback                   | `@resili/core`   | Available | Async fallback handlers and predicates                    |
-| Events                     | `@resili/core`   | Available | Typed runtime subscriptions                               |
+| Hedged requests            | `@resili/core`   | Available | Starts a delayed duplicate attempt for safe operations    |
+| Request deduplication      | `@resili/core`   | Available | Shares concurrent same-key in-flight work                 |
+| Memory cache               | `@resili/core`   | Available | Per-client TTL cache with lazy expiry and FIFO eviction   |
+| Typed events               | `@resili/core`   | Available | Runtime subscriptions with typed event payloads           |
 | Metrics contract           | `@resili/core`   | Available | `MetricsRecorder` interface and `noopMetrics`             |
 | Plugin contracts/runtime   | `@resili/core`   | Available | Register policies/events/service overrides                |
 | Fetch adapter              | `@resili/fetch`  | Available | Native fetch-compatible wrapper                           |
 | Axios adapter              | `@resili/axios`  | Available | Minimal Axios-compatible structural wrapper               |
 | Undici adapter             | `@resili/undici` | Available | Minimal Undici-compatible request wrapper                 |
+
+## Built-in Policies at a glance
+
+| Policy                | Use it when you need to                           | Default scope/state                         |
+| --------------------- | ------------------------------------------------- | ------------------------------------------- |
+| Fallback              | Return an alternate value for handled failures    | Per logical call                            |
+| Memory Cache          | Reuse successful completed values for a short TTL | Per built client, in-memory `Map`           |
+| Retry                 | Retry transient failures                          | Per logical call                            |
+| Circuit Breaker       | Stop calling unhealthy dependencies               | Per built client, in-memory per key         |
+| Timeout               | Bound one downstream attempt                      | Per attempt `AbortSignal` fork              |
+| Request Deduplication | Share concurrent same-key in-flight work          | Per built client, in-memory in-flight table |
+| Hedged Requests       | Reduce tail latency for safe/idempotent reads     | Per logical call                            |
+| Rate Limiter          | Limit request rate                                | Per built client, in-memory per key         |
+| Bulkhead              | Bound concurrency and queue depth                 | Per built client, in-memory per key         |
 
 ## Installation
 
@@ -255,6 +279,65 @@ Supported today: token bucket, sliding window, per-key in-memory state, and reje
 
 Fallback handlers may be synchronous or asynchronous.
 
+### Hedged Requests
+
+```ts
+.hedge({
+  delay: 100,
+})
+```
+
+Hedged requests start the original execution immediately and, if no acceptable result completes before the configured delay, start a second execution. Use hedging only for safe or idempotent operations because it can increase downstream load.
+
+### Request Deduplication
+
+```ts
+.dedupe({
+  key: (id: string) => id,
+})
+```
+
+Request deduplication shares concurrent same-key in-flight executions. It does not cache completed results.
+
+### Memory Cache
+
+```ts
+.cache({
+  key: (id: string) => id,
+  ttl: 5_000,
+})
+```
+
+Memory cache stores successful completed values in a per-client in-memory cache. Entries expire lazily by TTL and are evicted using bounded FIFO behavior.
+
+## Policy Execution Order
+
+Resili composes policies in a deterministic onion-style pipeline. Lower policies are reached only if earlier policies call downstream.
+
+```text
+Fallback
+↓
+Memory Cache
+↓
+Retry
+↓
+Circuit Breaker
+↓
+Timeout
+↓
+Request Deduplication
+↓
+Hedged Requests
+↓
+Rate Limiter
+↓
+Bulkhead
+↓
+Operation
+```
+
+This order matters. For example, a cache hit bypasses retry, timeout, dedupe, hedge, rate limiting, bulkhead admission, and the wrapped operation. A cache miss continues into the normal downstream pipeline.
+
 ## Adapters
 
 Adapters are thin transport wrappers around `@resili/core`. They do not classify HTTP status codes or transform response bodies.
@@ -370,15 +453,19 @@ Plugin installation supports dependency validation, priority ordering, setup exe
 
 ## Architecture
 
+Resili is built around a small set of runtime contracts:
+
 ```text
 operation args
   ↓
 Client.call(...args)
   ↓
+Context creation
+  ↓
 Pipeline.execute(ctx)
   ↓
 Policies in canonical order
-  fallback → retry → circuit-breaker → timeout → rate-limiter → bulkhead
+  fallback → cache → retry → circuit-breaker → timeout → dedupe → hedge → rate-limiter → bulkhead
   ↓
 wrapped operation / adapter
 ```
@@ -386,29 +473,30 @@ wrapped operation / adapter
 Core concepts:
 
 - **Client** — immutable wrapper around an operation and compiled policy pipeline.
-- **Context** — per-execution request metadata, attempt number, deadline, signal, and metadata.
-- **Policy** — middleware-style unit that can observe, wrap, short-circuit, or retry downstream work.
-- **Pipeline** — deterministic policy ordering and onion-style execution.
+- **Context** — immutable per-execution metadata, attempt number, deadline, cancellation signal, and policy metadata.
+- **Policy** — middleware-style unit that can observe, wrap, short-circuit, retry, time-box, or coordinate downstream work.
+- **Pipeline** — deterministic policy ordering with onion-style execution and stable relative anchors.
+- **Events** — typed lifecycle notifications emitted by clients and policies.
+- **Metrics** — framework-neutral counters, gauges, and histograms recorded through `MetricsRecorder`.
 - **Adapters** — package-level wrappers that turn transport APIs into Resili operations.
-- **Plugins** — setup-time extension points for policies, events, and service overrides.
+- **Plugins** — setup-time extension points for policies, events, metrics, state stores, clocks, and disposal.
+
+The core package has no runtime dependencies. Transport integrations, exporters, and ecosystem-specific behavior belong in adapter or plugin packages.
 
 ## Development Status
 
-Resili is under active development. The core framework, built-in policies, plugin runtime, public entry points, and minimal fetch/Axios/Undici adapters are implemented and tested in this repository.
+Resili is under active development. The core runtime, built-in policies, plugin runtime, public entry points, typed events, metrics contracts, and minimal fetch/Axios/Undici adapters are implemented and tested in this repository.
 
-Current package version placeholders are `0.0.0`; publishing and release automation are intentionally separate from the runtime implementation.
+Current package version placeholders are still pre-1.0; publishing and release automation are intentionally separate from the runtime implementation.
 
 ## Roadmap
 
-Near-term work is focused on hardening the implemented surface:
-
-- API Extractor coverage for adapter packages.
-- Package README files for individual adapters.
-- Additional integration tests across policy combinations.
-- Production examples for common Node.js service patterns.
-- Optional ecosystem packages for metrics exporters and distributed state stores.
-
-Deferred items include OpenTelemetry exporters, Prometheus exporters, dashboards, additional transport adapters, and release automation.
+| Version | Theme                             | Focus                                                                 |
+| ------- | --------------------------------- | --------------------------------------------------------------------- |
+| v0.2    | Intelligent Request Management    | Hedged requests, request deduplication, memory cache                  |
+| v0.3    | Policy Composition                | Composition ergonomics, policy interaction hardening, advanced config |
+| v0.4    | Playground & Profiles             | Interactive examples, reusable policy profiles, production recipes    |
+| v1.0    | Stable API + Distributed adapters | Stable public API, distributed state adapters, release guarantees     |
 
 ## Contributing
 
