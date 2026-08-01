@@ -19,6 +19,7 @@ export type PolicyOrder =
         | "retry"
         | "circuit-breaker"
         | "timeout"
+        | "dedupe"
         | "hedge"
         | "rate-limiter"
         | "bulkhead";
@@ -29,6 +30,7 @@ export type PolicyOrder =
         | "retry"
         | "circuit-breaker"
         | "timeout"
+        | "dedupe"
         | "hedge"
         | "rate-limiter"
         | "bulkhead";

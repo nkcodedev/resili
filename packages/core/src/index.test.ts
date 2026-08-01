@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import {
   AbortError,
@@ -13,6 +13,7 @@ import {
   circuitBreakerPolicy,
   composeClassifier,
   createClient,
+  dedupePolicy,
   definePlugin,
   fallbackPolicy,
   hedgePolicy,
@@ -35,6 +36,8 @@ import {
   type FailureClassifier,
   type FailureVerdict,
   type Context,
+  type DedupeKey,
+  type DedupeOptions,
   type FallbackOptions,
   type HedgeOptions,
   type Outcome,
@@ -178,6 +181,8 @@ describe("@resili/core package entry", () => {
     const rateLimiter: RateLimiterOptions = { limit: 1, intervalMs: 100 };
     const circuitBreaker: CircuitBreakerOptions = { minimumThroughput: 1 };
     const retry: RetryOptions = { maxAttempts: 1, jitter: "none" };
+    const dedupe: DedupeOptions<readonly [string]> = { key: (id) => id };
+    const dedupeKey: DedupeKey = "user:42";
     const hedge: HedgeOptions<string> = {
       delay: 10,
       shouldAccept(value) {
@@ -195,6 +200,7 @@ describe("@resili/core package entry", () => {
     expect(rateLimiterPolicy.name).toBe("rate-limiter");
     expect(circuitBreakerPolicy.name).toBe("circuit-breaker");
     expect(retryPolicy.name).toBe("retry");
+    expect(dedupePolicy.name).toBe("dedupe");
     expect(hedgePolicy.name).toBe("hedge");
     expect(fallbackPolicy.name).toBe("fallback");
     expect({
@@ -203,6 +209,8 @@ describe("@resili/core package entry", () => {
       rateLimiter,
       circuitBreaker,
       retry,
+      dedupe,
+      dedupeKey,
       hedge,
       fallback,
     }).toBeDefined();
@@ -219,6 +227,7 @@ describe("@resili/core package entry", () => {
   it("creates a client from supported declarative config", async () => {
     const config: ResiliConfig<string> = {
       timeout: { perAttemptMs: 100 },
+      dedupe: { key: () => "key" },
       hedge: { delay: 10 },
       bulkhead: { maxConcurrent: 1 },
       rateLimiter: { limit: 2, intervalMs: 100 },
@@ -259,6 +268,30 @@ describe("@resili/core package entry", () => {
     await expect(client.call()).resolves.toBe("ok");
   });
 
+  it("accepts dedupe config through createClient and passes operation args to key", async () => {
+    const key = vi.fn((id: string) => id);
+    const gate = createGate<string>();
+    const operation = vi.fn((id: string) => {
+      void id;
+
+      return gate.promise;
+    });
+    const client = createClient(operation, {
+      dedupe: { key },
+    });
+    const first = client.call("42");
+    const second = client.call("42");
+
+    await flushMicrotasks();
+    expect(key).toHaveBeenCalledTimes(2);
+    expect(key).toHaveBeenCalledWith("42");
+    expect(operation).toHaveBeenCalledTimes(1);
+
+    gate.resolve("user:42");
+    await expect(first).resolves.toBe("user:42");
+    await expect(second).resolves.toBe("user:42");
+  });
+
   it("applies custom policy config through createClient", async () => {
     const events: string[] = [];
     const factory = definePolicy({
@@ -295,3 +328,23 @@ describe("@resili/core package entry", () => {
     ).toThrow(ConfigurationError);
   });
 });
+
+function createGate<T>(): {
+  readonly promise: Promise<T>;
+  readonly resolve: (value: T) => void;
+  readonly reject: (error: unknown) => void;
+} {
+  let resolve!: (value: T) => void;
+  let reject!: (error: unknown) => void;
+  const promise = new Promise<T>((innerResolve, innerReject) => {
+    resolve = innerResolve;
+    reject = innerReject;
+  });
+
+  return { promise, resolve, reject };
+}
+
+async function flushMicrotasks(): Promise<void> {
+  await Promise.resolve();
+  await Promise.resolve();
+}

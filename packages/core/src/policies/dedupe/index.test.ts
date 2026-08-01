@@ -8,7 +8,7 @@ import { ConfigurationError } from "../../core/errors";
 import { noopMetrics } from "../../core/metrics";
 import type { Next, PolicyServices } from "../../core/policy";
 import { memoryStore } from "../../core/state";
-import { dedupePolicy, type DedupeKey } from "./index";
+import { DEDUPE_OPERATION_ARGS_METADATA_KEY, dedupePolicy, type DedupeKey } from "./index";
 
 describe("dedupePolicy", () => {
   it("creates an immutable policy from valid options", () => {
@@ -103,6 +103,39 @@ describe("dedupePolicy", () => {
     });
 
     await expect(policy.execute(createTestContext(), next)).rejects.toBe(failure);
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it("passes operation arguments from context metadata to the key function", async () => {
+    const key = vi.fn(
+      (tenantId: unknown, userId: unknown) => `${String(tenantId)}:${String(userId)}`,
+    );
+    const policy = dedupePolicy.create(createServices(), { key });
+
+    await expect(
+      policy.execute(
+        createTestContext({
+          metadata: {
+            [DEDUPE_OPERATION_ARGS_METADATA_KEY]: ["tenant", "42"],
+          },
+        }),
+        () => Promise.resolve("ok"),
+      ),
+    ).resolves.toBe("ok");
+
+    expect(key).toHaveBeenCalledWith("tenant", "42");
+    expect(key).toHaveBeenCalledTimes(1);
+  });
+
+  it("rejects already-aborted callers without creating shared work", async () => {
+    const controller = new AbortController();
+    controller.abort(new Error("cancelled"));
+    const next = vi.fn<Next<string>>(() => Promise.resolve("ok"));
+    const policy = dedupePolicy.create(createServices(), { key: () => "user:42" });
+
+    await expect(
+      policy.execute(createTestContext({ signal: controller.signal }), next),
+    ).rejects.toThrow("cancelled");
     expect(next).not.toHaveBeenCalled();
   });
 
@@ -264,7 +297,7 @@ describe("dedupePolicy", () => {
     expect(settlements).toBe(1);
   });
 
-  it("uses the owner context for the shared Phase 1 execution", async () => {
+  it("uses a coordinator-owned shared context for downstream execution", async () => {
     const policy = dedupePolicy.create(createServices(), { key: () => "user:42" });
     const owner = createTestContext({ attemptNumber: 3, metadata: { tenant: "acme" } });
     const joiner = createTestContext({ attemptNumber: 7, metadata: { tenant: "other" } });
@@ -282,7 +315,9 @@ describe("dedupePolicy", () => {
 
     await expect(first).resolves.toBe("ok");
     await expect(second).resolves.toBe("ok");
-    expect(observedContext).toBe(owner);
+    expect(observedContext).not.toBe(owner);
+    expect(observedContext).not.toBe(joiner);
+    expect(observedContext?.requestId).toBe(owner.requestId);
     expect(observedContext?.attemptNumber).toBe(3);
     expect(observedContext?.metadata.get("tenant")).toBe("acme");
     expect(joiner.metadata.get("tenant")).toBe("other");
@@ -290,21 +325,143 @@ describe("dedupePolicy", () => {
     releaseContext(joiner);
   });
 
-  it("reflects current owner-signal behavior for shared work", async () => {
+  it("lets owner abort independently while a joiner remains", async () => {
     const policy = dedupePolicy.create(createServices(), { key: () => "user:42" });
     const controller = new AbortController();
     const owner = createTestContext({ signal: controller.signal });
     const joiner = createTestContext();
-    const first = policy.execute(owner, (ctx) => rejectOnAbort(ctx.signal));
+    const gate = createGate<string>();
+    let sharedSignal: AbortSignal | undefined;
+    const first = policy.execute(owner, (ctx) => {
+      sharedSignal = ctx.signal;
+
+      return gate.promise;
+    });
     const second = policy.execute(joiner, () => Promise.resolve("joiner"));
 
     await flushMicrotasks();
     controller.abort(new Error("owner aborted"));
 
     await expect(first).rejects.toThrow("owner aborted");
-    await expect(second).rejects.toThrow("owner aborted");
+    expect(sharedSignal?.aborted).toBe(false);
+
+    gate.resolve("shared");
+    await expect(second).resolves.toBe("shared");
     releaseContext(owner);
     releaseContext(joiner);
+  });
+
+  it("lets joiner abort independently while owner remains", async () => {
+    const policy = dedupePolicy.create(createServices(), { key: () => "user:42" });
+    const controller = new AbortController();
+    const owner = createTestContext();
+    const joiner = createTestContext({ signal: controller.signal });
+    const gate = createGate<string>();
+    let sharedSignal: AbortSignal | undefined;
+    const first = policy.execute(owner, (ctx) => {
+      sharedSignal = ctx.signal;
+
+      return gate.promise;
+    });
+    const second = policy.execute(joiner, () => Promise.resolve("joiner"));
+
+    await flushMicrotasks();
+    controller.abort(new Error("joiner aborted"));
+
+    await expect(second).rejects.toThrow("joiner aborted");
+    expect(sharedSignal?.aborted).toBe(false);
+
+    gate.resolve("shared");
+    await expect(first).resolves.toBe("shared");
+    releaseContext(owner);
+    releaseContext(joiner);
+  });
+
+  it("aborts shared work when all subscribers abort and abortSharedWhenUnused is true", async () => {
+    const policy = dedupePolicy.create(createServices(), { key: () => "user:42" });
+    const ownerController = new AbortController();
+    const joinerController = new AbortController();
+    const owner = createTestContext({ signal: ownerController.signal });
+    const joiner = createTestContext({ signal: joinerController.signal });
+    let sharedAbortCount = 0;
+    const first = policy.execute(owner, (ctx) => {
+      ctx.signal.addEventListener(
+        "abort",
+        () => {
+          sharedAbortCount += 1;
+        },
+        { once: true },
+      );
+
+      return rejectOnAbort(ctx.signal);
+    });
+    const second = policy.execute(joiner, () => Promise.resolve("joiner"));
+
+    await flushMicrotasks();
+    ownerController.abort(new Error("owner aborted"));
+    joinerController.abort(new Error("joiner aborted"));
+
+    await expect(first).rejects.toThrow("owner aborted");
+    await expect(second).rejects.toThrow("joiner aborted");
+    await flushMicrotasks();
+    expect(sharedAbortCount).toBe(1);
+    releaseContext(owner);
+    releaseContext(joiner);
+  });
+
+  it("keeps shared work alive with zero subscribers when abortSharedWhenUnused is false", async () => {
+    const policy = dedupePolicy.create(createServices(), {
+      key: () => "user:42",
+      abortSharedWhenUnused: false,
+    });
+    const ownerController = new AbortController();
+    const joinerController = new AbortController();
+    const owner = createTestContext({ signal: ownerController.signal });
+    const joiner = createTestContext({ signal: joinerController.signal });
+    const gate = createGate<string>();
+    let sharedSignal: AbortSignal | undefined;
+    const first = policy.execute(owner, (ctx) => {
+      sharedSignal = ctx.signal;
+
+      return gate.promise;
+    });
+    const second = policy.execute(joiner, () => Promise.resolve("joiner"));
+
+    await flushMicrotasks();
+    ownerController.abort(new Error("owner aborted"));
+    joinerController.abort(new Error("joiner aborted"));
+
+    await expect(first).rejects.toThrow("owner aborted");
+    await expect(second).rejects.toThrow("joiner aborted");
+    expect(sharedSignal?.aborted).toBe(false);
+
+    gate.resolve("ignored");
+    await flushMicrotasks();
+    await expect(policy.execute(createTestContext(), () => Promise.resolve("new"))).resolves.toBe(
+      "new",
+    );
+    releaseContext(owner);
+    releaseContext(joiner);
+  });
+
+  it("removes caller abort listeners after shared success and failure", async () => {
+    const successContext = createTestContext();
+    const successRemove = vi.spyOn(successContext.signal, "removeEventListener");
+    const successPolicy = dedupePolicy.create(createServices(), { key: () => "success" });
+
+    await expect(successPolicy.execute(successContext, () => Promise.resolve("ok"))).resolves.toBe(
+      "ok",
+    );
+    expect(successRemove).toHaveBeenCalledTimes(1);
+
+    const failureContext = createTestContext();
+    const failureRemove = vi.spyOn(failureContext.signal, "removeEventListener");
+    const failurePolicy = dedupePolicy.create(createServices(), { key: () => "failure" });
+
+    await expect(
+      failurePolicy.execute(failureContext, () => Promise.reject(new Error("failed"))),
+    ).rejects.toThrow("failed");
+    expect(failureRemove).toHaveBeenCalledTimes(1);
   });
 });
 

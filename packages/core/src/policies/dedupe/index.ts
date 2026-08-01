@@ -1,11 +1,17 @@
-import type { Context } from "../../core/context";
-import { ConfigurationError } from "../../core/errors";
+import { createContext, releaseContext, type Context } from "../../core/context";
+import { AbortError, ConfigurationError } from "../../core/errors";
 import {
   definePolicy,
   type Next,
   type PolicyFactory,
   type PolicyServices,
 } from "../../core/policy";
+
+/**
+ * Internal metadata key used by client.call(...) to pass operation arguments to
+ * the dedupe policy without changing the public Context API.
+ */
+export const DEDUPE_OPERATION_ARGS_METADATA_KEY = "resili.dedupe.args";
 
 /**
  * Stable identifier used to share concurrent in-flight executions.
@@ -22,15 +28,11 @@ export type DedupeKey = string | number | symbol;
 export interface DedupeOptions<Args extends readonly unknown[] = readonly unknown[]> {
   /**
    * Resolves the in-flight dedupe key for one logical caller.
-   *
-   * Phase 1 policy-only execution invokes this without operation arguments;
-   * builder wiring will supply `client.call(...args)` in a later phase.
    */
   readonly key: (...args: Args) => DedupeKey;
 
   /**
-   * Future cancellation option. Phase 1 validates and stores this value but does
-   * not implement independent subscriber cancellation.
+   * Whether to abort shared work when the final active logical caller detaches.
    */
   readonly abortSharedWhenUnused?: boolean;
 }
@@ -45,10 +47,24 @@ interface DedupeOptionsCandidate {
   readonly abortSharedWhenUnused?: unknown;
 }
 
-interface InFlightEntry<T> {
+interface InFlightEntry {
   readonly key: DedupeKey;
-  readonly promise: Promise<T>;
+  readonly sharedController: AbortController;
+  readonly sharedContext: Context;
+  readonly subscribers: Set<DedupeSubscriber>;
   readonly createdAt: number;
+  sharedPromise: Promise<unknown>;
+  activeSubscriberCount: number;
+  settled: boolean;
+  cleanupDone: boolean;
+  sharedAbortIssued: boolean;
+}
+
+interface DedupeSubscriber {
+  readonly signal: AbortSignal;
+  readonly resolve: (value: unknown) => void;
+  readonly reject: (error: unknown) => void;
+  cleanup: () => void;
   settled: boolean;
 }
 
@@ -64,7 +80,7 @@ export const dedupePolicy: PolicyFactory = definePolicy({
   order: 425,
   create(services: PolicyServices, options?: unknown) {
     const dedupeOptions = normalizeOptions(options);
-    const registry = new Map<DedupeKey, InFlightEntry<unknown>>();
+    const registry = new Map<DedupeKey, InFlightEntry>();
 
     return {
       name: "dedupe",
@@ -81,65 +97,205 @@ async function executeWithDedupe<T>(
   next: Next<T>,
   services: PolicyServices,
   options: NormalizedDedupeOptions,
-  registry: Map<DedupeKey, InFlightEntry<unknown>>,
+  registry: Map<DedupeKey, InFlightEntry>,
 ): Promise<T> {
-  const key = resolveKey(options);
-  const existing = registry.get(key) as InFlightEntry<T> | undefined;
-
-  if (existing !== undefined && !existing.settled) {
-    return await existing.promise;
+  if (ctx.signal.aborted) {
+    throw createAbortError(ctx);
   }
 
-  const entry = createEntry(key, ctx, next, services, registry);
-  registry.set(key, entry);
+  const key = resolveKey(options, ctx);
+  let entry = registry.get(key);
 
-  return await entry.promise;
+  if (entry === undefined || entry.settled) {
+    entry = createEntry(key, ctx, services);
+    registry.set(key, entry);
+    startSharedExecution(entry, next, registry);
+  }
+
+  return (await attachSubscriber(entry, ctx, options)) as T;
 }
 
-function createEntry<T>(
+function createEntry(
   key: DedupeKey,
-  ctx: Context,
-  next: Next<T>,
+  ownerContext: Context,
   services: PolicyServices,
-  registry: Map<DedupeKey, InFlightEntry<unknown>>,
-): InFlightEntry<T> {
-  const entryRef: { current?: InFlightEntry<T> } = {};
-  const promise = Promise.resolve()
-    .then(() => next(ctx))
-    .finally(() => {
-      const entry = entryRef.current;
-
-      if (entry === undefined) {
-        return;
-      }
-
-      entry.settled = true;
-
-      if (registry.get(key) === entry) {
-        registry.delete(key);
-      }
-    });
-  const entry: InFlightEntry<T> = {
-    key,
-    promise,
-    createdAt: services.clock.now(),
-    settled: false,
-  };
-  entryRef.current = entry;
-
-  void promise.catch(() => {
-    // The shared promise remains safe even if a caller drops its returned promise.
+): InFlightEntry {
+  const sharedController = new AbortController();
+  const sharedContext = createContext({
+    requestId: ownerContext.requestId,
+    operationName: ownerContext.operationName,
+    serviceName: ownerContext.serviceName,
+    attemptNumber: ownerContext.attemptNumber,
+    metadata: ownerContext.metadata,
+    signal: sharedController.signal,
+    ...(Number.isFinite(ownerContext.deadline) ? { deadline: ownerContext.deadline } : {}),
+    startedAt: ownerContext.startedAt,
   });
 
-  return entry;
+  return {
+    key,
+    sharedController,
+    sharedContext,
+    subscribers: new Set<DedupeSubscriber>(),
+    sharedPromise: Promise.resolve(undefined as never),
+    createdAt: services.clock.now(),
+    activeSubscriberCount: 0,
+    settled: false,
+    cleanupDone: false,
+    sharedAbortIssued: false,
+  };
 }
 
-function resolveKey(options: NormalizedDedupeOptions): DedupeKey {
-  const key = options.key();
+function startSharedExecution<T>(
+  entry: InFlightEntry,
+  next: Next<T>,
+  registry: Map<DedupeKey, InFlightEntry>,
+): void {
+  const sharedPromise = Promise.resolve().then(() => next(entry.sharedContext));
+
+  entry.sharedPromise = sharedPromise;
+  void sharedPromise.then(
+    (value) => {
+      settleEntrySuccess(entry, value);
+    },
+    (error: unknown) => {
+      settleEntryFailure(entry, error);
+    },
+  );
+  void sharedPromise
+    .catch(() => {
+      // The shared promise remains observed even when every subscriber aborts.
+    })
+    .finally(() => {
+      cleanupEntry(entry, registry);
+    });
+}
+
+function attachSubscriber(
+  entry: InFlightEntry,
+  ctx: Context,
+  options: NormalizedDedupeOptions,
+): Promise<unknown> {
+  return new Promise<unknown>((resolve, reject) => {
+    const subscriber: DedupeSubscriber = {
+      signal: ctx.signal,
+      resolve,
+      reject,
+      cleanup: noop,
+      settled: false,
+    };
+
+    if (ctx.signal.aborted) {
+      settleSubscriber(entry, subscriber, "reject", createAbortError(ctx), options);
+      return;
+    }
+
+    const onAbort = (): void => {
+      settleSubscriber(entry, subscriber, "reject", createAbortError(ctx), options);
+    };
+
+    subscriber.cleanup = () => {
+      ctx.signal.removeEventListener("abort", onAbort);
+    };
+    ctx.signal.addEventListener("abort", onAbort, { once: true });
+    entry.subscribers.add(subscriber);
+    entry.activeSubscriberCount += 1;
+  });
+}
+
+function settleEntrySuccess(entry: InFlightEntry, value: unknown): void {
+  if (entry.settled) {
+    return;
+  }
+
+  entry.settled = true;
+
+  for (const subscriber of [...entry.subscribers]) {
+    settleSubscriber(entry, subscriber, "resolve", value);
+  }
+}
+
+function settleEntryFailure(entry: InFlightEntry, error: unknown): void {
+  if (entry.settled) {
+    return;
+  }
+
+  entry.settled = true;
+
+  for (const subscriber of [...entry.subscribers]) {
+    settleSubscriber(entry, subscriber, "reject", error);
+  }
+}
+
+function settleSubscriber(
+  entry: InFlightEntry,
+  subscriber: DedupeSubscriber,
+  action: "resolve" | "reject",
+  result: unknown,
+  options?: NormalizedDedupeOptions,
+): void {
+  if (subscriber.settled) {
+    return;
+  }
+
+  subscriber.settled = true;
+  subscriber.cleanup();
+
+  if (entry.subscribers.delete(subscriber)) {
+    entry.activeSubscriberCount = Math.max(0, entry.activeSubscriberCount - 1);
+  }
+
+  if (action === "resolve") {
+    subscriber.resolve(result);
+  } else {
+    subscriber.reject(result);
+  }
+
+  if (
+    !entry.settled &&
+    options?.abortSharedWhenUnused === true &&
+    entry.activeSubscriberCount === 0 &&
+    !entry.sharedAbortIssued
+  ) {
+    entry.sharedAbortIssued = true;
+    entry.sharedController.abort(
+      createAbortErrorFromSignal(subscriber.signal, entry.sharedContext),
+    );
+  }
+}
+
+function cleanupEntry(entry: InFlightEntry, registry: Map<DedupeKey, InFlightEntry>): void {
+  if (entry.cleanupDone) {
+    return;
+  }
+
+  entry.cleanupDone = true;
+
+  for (const subscriber of [...entry.subscribers]) {
+    settleSubscriber(entry, subscriber, "reject", createAbortError(entry.sharedContext));
+  }
+
+  entry.subscribers.clear();
+  entry.activeSubscriberCount = 0;
+  releaseContext(entry.sharedContext);
+
+  if (registry.get(entry.key) === entry) {
+    registry.delete(entry.key);
+  }
+}
+
+function resolveKey(options: NormalizedDedupeOptions, ctx: Context): DedupeKey {
+  const key = options.key(...getOperationArgs(ctx));
 
   validateDedupeKey(key);
 
   return key;
+}
+
+function getOperationArgs(ctx: Context): readonly unknown[] {
+  const args = ctx.metadata.get(DEDUPE_OPERATION_ARGS_METADATA_KEY);
+
+  return Array.isArray(args) ? args : [];
 }
 
 function normalizeOptions(options: unknown): NormalizedDedupeOptions {
@@ -178,4 +334,18 @@ function validateDedupeKey(key: unknown): asserts key is DedupeKey {
   throw new ConfigurationError("dedupe.key must return a string, finite number, or symbol.", {
     field: "dedupe.key",
   });
+}
+
+function createAbortError(ctx: Context): Error {
+  return createAbortErrorFromSignal(ctx.signal, ctx);
+}
+
+function createAbortErrorFromSignal(signal: AbortSignal, ctx: Context): Error {
+  const reason: unknown = signal.reason;
+
+  return reason instanceof Error ? reason : new AbortError({ reason, context: ctx.snapshot() });
+}
+
+function noop(): void {
+  // Intentionally empty.
 }

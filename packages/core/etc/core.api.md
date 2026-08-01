@@ -19,6 +19,7 @@ export interface Builder<Args extends readonly unknown[], R> {
     build(): Client<Args, R>;
     bulkhead(options: number | BulkheadOptions): this;
     circuitBreaker(options?: CircuitBreakerOptions): this;
+    dedupe(options: DedupeOptions<Args>): this;
     fallback(options: FallbackOptions<R> | FallbackFn<R>): this;
     hedge(options: HedgeOptions<R>): this;
     on<T extends ResiliEventType>(type: T, handler: EventHandler<T>): this;
@@ -211,7 +212,19 @@ export interface Counter {
 }
 
 // @public
-export function createClient<Args extends readonly unknown[], R>(operation: Operation<Args, R>, config?: ResiliConfig<R>): Client<Args, R>;
+export function createClient<Args extends readonly unknown[], R>(operation: Operation<Args, R>, config?: ResiliConfig<R, Args>): Client<Args, R>;
+
+// @public
+export type DedupeKey = string | number | symbol;
+
+// @public
+export interface DedupeOptions<Args extends readonly unknown[] = readonly unknown[]> {
+    readonly abortSharedWhenUnused?: boolean;
+    readonly key: (...args: Args) => DedupeKey;
+}
+
+// @public
+export const dedupePolicy: PolicyFactory;
 
 // @public
 export function definePlugin<O = void>(plugin: ResiliPlugin<O>): ResiliPlugin<O>;
@@ -347,9 +360,9 @@ export interface PolicyFactory {
 
 // @public
 export type PolicyOrder = number | {
-    readonly before: "fallback" | "retry" | "circuit-breaker" | "timeout" | "hedge" | "rate-limiter" | "bulkhead";
+    readonly before: "fallback" | "retry" | "circuit-breaker" | "timeout" | "dedupe" | "hedge" | "rate-limiter" | "bulkhead";
 } | {
-    readonly after: "fallback" | "retry" | "circuit-breaker" | "timeout" | "hedge" | "rate-limiter" | "bulkhead";
+    readonly after: "fallback" | "retry" | "circuit-breaker" | "timeout" | "dedupe" | "hedge" | "rate-limiter" | "bulkhead";
 };
 
 // @public
@@ -397,7 +410,7 @@ export function resili<Args extends readonly unknown[], R>(operation: Operation<
 export const RESILI_VERSION = "0.0.0";
 
 // @public
-export interface ResiliConfig<R = unknown> {
+export interface ResiliConfig<R = unknown, Args extends readonly unknown[] = readonly unknown[]> {
     // (undocumented)
     readonly bulkhead?: number | BulkheadOptions;
     // (undocumented)
@@ -406,6 +419,8 @@ export interface ResiliConfig<R = unknown> {
     readonly classifier?: FailureClassifier;
     // (undocumented)
     readonly clock?: Clock;
+    // (undocumented)
+    readonly dedupe?: DedupeOptions<Args>;
     // (undocumented)
     readonly fallback?: FallbackOptions<R> | FallbackFn<R>;
     // (undocumented)
