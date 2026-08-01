@@ -22,6 +22,7 @@ import { memoryStore, type StateStore } from "../state";
 import { bulkheadPolicy, type BulkheadOptions } from "../../policies/bulkhead";
 import { circuitBreakerPolicy, type CircuitBreakerOptions } from "../../policies/circuit-breaker";
 import { fallbackPolicy, type FallbackFn, type FallbackOptions } from "../../policies/fallback";
+import { hedgePolicy, type HedgeOptions } from "../../policies/hedge";
 import { rateLimiterPolicy, type RateLimiterOptions } from "../../policies/rate-limiter";
 import { retryPolicy, type RetryOptions } from "../../policies/retry";
 import { timeoutPolicy, type TimeoutOptions } from "../../policies/timeout";
@@ -52,6 +53,11 @@ export interface Builder<Args extends readonly unknown[], R> {
    * Adds the built-in timeout policy.
    */
   timeout(options: number | TimeoutOptions): this;
+
+  /**
+   * Adds the built-in hedged request policy.
+   */
+  hedge(options: HedgeOptions<R>): this;
 
   /**
    * Adds the built-in circuit breaker policy.
@@ -169,6 +175,10 @@ class ImmutableBuilder<Args extends readonly unknown[], R> implements Builder<Ar
 
   timeout(options: number | TimeoutOptions): this {
     return this.policy(timeoutPolicy, options);
+  }
+
+  hedge(options: HedgeOptions<R>): this {
+    return this.policy(hedgePolicy, options);
   }
 
   circuitBreaker(options?: CircuitBreakerOptions): this {

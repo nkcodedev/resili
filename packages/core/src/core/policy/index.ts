@@ -15,11 +15,23 @@ export type PolicyOrder =
   | number
   | {
       readonly before:
-        "fallback" | "retry" | "circuit-breaker" | "timeout" | "rate-limiter" | "bulkhead";
+        | "fallback"
+        | "retry"
+        | "circuit-breaker"
+        | "timeout"
+        | "hedge"
+        | "rate-limiter"
+        | "bulkhead";
     }
   | {
       readonly after:
-        "fallback" | "retry" | "circuit-breaker" | "timeout" | "rate-limiter" | "bulkhead";
+        | "fallback"
+        | "retry"
+        | "circuit-breaker"
+        | "timeout"
+        | "hedge"
+        | "rate-limiter"
+        | "bulkhead";
     };
 
 /**
@@ -239,12 +251,14 @@ function validatePolicyOrder(order: unknown): asserts order is PolicyOrder {
 
 function isBuiltinPolicyAnchor(
   value: unknown,
-): value is "fallback" | "retry" | "circuit-breaker" | "timeout" | "rate-limiter" | "bulkhead" {
+): value is
+  "fallback" | "retry" | "circuit-breaker" | "timeout" | "hedge" | "rate-limiter" | "bulkhead" {
   return (
     value === "fallback" ||
     value === "retry" ||
     value === "circuit-breaker" ||
     value === "timeout" ||
+    value === "hedge" ||
     value === "rate-limiter" ||
     value === "bulkhead"
   );

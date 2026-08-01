@@ -13,6 +13,7 @@ import type { StateStore } from "./core/state/index";
 import type { BulkheadOptions } from "./policies/bulkhead/index";
 import type { CircuitBreakerOptions } from "./policies/circuit-breaker/index";
 import type { FallbackFn, FallbackOptions } from "./policies/fallback/index";
+import type { HedgeOptions } from "./policies/hedge/index";
 import type { RateLimiterOptions } from "./policies/rate-limiter/index";
 import type { RetryOptions } from "./policies/retry/index";
 import type { TimeoutOptions } from "./policies/timeout/index";
@@ -27,6 +28,7 @@ export const RESILI_VERSION = "0.0.0";
 export interface ResiliConfig<R = unknown> {
   readonly retry?: RetryOptions;
   readonly timeout?: number | TimeoutOptions;
+  readonly hedge?: HedgeOptions<R>;
   readonly circuitBreaker?: CircuitBreakerOptions;
   readonly bulkhead?: number | BulkheadOptions;
   readonly rateLimiter?: RateLimiterOptions;
@@ -84,6 +86,10 @@ export function createClient<Args extends readonly unknown[], R>(
     builder = builder.timeout(config.timeout);
   }
 
+  if (config.hedge !== undefined) {
+    builder = builder.hedge(config.hedge);
+  }
+
   if (config.circuitBreaker !== undefined) {
     builder = builder.circuitBreaker(config.circuitBreaker);
   }
@@ -110,6 +116,7 @@ export function createClient<Args extends readonly unknown[], R>(
 const SUPPORTED_CONFIG_KEYS = new Set<string>([
   "retry",
   "timeout",
+  "hedge",
   "circuitBreaker",
   "bulkhead",
   "rateLimiter",
@@ -175,6 +182,8 @@ export type { CircuitBreakerOptions, KeyResolver } from "./policies/circuit-brea
 export { circuitBreakerPolicy } from "./policies/circuit-breaker/index";
 export type { FallbackFn, FallbackOptions } from "./policies/fallback/index";
 export { fallbackPolicy } from "./policies/fallback/index";
+export type { HedgeOptions } from "./policies/hedge/index";
+export { hedgePolicy } from "./policies/hedge/index";
 export type { RateLimiterOptions } from "./policies/rate-limiter/index";
 export { rateLimiterPolicy } from "./policies/rate-limiter/index";
 export type { RetryOptions, RetryPredicate } from "./policies/retry/index";

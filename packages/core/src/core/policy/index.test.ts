@@ -20,14 +20,14 @@ describe("definePolicy", () => {
   it("returns an immutable factory with frozen relative order", () => {
     const factory = definePolicy({
       name: "observer",
-      order: { before: "retry" },
+      order: { before: "hedge" },
       create() {
-        return passThroughPolicy("observer", { before: "retry" });
+        return passThroughPolicy("observer", { before: "hedge" });
       },
     });
 
     expect(factory.name).toBe("observer");
-    expect(factory.order).toEqual({ before: "retry" });
+    expect(factory.order).toEqual({ before: "hedge" });
     expect(Object.isFrozen(factory)).toBe(true);
     expect(Object.isFrozen(factory.order)).toBe(true);
     expect(() => {
