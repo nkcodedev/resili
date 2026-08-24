@@ -6,6 +6,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [Unreleased]
+
+### Added
+
+#### `@resili/llm` `0.1.0-alpha.1`
+
+- Provider-neutral LLM foundation for Resili (`createLlmClient`, `defineProvider`).
+- Provider-neutral contracts: `LlmRequest`, `LlmResponse`, `LlmUsage`, and `LlmError` classification/retryability.
+- Usage and cost accounting from an injectable price table (integer micro-USD).
+- Budget Guard with estimated-cost preflight, process-local reservations, and unknown-pricing reject/allow behavior.
+- Typed LLM lifecycle events and low-cardinality metrics (`result` only).
+
+#### `@resili/llm-openai` `0.1.0-alpha.1`
+
+- OpenAI Chat Completions adapter for `@resili/llm` using a user-owned OpenAI client.
+- Normalized usage and OpenAI/HTTP error mapping to `LlmError`.
+- SDK retry suppression (`maxRetries: 0` on every Chat Completions call) so Resili owns retries.
+- AbortSignal integration from Resili timeout/cancellation into the SDK request.
+
 ## [0.2.0-alpha.2] - 2026-08-01
 
 This release completes the v0.2 Intelligent Request Management scope.
