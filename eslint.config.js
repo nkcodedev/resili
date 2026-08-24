@@ -11,6 +11,7 @@ export default tseslint.config(
       "**/coverage/**",
       "**/temp/**",
       "docs/api/**",
+      "examples/**",
       "node_modules/**",
       "pnpm-lock.yaml",
     ],
