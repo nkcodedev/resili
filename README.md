@@ -77,6 +77,7 @@ Resili gives those failure modes explicit, typed, testable policy boundaries.
 | Fetch adapter              | `@resili/fetch`  | Available | Native fetch-compatible wrapper                           |
 | Axios adapter              | `@resili/axios`  | Available | Minimal Axios-compatible structural wrapper               |
 | Undici adapter             | `@resili/undici` | Available | Minimal Undici-compatible request wrapper                 |
+| LLM foundation             | `@resili/llm`    | Alpha     | Provider-neutral usage, cost, budget, and LLM telemetry   |
 
 ## Built-in Policies at a glance
 
