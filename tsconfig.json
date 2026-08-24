@@ -16,6 +16,9 @@
     },
     {
       "path": "./packages/llm"
+    },
+    {
+      "path": "./packages/llm-openai"
     }
   ]
 }

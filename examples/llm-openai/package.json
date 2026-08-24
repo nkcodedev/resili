@@ -1,0 +1,9 @@
+{
+  "name": "@resili/example-llm-openai",
+  "private": true,
+  "type": "module",
+  "description": "Local-only OpenAI example. Not published and not run in CI.",
+  "engines": {
+    "node": ">=20"
+  }
+}

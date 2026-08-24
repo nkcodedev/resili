@@ -7,7 +7,8 @@
     "noEmit": true,
     "baseUrl": ".",
     "paths": {
-      "@resili/core": ["packages/core/src/index.ts"]
+      "@resili/core": ["packages/core/src/index.ts"],
+      "@resili/llm": ["packages/llm/src/index.ts"]
     }
   },
   "include": [
