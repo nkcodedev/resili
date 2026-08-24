@@ -6,7 +6,7 @@
 
 It is **not** an AI SDK. It does not call OpenAI, Anthropic, Gemini, or any other vendor. It does not ship prompt templates, agents, RAG, embeddings, or moderation.
 
-Future packages such as `@resili/llm-openai` can wrap a vendor SDK and return the contracts defined here.
+[`@resili/llm-openai`](../llm-openai/README.md) is the first official adapter: it wraps a **user-owned** OpenAI client and returns the contracts defined here.
 
 ## Installation
 
@@ -175,7 +175,7 @@ Metrics use Resili's `MetricsRecorder`. The only label is `result` = `success` |
 
 ## Current alpha limitations
 
-- No official OpenAI, Anthropic, Gemini, Azure, or Bedrock adapters yet
+- Official OpenAI adapter is [`@resili/llm-openai`](../llm-openai/README.md) (Chat Completions only). No Anthropic, Gemini, Azure, or Bedrock adapters yet
 - Budget accounting is in-memory per client (or per injected `BudgetAccountant`); reservations are process-local, not distributed
 - `maxCostPerRequestUsd` is an estimated-cost preflight, not a hard actual-cost ceiling
 - Concurrent requests with missing estimates can overshoot `maxAccumulatedCostUsd` after execution

@@ -14,6 +14,8 @@ pnpm add @resili/core @resili/llm @resili/llm-openai openai
 
 Node.js 20 or newer is required for Resili. The official `openai` SDK **v7** declares `node >= 22`. Use SDK v4–v6 on Node 20, or Node 22+ with v7.
 
+You supply the OpenAI SDK client. This package does not depend on `openai` at runtime (optional peer `openai >= 4.0.0`). The adapter is **structural** and was inspected against **`openai@7.5.0`**. It supports **Chat Completions only**. It sets **`maxRetries: 0`** on every SDK call so **Resili owns retries**.
+
 ## Relationship to `@resili/llm`
 
 `@resili/llm` owns contracts, pricing, Budget Guard, events, and metrics.
