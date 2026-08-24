@@ -98,6 +98,12 @@ importers:
         specifier: workspace:*
         version: link:../core
 
+  packages/llm:
+    dependencies:
+      '@resili/core':
+        specifier: workspace:*
+        version: link:../core
+
   packages/undici:
     dependencies:
       '@resili/core':
