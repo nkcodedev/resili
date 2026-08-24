@@ -58,26 +58,27 @@ Resili gives those failure modes explicit, typed, testable policy boundaries.
 
 ## Features
 
-| Capability                 | Package          | Status    | Notes                                                     |
-| -------------------------- | ---------------- | --------- | --------------------------------------------------------- |
-| Fluent builder             | `@resili/core`   | Available | `resili(operation).retry().timeout(...).build()`          |
-| Declarative client factory | `@resili/core`   | Available | `createClient(operation, config)`                         |
-| Retry                      | `@resili/core`   | Available | Fixed/exponential backoff, deterministic `jitter: "none"` |
-| Timeout                    | `@resili/core`   | Available | Per-attempt timeout with context signal fork              |
-| Circuit breaker            | `@resili/core`   | Available | In-memory per-key breaker state                           |
-| Bulkhead                   | `@resili/core`   | Available | In-memory concurrency and queue limits                    |
-| Rate limiter               | `@resili/core`   | Available | Token bucket and sliding window, reject mode              |
-| Fallback                   | `@resili/core`   | Available | Async fallback handlers and predicates                    |
-| Hedged requests            | `@resili/core`   | Available | Starts a delayed duplicate attempt for safe operations    |
-| Request deduplication      | `@resili/core`   | Available | Shares concurrent same-key in-flight work                 |
-| Memory cache               | `@resili/core`   | Available | Per-client TTL cache with lazy expiry and FIFO eviction   |
-| Typed events               | `@resili/core`   | Available | Runtime subscriptions with typed event payloads           |
-| Metrics contract           | `@resili/core`   | Available | `MetricsRecorder` interface and `noopMetrics`             |
-| Plugin contracts/runtime   | `@resili/core`   | Available | Register policies/events/service overrides                |
-| Fetch adapter              | `@resili/fetch`  | Available | Native fetch-compatible wrapper                           |
-| Axios adapter              | `@resili/axios`  | Available | Minimal Axios-compatible structural wrapper               |
-| Undici adapter             | `@resili/undici` | Available | Minimal Undici-compatible request wrapper                 |
-| LLM foundation             | `@resili/llm`    | Alpha     | Provider-neutral usage, cost, budget, and LLM telemetry   |
+| Capability                 | Package              | Status    | Notes                                                     |
+| -------------------------- | -------------------- | --------- | --------------------------------------------------------- |
+| Fluent builder             | `@resili/core`       | Available | `resili(operation).retry().timeout(...).build()`          |
+| Declarative client factory | `@resili/core`       | Available | `createClient(operation, config)`                         |
+| Retry                      | `@resili/core`       | Available | Fixed/exponential backoff, deterministic `jitter: "none"` |
+| Timeout                    | `@resili/core`       | Available | Per-attempt timeout with context signal fork              |
+| Circuit breaker            | `@resili/core`       | Available | In-memory per-key breaker state                           |
+| Bulkhead                   | `@resili/core`       | Available | In-memory concurrency and queue limits                    |
+| Rate limiter               | `@resili/core`       | Available | Token bucket and sliding window, reject mode              |
+| Fallback                   | `@resili/core`       | Available | Async fallback handlers and predicates                    |
+| Hedged requests            | `@resili/core`       | Available | Starts a delayed duplicate attempt for safe operations    |
+| Request deduplication      | `@resili/core`       | Available | Shares concurrent same-key in-flight work                 |
+| Memory cache               | `@resili/core`       | Available | Per-client TTL cache with lazy expiry and FIFO eviction   |
+| Typed events               | `@resili/core`       | Available | Runtime subscriptions with typed event payloads           |
+| Metrics contract           | `@resili/core`       | Available | `MetricsRecorder` interface and `noopMetrics`             |
+| Plugin contracts/runtime   | `@resili/core`       | Available | Register policies/events/service overrides                |
+| Fetch adapter              | `@resili/fetch`      | Available | Native fetch-compatible wrapper                           |
+| Axios adapter              | `@resili/axios`      | Available | Minimal Axios-compatible structural wrapper               |
+| Undici adapter             | `@resili/undici`     | Available | Minimal Undici-compatible request wrapper                 |
+| LLM foundation             | `@resili/llm`        | Alpha     | Provider-neutral usage, cost, budget, and LLM telemetry   |
+| OpenAI LLM adapter         | `@resili/llm-openai` | Alpha     | Chat Completions provider for `@resili/llm`               |
 
 ## Built-in Policies at a glance
 
