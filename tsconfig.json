@@ -19,6 +19,9 @@
     },
     {
       "path": "./packages/llm-openai"
+    },
+    {
+      "path": "./packages/llm-anthropic"
     }
   ]
 }

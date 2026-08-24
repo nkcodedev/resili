@@ -1,0 +1,9 @@
+{
+  "name": "@resili/example-llm-anthropic",
+  "private": true,
+  "type": "module",
+  "description": "Local-only Anthropic example. Not published and not run in CI.",
+  "engines": {
+    "node": ">=20"
+  }
+}

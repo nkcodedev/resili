@@ -25,6 +25,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - SDK retry suppression (`maxRetries: 0` on every Chat Completions call) so Resili owns retries.
 - AbortSignal integration from Resili timeout/cancellation into the SDK request.
 
+#### `@resili/llm-anthropic` `0.1.0-alpha.1`
+
+- Anthropic Messages adapter for `@resili/llm` using a user-owned Anthropic client.
+- Normalized usage and Anthropic/HTTP error mapping to `LlmError`.
+- SDK retry suppression (`maxRetries: 0` on every Messages call) so Resili owns retries.
+- AbortSignal integration from Resili timeout/cancellation into the SDK request.
+- Required caller-supplied `maxTokens` (Anthropic requires `max_tokens`; no silent default).
+
 ## [0.2.0-alpha.2] - 2026-08-01
 
 This release completes the v0.2 Intelligent Request Management scope.
