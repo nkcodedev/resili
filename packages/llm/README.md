@@ -175,7 +175,7 @@ Metrics use Resili's `MetricsRecorder`. The only label is `result` = `success` |
 
 ## Current alpha limitations
 
-- Official OpenAI adapter is [`@resili/llm-openai`](../llm-openai/README.md) (Chat Completions only). No Anthropic, Gemini, Azure, or Bedrock adapters yet
+- Official adapters: [`@resili/llm-openai`](../llm-openai/README.md) (Chat Completions) and [`@resili/llm-anthropic`](../llm-anthropic/README.md) (Messages). No Gemini, Azure, or Bedrock adapters yet
 - Budget accounting is in-memory per client (or per injected `BudgetAccountant`); reservations are process-local, not distributed
 - `maxCostPerRequestUsd` is an estimated-cost preflight, not a hard actual-cost ceiling
 - Concurrent requests with missing estimates can overshoot `maxAccumulatedCostUsd` after execution
