@@ -8,6 +8,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Improved
+
+#### Core hardening
+
+- `"cache"` is a valid built-in relative policy-order anchor (`before`/`after`), matching `PolicyOrder` and the canonical numeric slot `150`.
+- `RequestStarted` and `RequestCompleted` are emitted once per top-level execution (not per retry attempt). `RequestCompleted` reports `status: "success" | "error"`; `errorCode` is set only for Resili errors.
+- `stats().totals.retries` increments on `RetryStarted` (extra attempts after the first). Circuit, bulkhead, and rate-limiter maps remain empty rather than fabricating policy state.
+- Rate limiter `onLimit: "wait"` with required `maxWaitMs` waits for capacity (FIFO per key, abort-safe, no busy loop) and rejects immediately when the next wait would exceed the remaining budget.
+
 ### Added
 
 #### `@resili/llm` `0.1.0-alpha.1`

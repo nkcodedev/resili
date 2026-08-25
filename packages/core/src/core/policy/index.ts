@@ -257,6 +257,7 @@ function isBuiltinPolicyAnchor(
   value: unknown,
 ): value is
   | "fallback"
+  | "cache"
   | "retry"
   | "circuit-breaker"
   | "timeout"
@@ -266,6 +267,7 @@ function isBuiltinPolicyAnchor(
   | "bulkhead" {
   return (
     value === "fallback" ||
+    value === "cache" ||
     value === "retry" ||
     value === "circuit-breaker" ||
     value === "timeout" ||

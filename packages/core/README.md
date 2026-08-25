@@ -187,12 +187,29 @@ Bulkhead isolates concurrency by key and preserves FIFO queue ordering.
   limit: 100,
   intervalMs: 1_000,
   burst: 200,
-  onLimit: "reject",
+  onLimit: "wait",
+  maxWaitMs: 500,
 })
 ```
 
-Current behavior supports in-memory token bucket and sliding-window strategies
-with reject mode.
+In-memory token bucket and sliding-window strategies support `onLimit: "reject"`
+(immediate `RateLimitExceededError`) and `onLimit: "wait"`. Wait mode sleeps
+until a token is available, up to `maxWaitMs`, then rejects immediately if the
+next wait would exceed the remaining budget. Waiters for the same key are
+admitted FIFO. `maxWaitMs` is required for wait mode and is rejected in reject
+mode. `RateLimited` is emitted when a request first cannot be admitted
+(`waited: false`) and again if a wait started but `maxWaitMs` is then exceeded
+(`waited: true`).
+
+`RequestStarted` and `RequestCompleted` are emitted once per top-level
+`call()` / `execute()`. Retries do not emit additional lifecycle pairs.
+`RequestCompleted.status` is `"success"` or `"error"`; `errorCode` is set only
+for Resili errors. Fallback success completes as `"success"`.
+
+`client.stats().totals` tracks calls, successes, failures, and retries (extra
+attempts after the first). Circuit, bulkhead, and rate-limiter maps are empty
+until a future snapshot hook exists; `health()` therefore stays `"healthy"`
+unless those maps are populated.
 
 ### Fallback
 
