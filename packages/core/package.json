@@ -1,6 +1,6 @@
 {
   "name": "@resili/core",
-  "version": "0.2.0-alpha.2",
+  "version": "0.2.0-alpha.3",
   "description": "TypeScript-first resilience toolkit for production Node.js applications.",
   "type": "module",
   "license": "MIT",

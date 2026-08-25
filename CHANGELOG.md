@@ -8,15 +8,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
-### Improved
-
-#### Core hardening
-
-- `"cache"` is a valid built-in relative policy-order anchor (`before`/`after`), matching `PolicyOrder` and the canonical numeric slot `150`.
-- `RequestStarted` and `RequestCompleted` are emitted once per top-level execution (not per retry attempt). `RequestCompleted` reports `status: "success" | "error"`; `errorCode` is set only for Resili errors.
-- `stats().totals.retries` increments on `RetryStarted` (extra attempts after the first). Circuit, bulkhead, and rate-limiter maps remain empty rather than fabricating policy state.
-- Rate limiter `onLimit: "wait"` with required `maxWaitMs` waits for capacity (FIFO per key, abort-safe, no busy loop) and rejects immediately when the next wait would exceed the remaining budget.
-
 ### Added
 
 #### `@resili/llm` `0.1.0-alpha.1`
@@ -41,6 +32,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - SDK retry suppression (`maxRetries: 0` on every Messages call) so Resili owns retries.
 - AbortSignal integration from Resili timeout/cancellation into the SDK request.
 - Required caller-supplied `maxTokens` (Anthropic requires `max_tokens`; no silent default).
+
+## [0.2.0-alpha.3] - 2026-08-25
+
+Core hardening for `@resili/core`. HTTP adapters are republished at the same version so packed `workspace:*` dependencies resolve to `@resili/core@0.2.0-alpha.3`. Adapter runtime behavior is unchanged.
+
+### Improved
+
+#### `@resili/core`
+
+- `"cache"` is a valid built-in relative policy-order anchor (`before` / `after`); resolved order is `149.5` / `150.5` around canonical cache `150`.
+- `RequestStarted` and `RequestCompleted` are emitted once per top-level `call()` / `execute()` (not per retry). `RequestCompleted` uses `status: "success" | "error"`; `errorCode` is set only for Resili errors.
+- `stats().totals.retries` counts extra attempts after the first (`RetryStarted`). `stats().circuit`, `stats().bulkhead`, and `stats().rateLimiter` remain empty; `health()` is derived from those maps and is not live built-in policy aggregation.
+- Rate limiter `onLimit: "wait"` with required `maxWaitMs` waits for capacity (FIFO per key, `AbortSignal` / timeout abort while waiting, no busy loop) and rejects immediately when the next wait would exceed the remaining budget.
+
+### Package Compatibility
+
+- Republished `@resili/fetch`, `@resili/axios`, and `@resili/undici` as `0.2.0-alpha.3` against `@resili/core@0.2.0-alpha.3`.
+- Republished `@resili/llm`, `@resili/llm-openai`, and `@resili/llm-anthropic` as `0.1.0-alpha.2` so they resolve against `@resili/core@0.2.0-alpha.3`.
+- No LLM provider or runtime behavior changed in this compatibility release.
 
 ## [0.2.0-alpha.2] - 2026-08-01
 
