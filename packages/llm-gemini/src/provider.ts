@@ -1,5 +1,11 @@
 import { ConfigurationError, type Context } from "@resili/core";
-import { defineProvider, type LlmProvider, type LlmRequest, type LlmResponse } from "@resili/llm";
+import {
+  defineProvider,
+  type LlmProvider,
+  type LlmProviderStreamFrame,
+  type LlmRequest,
+  type LlmResponse,
+} from "@resili/llm";
 
 import { mapGeminiError } from "./errors";
 import { mapFinishReason } from "./finish-reason";
@@ -9,7 +15,7 @@ import type {
   GeminiGenerateContentResponse,
   GeminiPart,
 } from "./gemini-types";
-import { mapUsage } from "./usage";
+import { mapStreamUsage, mapUsage } from "./usage";
 
 /**
  * Options for {@link createGeminiProvider}.
@@ -95,6 +101,39 @@ export function createGeminiProvider(options: CreateGeminiProviderOptions): LlmP
         mapGeminiError(error, model);
       }
     },
+    async stream(
+      request: LlmRequest,
+      ctx: Context,
+    ): Promise<AsyncIterable<LlmProviderStreamFrame>> {
+      const model = resolveModel(request.model, defaultModel);
+
+      if (client.models.generateContentStream === undefined) {
+        throw new ConfigurationError("options.client must expose models.generateContentStream.", {
+          field: "client",
+        });
+      }
+
+      try {
+        const created = await Promise.resolve(
+          client.models.generateContentStream({
+            model,
+            contents: request.input,
+            config: {
+              abortSignal: ctx.signal,
+              httpOptions: {
+                retryOptions: {
+                  attempts: GEMINI_SDK_HTTP_ATTEMPTS,
+                },
+              },
+            },
+          }),
+        );
+
+        return mapGeminiStream(created, model);
+      } catch (error) {
+        mapGeminiError(error, model);
+      }
+    },
   });
 }
 
@@ -163,4 +202,98 @@ function textFromPart(part: GeminiPart): string | undefined {
   }
 
   return undefined;
+}
+
+function mapGeminiStream(
+  iterable: AsyncIterable<GeminiGenerateContentResponse>,
+  fallbackModel: string,
+): AsyncIterable<LlmProviderStreamFrame> {
+  return {
+    [Symbol.asyncIterator](): AsyncIterator<LlmProviderStreamFrame> {
+      const inner = iterable[Symbol.asyncIterator]();
+      let emitted = "";
+
+      return {
+        async next(): Promise<IteratorResult<LlmProviderStreamFrame>> {
+          try {
+            const result = await inner.next();
+
+            if (result.done === true) {
+              return result;
+            }
+
+            const frame = chunkToFrame(result.value, fallbackModel, emitted);
+            emitted = frame.nextEmitted;
+            return { done: false, value: frame.frame };
+          } catch (error) {
+            mapGeminiError(error, fallbackModel);
+          }
+        },
+        async return(): Promise<IteratorResult<LlmProviderStreamFrame>> {
+          try {
+            await inner.return?.();
+          } catch {
+            // Cleanup errors must not replace the primary stream error.
+          }
+
+          return { done: true, value: undefined };
+        },
+      };
+    },
+  };
+}
+
+function chunkToFrame(
+  chunk: GeminiGenerateContentResponse,
+  fallbackModel: string,
+  previouslyEmitted: string,
+): { readonly frame: LlmProviderStreamFrame; readonly nextEmitted: string } {
+  const candidate = chunk.candidates?.[0];
+  const blockReason = chunk.promptFeedback?.blockReason;
+  const finishReason =
+    blockReason !== undefined && blockReason.length > 0 && candidate === undefined
+      ? mapFinishReason("SAFETY")
+      : candidate?.finishReason === undefined || candidate.finishReason === null
+        ? undefined
+        : mapFinishReason(candidate.finishReason);
+  const modelVersion = chunk.modelVersion;
+  const incoming = extractText(candidate?.content);
+  const delta = incrementalVisibleText(previouslyEmitted, incoming);
+  const usage = chunk.usageMetadata;
+
+  return {
+    nextEmitted: incoming.length > 0 ? incoming : previouslyEmitted,
+    frame: {
+      model:
+        typeof modelVersion === "string" && modelVersion.length > 0 ? modelVersion : fallbackModel,
+      ...(delta.length > 0 ? { text: delta } : {}),
+      ...(finishReason === undefined ? {} : { finishReason }),
+      ...(usage === undefined || usage === null ? {} : { usage: mapStreamUsage(usage) }),
+    },
+  };
+}
+
+/**
+ * Emits only newly visible text.
+ *
+ * Official `@google/genai` samples append each chunk's text (incremental
+ * deltas). Some transports repeat a growing prefix; if `incoming` starts with
+ * the previous chunk snapshot, only the suffix is emitted.
+ *
+ * @internal
+ */
+export function incrementalVisibleText(previous: string, incoming: string): string {
+  if (incoming.length === 0) {
+    return "";
+  }
+
+  if (incoming.startsWith(previous)) {
+    return incoming.slice(previous.length);
+  }
+
+  if (previous.startsWith(incoming)) {
+    return "";
+  }
+
+  return incoming;
 }

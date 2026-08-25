@@ -35,6 +35,56 @@ Node.js 20 or newer is required. `@resili/llm` depends only on `@resili/core` at
 
 Reuse `@resili/core` for timeout, retry, circuit breaker, rate limiting, bulkhead, and fallback. Pass those fields through `createLlmClient()`.
 
+## Streaming
+
+`client.stream(request)` is additive. `generate()` is unchanged.
+
+Providers implement optional `LlmProvider.stream`. Calling `stream()` on a provider that only has `execute()` throws `ConfigurationError`.
+
+Pull-through model: `@resili/core` `execute()` stays pending for the entire consumer lifetime (completion, failure, abort, timeout, or early `break`). The provider iterator is not drained into a buffer.
+
+```ts
+const stream = llm.stream({ input: "Explain circuit breakers" });
+
+for await (const event of stream) {
+  if (event.type === "text-delta") {
+    process.stdout.write(event.text);
+  }
+
+  if (event.type === "completed") {
+    event.usage;
+    event.cost;
+    event.finishReason;
+  }
+}
+
+const result = await stream.result();
+```
+
+`result()` does **not** start a second provider call. It shares the same terminal promise as the `completed` event. Iterate (or pull `next()`) to start execution; `result()` alone does not open the provider stream and stays pending until consumption, abort, or `iterator.return()`. `return()` before the first `next()` rejects `result()` with `AbortError`. Concurrent `next()` is rejected.
+
+Unsuccessful streams **reject** `result()` (provider error, timeout, caller abort, or early `break`). There is no successful `"error"` stream event.
+
+### Retry commit point
+
+The stream is **committed** when the first **non-empty** user-visible `text-delta` has been yielded. Metadata frames and empty text do not commit. Before commit, Resili may retry using existing retry config and `llmClassifier`. After commit, there is **no automatic retry**.
+
+### Timeout
+
+`timeout.perAttemptMs` on `stream()` is the **total attempt lifetime**, including time waiting for the consumer to pull. It is **not** time-to-first-token and **not** idle-between-chunks. Those are not implemented in this alpha.
+
+### Early break
+
+`break` from `for await` runs `iterator.return()`, cancels the provider iterator when the SDK exposes `return()`, finishes core execution, releases context, and settles Budget Guard. `result()` rejects with `AbortError`. No `completed` event is yielded.
+
+### Usage, cost, and interrupted streams
+
+Budget Guard still wraps the same `execute()` lifetime: preflight → reserve → consume stream → settle actual cost from **authoritative** usage when present. Failures settle the reservation with `0` actual micro-USD when usage is unavailable. Resili **does not invent tokens**. Provider-side billed tokens on an interrupted stream may therefore be **unrepresented**. This is not distributed budget accounting and is not exact billed usage after abort.
+
+### Telemetry
+
+Public `text-delta` events are not sent on the EventBus. Lifecycle: `LlmStreamStarted`, `LlmStreamCompleted`, `LlmStreamFailed`. No prompts, completions, chunks, keys, or bodies.
+
 ## Minimal example
 
 ```ts
@@ -162,6 +212,9 @@ LLM events (`llm.on`):
 - `LlmUsageRecorded`
 - `LlmBudgetWarning`
 - `LlmBudgetRejected`
+- `LlmStreamStarted`
+- `LlmStreamCompleted`
+- `LlmStreamFailed`
 
 Core policy events (timeout, retry, circuit breaker, …) are available on `llm.onCore(...)`.
 
@@ -175,7 +228,9 @@ Metrics use Resili's `MetricsRecorder`. The only label is `result` = `success` |
 
 ## Current alpha limitations
 
-- Official adapters: [`@resili/llm-openai`](../llm-openai/README.md) (Chat Completions), [`@resili/llm-anthropic`](../llm-anthropic/README.md) (Messages), and [`@resili/llm-gemini`](../llm-gemini/README.md) (`generateContent` text-in/text-out). No Azure or Bedrock adapters yet
+- Official adapters: [`@resili/llm-openai`](../llm-openai/README.md) (Chat Completions, unary + streaming), [`@resili/llm-anthropic`](../llm-anthropic/README.md) (Messages, unary + streaming), and [`@resili/llm-gemini`](../llm-gemini/README.md) (`generateContent` / `generateContentStream` text-in/text-out). No Azure or Bedrock adapters yet
+- Streaming `timeout.perAttemptMs` is full-attempt lifetime, not TTFB or idle-chunk timeout
+- Interrupted streams may not include provider-billed tokens in Resili usage/cost
 - Budget accounting is in-memory per client (or per injected `BudgetAccountant`); reservations are process-local, not distributed
 - `maxCostPerRequestUsd` is an estimated-cost preflight, not a hard actual-cost ceiling
 - Concurrent requests with missing estimates can overshoot `maxAccumulatedCostUsd` after execution

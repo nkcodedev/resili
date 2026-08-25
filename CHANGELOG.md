@@ -10,6 +10,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+#### `@resili/llm` streaming
+
+- Additive `LlmClient.stream()` pull-through streaming. Core `execute()` stays pending for the full consumer lifetime. Optional `LlmProvider.stream`. Retry only before the first yielded non-empty text delta. `timeout.perAttemptMs` is the full stream attempt, including consumer pull wait (not TTFB/idle).
+
+#### `@resili/llm-openai` / `@resili/llm-anthropic` / `@resili/llm-gemini` streaming
+
+- Chat Completions / Messages / `generateContentStream` adapters using raw SDK iterables (`maxRetries: 0` / Gemini `attempts: 1`, `ctx.signal`). Gemini emits only new text when chunks are cumulative.
+
 #### `@resili/llm-gemini` `0.1.0-alpha.1`
 
 - Google Gemini `models.generateContent` adapter for `@resili/llm` using a user-owned `@google/genai` client.

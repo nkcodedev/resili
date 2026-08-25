@@ -14,6 +14,7 @@ cp .env.example .env
 # put your key in .env — never commit .env
 pnpm add openai @resili/llm@file:../../packages/llm @resili/llm-openai@file:../../packages/llm-openai
 node --env-file=.env example.mjs
+node --env-file=.env stream.mjs
 ```
 
 Pricing numbers below are **example configuration**, not OpenAI's current price list.

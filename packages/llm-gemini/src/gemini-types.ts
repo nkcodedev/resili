@@ -59,6 +59,11 @@ export interface GeminiClient {
     generateContent(
       params: GeminiGenerateContentParameters,
     ): Promise<GeminiGenerateContentResponse>;
+    generateContentStream?(
+      params: GeminiGenerateContentParameters,
+    ):
+      | Promise<AsyncIterable<GeminiGenerateContentResponse>>
+      | AsyncIterable<GeminiGenerateContentResponse>;
   };
 }
 

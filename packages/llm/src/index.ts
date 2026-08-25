@@ -2,6 +2,7 @@ export type {
   LlmFinishReason,
   LlmProvider,
   LlmProviderIdentity,
+  LlmProviderStreamFrame,
   LlmRequest,
   LlmResponse,
   LlmUsage,
@@ -55,3 +56,10 @@ export {
   type LlmGenerateRequest,
   type LlmGenerateResult,
 } from "./client";
+export type {
+  LlmStream,
+  LlmStreamCompleted,
+  LlmStreamEvent,
+  LlmStreamResult,
+  LlmStreamTextDelta,
+} from "./stream";

@@ -1,10 +1,16 @@
 import { ConfigurationError, type Context } from "@resili/core";
-import { defineProvider, type LlmProvider, type LlmRequest, type LlmResponse } from "@resili/llm";
+import {
+  defineProvider,
+  type LlmProvider,
+  type LlmProviderStreamFrame,
+  type LlmRequest,
+  type LlmResponse,
+} from "@resili/llm";
 
 import { mapOpenAiError } from "./errors";
 import { mapFinishReason } from "./finish-reason";
-import type { OpenAiChatCompletion, OpenAiClient } from "./openai-types";
-import { mapUsage } from "./usage";
+import type { OpenAiChatCompletion, OpenAiChatCompletionChunk, OpenAiClient } from "./openai-types";
+import { mapStreamUsage, mapUsage } from "./usage";
 
 /**
  * Options for {@link createOpenAiProvider}.
@@ -82,8 +88,53 @@ export function createOpenAiProvider(options: CreateOpenAiProviderOptions): LlmP
           },
         );
 
+        if (!isChatCompletion(completion)) {
+          throw new ConfigurationError("OpenAI unary create() returned a stream.", {
+            field: "client",
+          });
+        }
+
         return normalizeCompletion(completion, model);
       } catch (error) {
+        if (error instanceof ConfigurationError) {
+          throw error;
+        }
+
+        mapOpenAiError(error, model);
+      }
+    },
+    async stream(
+      request: LlmRequest,
+      ctx: Context,
+    ): Promise<AsyncIterable<LlmProviderStreamFrame>> {
+      const model = resolveModel(request.model, defaultModel);
+
+      try {
+        const completion = await client.chat.completions.create(
+          {
+            model,
+            messages: [{ role: "user", content: request.input }],
+            stream: true,
+            stream_options: { include_usage: true },
+          },
+          {
+            signal: ctx.signal,
+            maxRetries: OPENAI_SDK_MAX_RETRIES,
+          },
+        );
+
+        if (isChatCompletion(completion)) {
+          throw new ConfigurationError("OpenAI streaming create() returned a unary completion.", {
+            field: "client",
+          });
+        }
+
+        return mapOpenAiStream(completion, model);
+      } catch (error) {
+        if (error instanceof ConfigurationError) {
+          throw error;
+        }
+
         mapOpenAiError(error, model);
       }
     },
@@ -117,4 +168,68 @@ function normalizeCompletion(completion: OpenAiChatCompletion, fallbackModel: st
     usage: mapUsage(completion.usage),
     finishReason,
   });
+}
+
+function isChatCompletion(
+  value: OpenAiChatCompletion | AsyncIterable<OpenAiChatCompletionChunk>,
+): value is OpenAiChatCompletion {
+  return !(Symbol.asyncIterator in value);
+}
+
+function mapOpenAiStream(
+  iterable: AsyncIterable<OpenAiChatCompletionChunk>,
+  fallbackModel: string,
+): AsyncIterable<LlmProviderStreamFrame> {
+  return {
+    [Symbol.asyncIterator](): AsyncIterator<LlmProviderStreamFrame> {
+      const inner = iterable[Symbol.asyncIterator]();
+
+      return {
+        async next(): Promise<IteratorResult<LlmProviderStreamFrame>> {
+          try {
+            const result = await inner.next();
+
+            if (result.done === true) {
+              return result;
+            }
+
+            return { done: false, value: chunkToFrame(result.value, fallbackModel) };
+          } catch (error) {
+            mapOpenAiError(error, fallbackModel);
+          }
+        },
+        async return(): Promise<IteratorResult<LlmProviderStreamFrame>> {
+          try {
+            await inner.return?.();
+          } catch {
+            // Cleanup errors must not replace the primary stream error.
+          }
+
+          return { done: true, value: undefined };
+        },
+      };
+    },
+  };
+}
+
+function chunkToFrame(
+  chunk: OpenAiChatCompletionChunk,
+  fallbackModel: string,
+): LlmProviderStreamFrame {
+  const choice = chunk.choices?.[0];
+  const text = choice?.delta?.content;
+  const finishReason =
+    choice?.finish_reason === undefined || choice.finish_reason === null
+      ? undefined
+      : mapFinishReason(choice.finish_reason);
+  const model =
+    typeof chunk.model === "string" && chunk.model.length > 0 ? chunk.model : fallbackModel;
+  const usage = chunk.usage;
+
+  return {
+    model,
+    ...(typeof text === "string" ? { text } : {}),
+    ...(finishReason === undefined ? {} : { finishReason }),
+    ...(usage === undefined || usage === null ? {} : { usage: mapStreamUsage(usage) }),
+  };
 }

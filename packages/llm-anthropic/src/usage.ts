@@ -45,3 +45,40 @@ export function mapUsage(usage: AnthropicUsage | null | undefined): LlmUsage {
       : {}),
   });
 }
+
+/**
+ * Streaming usage merge helper. Omitted fields are left unset so later frames
+ * can supply them without zeroing earlier counts.
+ *
+ * @internal
+ */
+export function mapStreamUsage(usage: AnthropicUsage | null | undefined): Partial<LlmUsage> {
+  if (usage === undefined || usage === null) {
+    return {};
+  }
+
+  const cacheCreation = usage.cache_creation_input_tokens;
+  const cacheRead = usage.cache_read_input_tokens;
+  const thinkingTokens = usage.output_tokens_details?.thinking_tokens;
+  const hasCacheCreation = cacheCreation !== undefined && cacheCreation !== null;
+  const hasCacheRead = cacheRead !== undefined && cacheRead !== null;
+  const hasThinking = thinkingTokens !== undefined && thinkingTokens !== null;
+
+  return {
+    ...(usage.input_tokens === undefined || usage.input_tokens === null
+      ? {}
+      : { inputTokens: usage.input_tokens }),
+    ...(usage.output_tokens === undefined || usage.output_tokens === null
+      ? {}
+      : { outputTokens: usage.output_tokens }),
+    ...(hasCacheCreation || hasCacheRead || hasThinking
+      ? {
+          dimensions: {
+            ...(hasCacheCreation ? { cacheCreationInputTokens: cacheCreation } : {}),
+            ...(hasCacheRead ? { cacheReadInputTokens: cacheRead } : {}),
+            ...(hasThinking ? { thinkingTokens } : {}),
+          },
+        }
+      : {}),
+  };
+}

@@ -89,6 +89,12 @@ result.usage.totalTokens;
 result.cost?.totalCostUsd;
 ```
 
+## Streaming
+
+`llm.stream()` uses Messages `stream: true` on the raw event iterable (not `messages.stream()` helpers). `maxRetries` remains `0`. `timeout.perAttemptMs` is the full stream attempt including consumer pull wait. Retry only before the first yielded non-empty text.
+
+See `examples/llm-anthropic/stream.mjs`.
+
 ## Retry ownership
 
 The official Anthropic Node SDK retries **2 times by default** (connection errors, 408, 409, 429, and 5xx).
@@ -144,7 +150,7 @@ Cache and thinking token counts, when present, are copied to `usage.dimensions` 
 
 ## Alpha limitations
 
-- Messages API only (no streaming, tools, vision, embeddings, batches, or beta APIs)
+- Messages API only (no tools, vision, embeddings, batches, or beta APIs). Unary `generate()` and pull-through `stream()` are supported.
 - Single user message from `LlmRequest.input`
 - `maxTokens` must be set by the caller (no silent default)
 - Text blocks only; other content blocks are ignored

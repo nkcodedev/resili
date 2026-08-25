@@ -1,10 +1,21 @@
 import { ConfigurationError, type Context } from "@resili/core";
-import { defineProvider, type LlmProvider, type LlmRequest, type LlmResponse } from "@resili/llm";
+import {
+  defineProvider,
+  type LlmProvider,
+  type LlmProviderStreamFrame,
+  type LlmRequest,
+  type LlmResponse,
+} from "@resili/llm";
 
-import type { AnthropicClient, AnthropicContentBlock, AnthropicMessage } from "./anthropic-types";
+import type {
+  AnthropicClient,
+  AnthropicContentBlock,
+  AnthropicMessage,
+  AnthropicStreamEvent,
+} from "./anthropic-types";
 import { mapAnthropicError } from "./errors";
 import { mapFinishReason } from "./finish-reason";
-import { mapUsage } from "./usage";
+import { mapStreamUsage, mapUsage } from "./usage";
 
 /**
  * Options for {@link createAnthropicProvider}.
@@ -101,8 +112,53 @@ export function createAnthropicProvider(options: CreateAnthropicProviderOptions)
           },
         );
 
+        if (!isAnthropicMessage(message)) {
+          throw new ConfigurationError("Anthropic unary create() returned a stream.", {
+            field: "client",
+          });
+        }
+
         return normalizeMessage(message, model);
       } catch (error) {
+        if (error instanceof ConfigurationError) {
+          throw error;
+        }
+
+        mapAnthropicError(error, model);
+      }
+    },
+    async stream(
+      request: LlmRequest,
+      ctx: Context,
+    ): Promise<AsyncIterable<LlmProviderStreamFrame>> {
+      const model = resolveModel(request.model, defaultModel);
+
+      try {
+        const created = await client.messages.create(
+          {
+            model,
+            max_tokens: maxTokens,
+            messages: [{ role: "user", content: request.input }],
+            stream: true,
+          },
+          {
+            signal: ctx.signal,
+            maxRetries: ANTHROPIC_SDK_MAX_RETRIES,
+          },
+        );
+
+        if (isAnthropicMessage(created)) {
+          throw new ConfigurationError("Anthropic streaming create() returned a unary message.", {
+            field: "client",
+          });
+        }
+
+        return mapAnthropicStream(created, model);
+      } catch (error) {
+        if (error instanceof ConfigurationError) {
+          throw error;
+        }
+
         mapAnthropicError(error, model);
       }
     },
@@ -163,4 +219,78 @@ function textFromBlock(block: AnthropicContentBlock): string | undefined {
   }
 
   return undefined;
+}
+
+function isAnthropicMessage(
+  value: AnthropicMessage | AsyncIterable<AnthropicStreamEvent>,
+): value is AnthropicMessage {
+  return !(Symbol.asyncIterator in value);
+}
+
+function mapAnthropicStream(
+  iterable: AsyncIterable<AnthropicStreamEvent>,
+  fallbackModel: string,
+): AsyncIterable<LlmProviderStreamFrame> {
+  return {
+    [Symbol.asyncIterator](): AsyncIterator<LlmProviderStreamFrame> {
+      const inner = iterable[Symbol.asyncIterator]();
+
+      return {
+        async next(): Promise<IteratorResult<LlmProviderStreamFrame>> {
+          try {
+            const result = await inner.next();
+
+            if (result.done === true) {
+              return result;
+            }
+
+            return { done: false, value: eventToFrame(result.value, fallbackModel) };
+          } catch (error) {
+            mapAnthropicError(error, fallbackModel);
+          }
+        },
+        async return(): Promise<IteratorResult<LlmProviderStreamFrame>> {
+          try {
+            await inner.return?.();
+          } catch {
+            // Cleanup errors must not replace the primary stream error.
+          }
+
+          return { done: true, value: undefined };
+        },
+      };
+    },
+  };
+}
+
+function eventToFrame(event: AnthropicStreamEvent, fallbackModel: string): LlmProviderStreamFrame {
+  if (event.type === "message_start") {
+    const model = event.message?.model;
+    const usage = event.message?.usage;
+
+    return {
+      ...(typeof model === "string" && model.length > 0 ? { model } : { model: fallbackModel }),
+      ...(usage === undefined || usage === null ? {} : { usage: mapStreamUsage(usage) }),
+    };
+  }
+
+  if (event.type === "content_block_delta") {
+    const text = event.delta?.type === "text_delta" ? event.delta.text : event.delta?.text;
+
+    return typeof text === "string" ? { text } : {};
+  }
+
+  if (event.type === "message_delta") {
+    const stopReason = event.delta?.stop_reason;
+    const usage = event.usage;
+
+    return {
+      ...(stopReason === undefined || stopReason === null
+        ? {}
+        : { finishReason: mapFinishReason(stopReason) }),
+      ...(usage === undefined || usage === null ? {} : { usage: mapStreamUsage(usage) }),
+    };
+  }
+
+  return {};
 }

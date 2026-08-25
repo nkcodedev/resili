@@ -12,6 +12,7 @@ import {
   createOpenAiProvider,
   OPENAI_SDK_MAX_RETRIES,
   type OpenAiChatCompletion,
+  type OpenAiChatCompletionChunk,
   type OpenAiClient,
   type OpenAiRequestOptions,
 } from "./index";
@@ -40,9 +41,13 @@ function completion(overrides: Partial<OpenAiChatCompletion> = {}): OpenAiChatCo
 
 function mockClient(
   create: (
-    body: { readonly model: string; readonly messages: readonly unknown[] },
+    body: {
+      readonly model: string;
+      readonly messages: readonly unknown[];
+      readonly stream?: boolean;
+    },
     options?: OpenAiRequestOptions,
-  ) => Promise<OpenAiChatCompletion>,
+  ) => Promise<OpenAiChatCompletion | AsyncIterable<OpenAiChatCompletionChunk>>,
 ): OpenAiClient {
   return {
     chat: {

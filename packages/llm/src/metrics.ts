@@ -18,6 +18,12 @@ export const LLM_METRIC_NAMES = Object.freeze({
   outputTokens: "resili_llm_output_tokens_total",
   tokens: "resili_llm_tokens_total",
   costMicroUsd: "resili_llm_cost_micro_usd_total",
+  streams: "resili_llm_streams_total",
+  streamFailures: "resili_llm_stream_failures_total",
+  streamDurationMs: "resili_llm_stream_duration_ms",
+  streamTtftMs: "resili_llm_stream_ttft_ms",
+  streamChunks: "resili_llm_stream_chunks_total",
+  streamOutputTokens: "resili_llm_stream_output_tokens_total",
 });
 
 /**
@@ -68,6 +74,46 @@ export function recordLlmMetrics(
 
     if (input.costMicroUsd !== undefined) {
       metrics.counter(LLM_METRIC_NAMES.costMicroUsd).add(input.costMicroUsd, labels);
+    }
+  } catch {
+    // Metrics backends must never break request execution.
+  }
+}
+
+/**
+ * @internal
+ */
+export function recordLlmStreamMetrics(
+  metrics: MetricsRecorder,
+  input: {
+    readonly result: "success" | "failure";
+    readonly durationMs: number;
+    readonly ttftMs?: number;
+    readonly chunkCount?: number;
+    readonly outputTokens?: number;
+  },
+): void {
+  const labels: Labels = { result: input.result };
+
+  try {
+    metrics.counter(LLM_METRIC_NAMES.streams).add(1, labels);
+
+    if (input.result === "failure") {
+      metrics.counter(LLM_METRIC_NAMES.streamFailures).add(1, labels);
+    }
+
+    metrics.histogram(LLM_METRIC_NAMES.streamDurationMs).record(input.durationMs, labels);
+
+    if (input.ttftMs !== undefined) {
+      metrics.histogram(LLM_METRIC_NAMES.streamTtftMs).record(input.ttftMs, labels);
+    }
+
+    if (input.chunkCount !== undefined) {
+      metrics.counter(LLM_METRIC_NAMES.streamChunks).add(input.chunkCount, labels);
+    }
+
+    if (input.outputTokens !== undefined) {
+      metrics.counter(LLM_METRIC_NAMES.streamOutputTokens).add(input.outputTokens, labels);
     }
   } catch {
     // Metrics backends must never break request execution.

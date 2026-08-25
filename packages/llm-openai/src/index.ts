@@ -7,6 +7,8 @@ export type { OpenAiErrorCause } from "./errors";
 export type {
   OpenAiChatCompletion,
   OpenAiChatCompletionChoice,
+  OpenAiChatCompletionChunk,
+  OpenAiChatCompletionChunkChoice,
   OpenAiChatCompletionCreateParams,
   OpenAiClient,
   OpenAiCompletionUsage,
