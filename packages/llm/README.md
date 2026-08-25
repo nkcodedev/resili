@@ -67,7 +67,7 @@ Unsuccessful streams **reject** `result()` (provider error, timeout, caller abor
 
 ### Retry commit point
 
-The stream is **committed** when the first **non-empty** user-visible `text-delta` has been yielded. Metadata frames and empty text do not commit. Before commit, Resili may retry using existing retry config and `llmClassifier`. After commit, there is **no automatic retry**.
+The stream is **committed** when the first **non-empty** user-visible `text-delta` has been yielded. Metadata frames and empty text do not commit. Before commit, Resili may retry using existing retry config and `llmClassifier`. After commit, there is **no automatic retry**, including for core per-attempt timeouts.
 
 ### Timeout
 

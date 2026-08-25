@@ -18,7 +18,12 @@ import {
   normalizeBudgetOptions,
   type BudgetGuardOptions,
 } from "./budget";
-import { llmClassifier } from "./classifier";
+import {
+  createLlmStreamCommitState,
+  LLM_STREAM_COMMIT_STATE_KEY,
+  llmClassifier,
+  withStreamCommitRetryGuard,
+} from "./classifier";
 import type { LlmProvider, LlmRequest, LlmResponse, LlmUsage } from "./contracts";
 import { isLlmError, LlmError } from "./errors";
 import {
@@ -144,7 +149,7 @@ export function createLlmClient(options: CreateLlmClientOptions): LlmClient {
     {
       ...createCoreConfig(options),
       policies,
-      classifier: options.classifier ?? llmClassifier,
+      classifier: withStreamCommitRetryGuard(options.classifier ?? llmClassifier),
     },
   );
 
@@ -209,7 +214,10 @@ function streamOnce(input: GenerateOnceInput): LlmStream {
     request: normalizedRequest,
     requestId,
     callerSignal: input.request.signal,
-    metadata: { [LLM_REQUEST_METADATA_KEY]: normalizedRequest },
+    metadata: {
+      [LLM_REQUEST_METADATA_KEY]: normalizedRequest,
+      [LLM_STREAM_COMMIT_STATE_KEY]: createLlmStreamCommitState(),
+    },
   });
 }
 

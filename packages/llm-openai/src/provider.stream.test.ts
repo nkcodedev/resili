@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/require-await, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/non-nullable-type-assertion-style */
 import { createLlmClient, LlmError } from "@resili/llm";
+import type { Clock } from "@resili/core";
 import { describe, expect, it, vi } from "vitest";
 
 import {
@@ -180,6 +181,59 @@ describe("OpenAI streaming adapter", () => {
     await llm.destroy();
   });
 
+  it("does not retry after the first OpenAI text-delta when the stream times out", async () => {
+    let creates = 0;
+    const clock = new FakeClock();
+    const llm = createLlmClient({
+      provider: createOpenAiProvider({
+        client: mockClient(() => {
+          creates += 1;
+          return Promise.resolve({
+            [Symbol.asyncIterator]() {
+              let index = 0;
+              return {
+                async next(): Promise<IteratorResult<OpenAiChatCompletionChunk>> {
+                  index += 1;
+                  if (index === 1) {
+                    return {
+                      done: false,
+                      value: { choices: [{ delta: { content: "A1" } }] },
+                    };
+                  }
+                  return new Promise(() => undefined);
+                },
+              };
+            },
+          });
+        }),
+        model: "gpt-4.1-mini",
+      }),
+      model: "gpt-4.1-mini",
+      clock,
+      timeout: { perAttemptMs: 40 },
+      retry: { maxAttempts: 3, backoff: "fixed", jitter: "none", baseDelayMs: 0 },
+    });
+
+    let retryStarted = 0;
+    llm.onCore("RetryStarted", () => {
+      retryStarted += 1;
+    });
+
+    const texts: string[] = [];
+    const iterator = llm.stream({ input: "x" })[Symbol.asyncIterator]();
+    const first = await iterator.next();
+    if (first.value?.type === "text-delta") {
+      texts.push(first.value.text);
+    }
+    const pending = iterator.next();
+    clock.tick(40);
+    await expect(pending).rejects.toMatchObject({ classification: "timeout", retryable: false });
+    expect(creates).toBe(1);
+    expect(texts).toEqual(["A1"]);
+    expect(retryStarted).toBe(0);
+    await llm.destroy();
+  });
+
   it("propagates cancellation through iterator.return", async () => {
     let returned = 0;
     const llm = createLlmClient({
@@ -213,3 +267,34 @@ describe("OpenAI streaming adapter", () => {
     await llm.destroy();
   });
 });
+
+class FakeClock implements Clock {
+  #now = 0;
+  #nextHandle = 1;
+  readonly #timers = new Map<number, { readonly at: number; readonly callback: () => void }>();
+
+  now(): number {
+    return this.#now;
+  }
+
+  setTimeout(callback: () => void, ms: number): ReturnType<typeof globalThis.setTimeout> {
+    const handle = this.#nextHandle++;
+    this.#timers.set(handle, { at: this.#now + ms, callback });
+    return handle as ReturnType<typeof globalThis.setTimeout>;
+  }
+
+  clearTimeout(handle: ReturnType<typeof globalThis.setTimeout>): void {
+    this.#timers.delete(handle as number);
+  }
+
+  tick(ms: number): void {
+    this.#now += ms;
+    for (const [handle, timer] of [...this.#timers].sort(
+      ([leftHandle], [rightHandle]) => leftHandle - rightHandle,
+    )) {
+      if (timer.at <= this.#now && this.#timers.delete(handle)) {
+        timer.callback();
+      }
+    }
+  }
+}
