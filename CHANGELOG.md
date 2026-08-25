@@ -8,6 +8,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+#### `@resili/llm` streaming
+
+- After the first user-visible `text-delta` is delivered, a core per-attempt timeout no longer starts another provider generation. Visible text from a committed stream comes from one attempt only.
+- Post-commit timeouts surface as `LlmError` with `classification: "timeout"` and `retryable: false` at the stream boundary (including `result()` and `LlmStreamFailed`).
+
 ## [LLM streaming] - 2026-08-25
 
 Independently versioned LLM packages. `@resili/core` remains `0.2.0-alpha.3`.

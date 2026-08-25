@@ -1,4 +1,12 @@
-import { AbortError, TimeoutError, type Context, type MetricsRecorder } from "@resili/core";
+import {
+  AbortError,
+  RetryExceededError,
+  TimeoutError,
+  type Context,
+  type MetricsRecorder,
+} from "@resili/core";
+
+import { markLlmStreamCommitted } from "./classifier";
 
 import type { LlmFinishReason, LlmProviderStreamFrame, LlmRequest, LlmResponse } from "./contracts";
 import { isLlmError, LlmError } from "./errors";
@@ -240,6 +248,7 @@ export function createLlmStream(runtime: StreamRuntime): LlmStream {
             },
             markCommitted: (): void => {
               committed = true;
+              markLlmStreamCommitted(ctx);
             },
             isCommitted: (): boolean => committed,
             onText: (): void => {
@@ -310,7 +319,7 @@ export function createLlmStream(runtime: StreamRuntime): LlmStream {
           committed,
         });
         recordLlmStreamMetrics(runtime.metrics, { result: "failure", durationMs });
-        fail(error);
+        fail(normalized);
       });
   };
 
@@ -498,6 +507,14 @@ async function closeIterator(
   }
 }
 
+function unwrapRetryExceeded(error: unknown): unknown {
+  if (error instanceof RetryExceededError && error.lastError instanceof TimeoutError) {
+    return error.lastError;
+  }
+
+  return error;
+}
+
 function afterCommit(error: unknown, committed: boolean, request: LlmRequest): unknown {
   if (!committed) {
     return error;
@@ -570,5 +587,9 @@ function toThrown(error: unknown): Error {
 }
 
 function normalizeFinalError(error: unknown, request: LlmRequest, committed: boolean): unknown {
-  return afterCommit(error, committed, request);
+  if (!committed) {
+    return error;
+  }
+
+  return afterCommit(unwrapRetryExceeded(error), true, request);
 }

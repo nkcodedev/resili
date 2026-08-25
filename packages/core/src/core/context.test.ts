@@ -176,6 +176,22 @@ describe("Context.fork", () => {
     expect(child.metadata).toBe(parent.metadata);
   });
 
+  it("shares mutable metadata values across retry-like and timeout-like forks", () => {
+    const box = { committed: false };
+    const parent = createContext({ metadata: { box } });
+    const retryFork = parent.fork({ attemptNumber: 2 });
+    const timeoutFork = retryFork.fork({
+      attemptNumber: 2,
+      signal: new AbortController().signal,
+    });
+
+    expect(retryFork.metadata.get("box")).toBe(box);
+    expect(timeoutFork.metadata.get("box")).toBe(box);
+    box.committed = true;
+    expect((parent.metadata.get("box") as { committed: boolean }).committed).toBe(true);
+    expect((timeoutFork.metadata.get("box") as { committed: boolean }).committed).toBe(true);
+  });
+
   it("lets child metadata override parent metadata", () => {
     const child = createContext({ metadata: { tenant: "acme" } }).fork({
       metadata: { tenant: "globex" },
