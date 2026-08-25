@@ -5,7 +5,11 @@
     "composite": true,
     "rootDir": "src",
     "outDir": "dist",
-    "tsBuildInfoFile": "dist/tsconfig.tsbuildinfo"
+    "tsBuildInfoFile": "dist/tsconfig.tsbuildinfo",
+    "baseUrl": ".",
+    "paths": {
+      "@resili/core": ["../core/src/index.ts"]
+    }
   },
   "references": [{ "path": "../core" }],
   "include": ["src/**/*.ts"],
