@@ -69,6 +69,63 @@ describe("definePolicy", () => {
     }).toThrow(TypeError);
   });
 
+  it("accepts cache as a relative order anchor at runtime", () => {
+    const beforeCache = definePolicy({
+      name: "before-cache",
+      order: { before: "cache" },
+      create() {
+        return passThroughPolicy("before-cache", { before: "cache" });
+      },
+    });
+    const afterCache = definePolicy({
+      name: "after-cache",
+      order: { after: "cache" },
+      create() {
+        return passThroughPolicy("after-cache", { after: "cache" });
+      },
+    });
+
+    expect(beforeCache.order).toEqual({ before: "cache" });
+    expect(afterCache.order).toEqual({ after: "cache" });
+    expect(beforeCache.create(createServices()).order).toEqual({ before: "cache" });
+    expect(afterCache.create(createServices()).order).toEqual({ after: "cache" });
+  });
+
+  it("accepts every built-in relative order anchor", () => {
+    const anchors = [
+      "fallback",
+      "cache",
+      "retry",
+      "circuit-breaker",
+      "timeout",
+      "dedupe",
+      "hedge",
+      "rate-limiter",
+      "bulkhead",
+    ] as const;
+
+    for (const anchor of anchors) {
+      expect(() =>
+        definePolicy({
+          name: `before-${anchor}`,
+          order: { before: anchor },
+          create() {
+            return passThroughPolicy(`before-${anchor}`, { before: anchor });
+          },
+        }),
+      ).not.toThrow();
+      expect(() =>
+        definePolicy({
+          name: `after-${anchor}`,
+          order: { after: anchor },
+          create() {
+            return passThroughPolicy(`after-${anchor}`, { after: anchor });
+          },
+        }),
+      ).not.toThrow();
+    }
+  });
+
   it("accepts dedupe as a relative order anchor at runtime", () => {
     const factory = definePolicy({
       name: "around-dedupe",

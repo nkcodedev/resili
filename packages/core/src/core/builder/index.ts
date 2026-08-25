@@ -300,7 +300,10 @@ class ImmutableBuilder<Args extends readonly unknown[], R> implements Builder<Ar
     const policies = policyRegistrations.map(({ factory, options }) =>
       factory.create(services, options),
     );
-    const pipeline = compilePipeline(policies);
+    const pipeline = compilePipeline(policies, {
+      events,
+      clock: installedPlugins.clock,
+    });
     const hasOperationArgsPolicy = policyRegistrations.some(
       (registration) =>
         registration.factory.name === cachePolicy.name ||
