@@ -14,6 +14,7 @@ export {
   isLlmErrorRetryable,
   type LlmErrorClassification,
   type LlmErrorCode,
+  type LlmErrorOptions,
 } from "./errors";
 export { defineProvider, normalizeUsage } from "./provider";
 export {

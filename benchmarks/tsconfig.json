@@ -3,7 +3,11 @@
   "extends": "../tsconfig.base.json",
   "compilerOptions": {
     "noEmit": true,
-    "rootDir": "."
+    "rootDir": ".",
+    "baseUrl": ".",
+    "paths": {
+      "@resili/core": ["../packages/core/src/index.ts"]
+    }
   },
   "include": ["src/**/*.ts"],
   "references": [{ "path": "../packages/core" }]

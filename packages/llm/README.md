@@ -36,7 +36,7 @@ release is `0.1.0-alpha.4`; see [versioning](../../docs/releases/versioning.md).
 - Typed LLM lifecycle events
 - Low-cardinality LLM metrics on Resili's `MetricsRecorder`
 
-Reuse `@resili/core` for timeout, retry, circuit breaker, rate limiting, bulkhead, and fallback. Pass those fields through `createLlmClient()`.
+Reuse `@resili/core` for timeout, retry, circuit breaker, rate limiting, bulkhead, and fallback. Pass those fields through `createLlmClient()`. `metrics` on the LLM client records `resili_llm_*` only and is not Core policy metrics.
 
 ## Streaming
 

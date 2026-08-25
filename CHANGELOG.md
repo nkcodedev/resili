@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Changed
 
 - `@resili/core` public contract honesty: `timeout.deadlineMs` is rejected; `RetryOptions.jitter` is `"none"` only; `idempotentOnly` is not a public field; `stats()` is totals-only; `health()` no longer claims circuit/bulkhead knowledge; `RESILI_VERSION` is generated from `package.json` (tsup/Vitest) so packed ESM and CJS match; `ResiliConfig.metrics` / `Builder.withMetrics` inject policy metrics. Core `tsc` emit is `tsbuild/` so it does not overwrite the tsup `dist` bundle.
+- `@resili/llm` `CreateLlmClientOptions` omits Core `metrics`; LLM `metrics` records `resili_llm_*` only. LLM and provider packages emit `tsc` to `tsbuild/` so typecheck cannot overwrite packed ESM.
 
 ### Documentation
 

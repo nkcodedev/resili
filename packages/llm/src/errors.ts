@@ -74,7 +74,12 @@ const RETRYABLE_CLASSIFICATIONS = new Set<LlmErrorClassification>([
   "network_transient",
 ]);
 
-interface LlmErrorOptions {
+/**
+ * Construction options for {@link LlmError}.
+ *
+ * @public
+ */
+export interface LlmErrorOptions {
   readonly cause?: unknown;
   readonly retryAfterMs?: number;
   readonly provider?: string;

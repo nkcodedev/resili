@@ -22,6 +22,9 @@ controller.abort();
 
 Aborting rejects the pending `generate()` promise, or the pending `next()` on a stream.
 
+If the caller signal is **already aborted** when `generate()` is invoked, the provider is not called.
+The same check runs on the first `stream()` `next()` so a lazy stream does not open the provider.
+
 ## Signal delivery to the SDK
 
 Every adapter forwards `ctx.signal` — the composed signal, so caller aborts, per-attempt timeouts, and

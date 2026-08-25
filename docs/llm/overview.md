@@ -50,7 +50,7 @@ not disable anything in the client you inject — there, disabling is your respo
 ## `createLlmClient()`
 
 ```ts
-interface CreateLlmClientOptions extends ResiliConfig<LlmResponse> {
+interface CreateLlmClientOptions extends Omit<ResiliConfig<LlmResponse>, "metrics"> {
   readonly provider: LlmProvider;
   readonly model?: string;
   readonly pricing?: PricingResolver;
@@ -59,8 +59,8 @@ interface CreateLlmClientOptions extends ResiliConfig<LlmResponse> {
 }
 ```
 
-Five LLM-specific keys; everything else is standard
-[`ResiliConfig`](../core/overview.md#client-config) and is passed straight to core.
+Five LLM-specific keys. Remaining Core policy fields (`retry`, `timeout`, and so on) are passed to
+`createClient`. `metrics` is **LLM-only** (`resili_llm_*`); it is not Core policy metrics injection.
 
 | Key        | Required | Purpose                                                          |
 | ---------- | -------- | ---------------------------------------------------------------- |
@@ -68,7 +68,7 @@ Five LLM-specific keys; everything else is standard
 | `model`    | no       | Default model when the request omits one.                        |
 | `pricing`  | no       | Price table. Required when `budget` uses the default `"reject"`. |
 | `budget`   | no       | [Budget Guard](budget-guard.md) limits.                          |
-| `metrics`  | no       | A `MetricsRecorder` for LLM metrics.                             |
+| `metrics`  | no       | LLM `MetricsRecorder` only. Not forwarded to Core policies.      |
 
 ```ts
 import OpenAI from "openai";
