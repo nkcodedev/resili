@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 
 import {
+  AbortError,
   ConfigurationError,
   createClient,
   type Client,
@@ -65,16 +66,23 @@ export interface LlmGenerateResult {
 /**
  * Configuration for {@link createLlmClient}.
  *
- * LLM-specific fields are stripped before the remainder is passed to
- * {@link createClient}.
+ * LLM-only fields (`provider`, `model`, `pricing`, `budget`, `metrics`) are
+ * not passed through to Core `createClient`. Remaining Core policy fields
+ * (retry, timeout, …) are.
  *
  * @public
  */
-export interface CreateLlmClientOptions extends ResiliConfig<LlmResponse> {
+export interface CreateLlmClientOptions extends Omit<ResiliConfig<LlmResponse>, "metrics"> {
   readonly provider: LlmProvider;
   readonly model?: string;
   readonly pricing?: PricingResolver;
   readonly budget?: BudgetGuardOptions;
+  /**
+   * LLM telemetry recorder (`resili_llm_*` names only).
+   *
+   * Not forwarded to `@resili/core`. Policy metrics such as timeout/retry
+   * counters use Core's default no-op unless a plugin installs Core metrics.
+   */
   readonly metrics?: MetricsRecorder;
 }
 
@@ -222,6 +230,7 @@ function streamOnce(input: GenerateOnceInput): LlmStream {
 }
 
 async function generateOnce(input: GenerateOnceInput): Promise<LlmGenerateResult> {
+  throwIfAborted(input.request.signal);
   const startedAt = Date.now();
   const requestId = randomUUID();
   const model = resolveModel(input.request.model, input.defaultModel);
@@ -391,4 +400,13 @@ function createCoreConfig(options: CreateLlmClientOptions): ResiliConfig<LlmResp
   void _metrics;
 
   return config;
+}
+
+function throwIfAborted(signal: AbortSignal | undefined): void {
+  if (!signal?.aborted) {
+    return;
+  }
+
+  const reason: unknown = signal.reason;
+  throw reason instanceof Error ? reason : new AbortError({ reason });
 }

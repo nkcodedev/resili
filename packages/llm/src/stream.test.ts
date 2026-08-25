@@ -742,6 +742,12 @@ describe("LlmClient.stream", () => {
       classification: "timeout",
       retryable: false,
     });
+
+    await new Promise((resolve) => {
+      setTimeout(resolve, 80);
+    });
+    expect(attempts).toBe(1);
+
     await llm.destroy();
   });
 

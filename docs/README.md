@@ -107,6 +107,9 @@ Deeper specifications: [ARCHITECTURE.md](./ARCHITECTURE.md),
 ## Release status
 
 - [Alpha status](./releases/alpha-status.md) — what is implemented, what the known limitations are
+- [Beta readiness](./releases/BETA_READINESS.md)
+- [Core API freeze review](./releases/BETA_API_REVIEW.md)
+- [LLM API freeze review](./releases/BETA_LLM_API_REVIEW.md)
 - [Versioning](./releases/versioning.md) — dist-tags, version lines, pinning, upgrading
 - [CHANGELOG](../CHANGELOG.md)
 

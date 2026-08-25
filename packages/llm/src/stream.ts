@@ -216,6 +216,14 @@ export function createLlmStream(runtime: StreamRuntime): LlmStream {
     }
 
     started = true;
+
+    try {
+      throwIfAborted(runtime.callerSignal);
+    } catch (error) {
+      fail(error);
+      return;
+    }
+
     const startedAt = Date.now();
 
     runtime.events.emit({
@@ -584,6 +592,15 @@ function toThrown(error: unknown): Error {
   }
 
   return new LlmError("unknown", { cause: error });
+}
+
+function throwIfAborted(signal: AbortSignal | undefined): void {
+  if (!signal?.aborted) {
+    return;
+  }
+
+  const reason: unknown = signal.reason;
+  throw reason instanceof Error ? reason : new AbortError({ reason });
 }
 
 function normalizeFinalError(error: unknown, request: LlmRequest, committed: boolean): unknown {

@@ -36,9 +36,9 @@ Resili is a **public alpha** with two independently versioned lines, eight publi
 
 - Public APIs have not been through an explicit freeze review.
 - HTTP adapters do expose caller-initiated per-call cancellation through the existing `signal` field.
-- Core honesty items from Milestone 4 are implemented on `fix/core-beta-api-honesty` (`timeout.deadlineMs` rejected, stats/health narrowed, `RESILI_VERSION` injected). HTTP/LLM freeze and pack CI remain.
+- Core honesty items from Milestone 4 are on `main`. LLM/provider freeze is Milestone 5 (`fix/llm-beta-api-lock`). Pack CI for HTTP remains Milestone 6.
 - CI runs Node 22 only. Packed-consumer, ESM/CJS, and Node 20/24 gates are manual or absent.
-- `@resili/llm` and HTTP adapters have no API Extractor report.
+- HTTP adapters have no API Extractor report. LLM/provider reports are added in Milestone 5.
 
 **Verdict in one line:** the product is capable enough to beta; the contract is not frozen enough to beta.
 
@@ -654,7 +654,7 @@ Shortest path from current `main` to a beta tag. Adjust only with a written scop
 
 ### Milestone 4 — Core contract honesty + interaction hardening
 
-- **Status:** Complete on `fix/core-beta-api-honesty` (not merged). Proven by Core tests, `api:check`, and packed ESM/CJS version smoke (this branch).
+- **Status:** Complete and merged (`fix(core): harden public API for beta (#31)`).
 - **Objective:** Implement Milestone 2 decisions (`deadlineMs` reject/remove, version, stats types). Add interaction and cancellation tests.
 - **Areas:** `packages/core` (timeout validation, client stats types, version), tests, core docs.
 - **Exit:** P0-3, P1-1, P1-2, P1-6.
@@ -663,6 +663,7 @@ Shortest path from current `main` to a beta tag. Adjust only with a written scop
 
 ### Milestone 5 — LLM / Budget / error hardening
 
+- **Status:** Complete on `fix/llm-beta-api-lock` (not merged). API Extractor for four LLM packages; `tsbuild/` packaging; metrics typing honesty; freeze record `docs/releases/BETA_LLM_API_REVIEW.md`.
 - **Objective:** No new features. Lock adversarial stream + budget tests in CI; add llm API report; confirm classifications frozen.
 - **Areas:** `packages/llm`, provider tests already present, docs/llm.
 - **Exit:** P1-4, P1-7, P1-15.

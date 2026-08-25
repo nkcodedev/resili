@@ -17,7 +17,7 @@ writeFileSync(
  *
  * @public
  */
-export const RESILI_VERSION = ${JSON.stringify(coreVersion.version)};
+export const RESILI_VERSION = ${JSON.stringify(coreVersion.version)} as string;
 `,
 );
 

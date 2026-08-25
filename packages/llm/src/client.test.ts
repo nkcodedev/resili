@@ -1,4 +1,4 @@
-import { ConfigurationError, type Labels, type MetricsRecorder } from "@resili/core";
+import { AbortError, ConfigurationError, type Labels, type MetricsRecorder } from "@resili/core";
 import { describe, expect, it, vi } from "vitest";
 
 import {
@@ -289,6 +289,120 @@ describe("createLlmClient", () => {
     await llm.destroy();
   });
 
+  it("rejects generate() when the caller signal is already aborted", async () => {
+    let attempts = 0;
+    const llm = createLlmClient({
+      provider: exampleProvider(() => {
+        attempts += 1;
+        return successResponse();
+      }),
+      model: "model-a",
+    });
+    const controller = new AbortController();
+    controller.abort();
+
+    await expect(llm.generate({ input: "Hello", signal: controller.signal })).rejects.toSatisfy(
+      isCancellation,
+    );
+    expect(attempts).toBe(0);
+    await llm.destroy();
+  });
+
+  it("does not retry generate() after an in-flight caller abort", async () => {
+    let attempts = 0;
+    const controller = new AbortController();
+    const llm = createLlmClient({
+      provider: defineProvider({
+        name: "example",
+        async execute(_request, ctx) {
+          attempts += 1;
+          await new Promise<void>((resolve, reject) => {
+            ctx.signal.addEventListener(
+              "abort",
+              () => {
+                reject(ctx.signal.reason instanceof Error ? ctx.signal.reason : new AbortError());
+              },
+              { once: true },
+            );
+          });
+          return successResponse();
+        },
+      }),
+      model: "model-a",
+      retry: { maxAttempts: 3, backoff: "fixed", jitter: "none", baseDelayMs: 0 },
+    });
+
+    const pending = llm.generate({ input: "Hello", signal: controller.signal });
+    controller.abort();
+    await expect(pending).rejects.toSatisfy(isCancellation);
+    expect(attempts).toBe(1);
+    await llm.destroy();
+  });
+
+  it("records LLM metrics without forwarding the recorder into Core policies", async () => {
+    const names: string[] = [];
+    const metrics: MetricsRecorder = {
+      counter(name) {
+        names.push(name);
+        return {
+          add() {
+            // capture name only
+          },
+        };
+      },
+      histogram(name) {
+        names.push(name);
+        return {
+          record() {
+            // capture name only
+          },
+        };
+      },
+      gauge(name) {
+        names.push(name);
+        return {
+          set() {
+            // capture name only
+          },
+        };
+      },
+    };
+    const llm = createLlmClient({
+      provider: exampleProvider(() => successResponse()),
+      model: "model-a",
+      metrics,
+      timeout: { perAttemptMs: 5_000 },
+    });
+
+    await llm.generate({ input: "Hello" });
+    expect(names.some((name) => name.startsWith("resili_llm_"))).toBe(true);
+    expect(names.some((name) => name.startsWith("resili_timeout") || name.includes("retry"))).toBe(
+      false,
+    );
+    await llm.destroy();
+  });
+
+  it("rejects stream() when the provider has no stream implementation", () => {
+    const llm = createLlmClient({
+      provider: exampleProvider(() => successResponse()),
+      model: "model-a",
+    });
+
+    expect(() => llm.stream({ input: "Hello" })).toThrow(ConfigurationError);
+  });
+
+  it("does not expose Core execute/stats/health on the LLM client", () => {
+    const llm = createLlmClient({
+      provider: exampleProvider(() => successResponse()),
+      model: "model-a",
+    });
+
+    expect(llm).not.toHaveProperty("execute");
+    expect(llm).not.toHaveProperty("stats");
+    expect(llm).not.toHaveProperty("health");
+    expect(llm).not.toHaveProperty("call");
+  });
+
   it("rejects unknown pricing by default instead of treating it as $0", async () => {
     const events: LlmEvent[] = [];
     const llm = createLlmClient({
@@ -475,4 +589,8 @@ function createRecordingMetrics(): MetricsRecorder & {
       return [...keys].sort((left, right) => left.localeCompare(right));
     },
   };
+}
+
+function isCancellation(error: unknown): boolean {
+  return error instanceof AbortError || (error instanceof Error && error.name === "AbortError");
 }

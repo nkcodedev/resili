@@ -520,12 +520,12 @@ This is **not** a freeze of HTTP adapter lifecycle APIs or the LLM public surfac
 - Error classes plus exported `ResiliErrorOptions`
 - Canonical policy order (fallback → cache → retry → circuit → timeout → dedupe → hedge → rate limiter → bulkhead)
 
-Do not freeze yet: HTTP `on`/`destroy`, LLM stream types, provider structural SDK types.
+Do not freeze yet: HTTP `on`/`destroy`. LLM/provider freeze: see `docs/releases/BETA_LLM_API_REVIEW.md`.
 
 ## Final Recommendation
 
-Milestone 4 honesty pass is the Core freeze candidate. HTTP cancellation is already implemented.
-Remaining Beta API work is adapter lifecycle and LLM/provider freeze recording.
+Milestone 4 is the Core freeze candidate. Milestone 5 is the LLM/provider freeze candidate.
+Remaining Beta API work is HTTP adapter lifecycle (`on`/`destroy`) and pack CI (Milestone 6).
 
 ---
 

@@ -4,10 +4,10 @@
   "compilerOptions": {
     "composite": true,
     "rootDir": "src",
-    "outDir": "dist",
-    "tsBuildInfoFile": "dist/tsconfig.tsbuildinfo"
+    "outDir": "tsbuild",
+    "tsBuildInfoFile": "tsbuild/tsconfig.tsbuildinfo"
   },
   "references": [{ "path": "../core" }],
   "include": ["src/**/*.ts"],
-  "exclude": ["dist", "coverage", "temp", "**/*.test.ts", "**/*.spec.ts"]
+  "exclude": ["dist", "tsbuild", "coverage", "temp", "**/*.test.ts", "**/*.spec.ts"]
 }
