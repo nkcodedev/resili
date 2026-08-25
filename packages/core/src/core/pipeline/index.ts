@@ -1,4 +1,7 @@
+import { systemClock, type Clock } from "../clock";
 import { createContext, releaseContext, type Context, type ContextInit } from "../context";
+import type { EventBus } from "../events";
+import { isResiliError } from "../errors";
 import type { Next, Policy, PolicyOrder } from "../policy";
 
 /**
@@ -19,27 +22,93 @@ export interface Pipeline {
 }
 
 /**
+ * Optional runtime collaborators for top-level request lifecycle events.
+ *
+ * @internal
+ */
+export interface PipelineRuntime {
+  readonly events?: EventBus;
+  readonly clock?: Clock;
+}
+
+/**
  * Compiles an ordered array of policies into a pipeline execution chain.
  *
  * @internal
  */
-export function compilePipeline(policies: Policy[]): Pipeline {
+export function compilePipeline(policies: Policy[], runtime: PipelineRuntime = {}): Pipeline {
   const sortedPolicies = sortPolicies(policies);
+  const events = runtime.events;
+  const clock = runtime.clock ?? systemClock;
 
   return {
     policies: Object.freeze(sortedPolicies),
     async execute<T>(operation: Operation<T>, ctxInit?: ContextInit): Promise<T> {
       const rootContext = createContext(ctxInit ?? {});
+      const startedAt = clock.now();
+      let attempts = rootContext.attemptNumber;
+      const unsubscribeRetryAttempts =
+        events === undefined
+          ? undefined
+          : events.on("RetryStarted", (event) => {
+              if (event.requestId === rootContext.requestId) {
+                attempts = Math.max(attempts, event.attemptNumber);
+              }
+            });
+
+      emitRequestStarted(events, clock, rootContext);
 
       try {
         const chain = buildExecutionChain(sortedPolicies, operation);
+        const result = await chain(rootContext);
+        emitRequestCompleted(events, clock, rootContext, startedAt, attempts, undefined);
 
-        return await chain(rootContext);
+        return result;
+      } catch (error) {
+        emitRequestCompleted(events, clock, rootContext, startedAt, attempts, error);
+        throw error;
       } finally {
+        unsubscribeRetryAttempts?.();
         releaseContext(rootContext);
       }
     },
   };
+}
+
+function emitRequestStarted(events: EventBus | undefined, clock: Clock, ctx: Context): void {
+  events?.emit({
+    type: "RequestStarted",
+    timestamp: clock.now(),
+    requestId: ctx.requestId,
+    operationName: ctx.operationName,
+    serviceName: ctx.serviceName,
+    deadline: ctx.deadline,
+  });
+}
+
+function emitRequestCompleted(
+  events: EventBus | undefined,
+  clock: Clock,
+  ctx: Context,
+  startedAt: number,
+  attempts: number,
+  error: unknown,
+): void {
+  if (events === undefined) {
+    return;
+  }
+
+  events.emit({
+    type: "RequestCompleted",
+    timestamp: clock.now(),
+    requestId: ctx.requestId,
+    operationName: ctx.operationName,
+    serviceName: ctx.serviceName,
+    durationMs: Math.max(0, clock.now() - startedAt),
+    status: error === undefined ? "success" : "error",
+    attempts,
+    ...(error !== undefined && isResiliError(error) ? { errorCode: error.code } : {}),
+  });
 }
 
 interface OrderedPolicy {

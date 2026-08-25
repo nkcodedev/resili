@@ -166,8 +166,10 @@ describe("createBuilder", () => {
 
     await expect(client.call()).resolves.toBe("ok");
 
-    expect(buildHandler).toHaveBeenCalledTimes(1);
-    expect(runtimeHandler).toHaveBeenCalledTimes(1);
+    expect(buildHandler).toHaveBeenCalledTimes(2);
+    expect(buildHandler).toHaveBeenCalledWith(event);
+    expect(runtimeHandler).toHaveBeenCalledTimes(2);
+    expect(runtimeHandler).toHaveBeenCalledWith(event);
   });
 
   it("adds built-in policy methods as immutable chainable snapshots", () => {

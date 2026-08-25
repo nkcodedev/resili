@@ -182,7 +182,7 @@ Metrics use Resili's `MetricsRecorder`. The only label is `result` = `success` |
 - Hedged/cached LLM semantics are not specialized beyond core policies
 - `usage.dimensions` are recorded but not priced
 - Core's public event map is closed; LLM events are a typed bus on this package
-- `{ after: "cache" }` cannot be used as a policy order anchor in `@resili/core` today (`PolicyOrder` lists `"cache"` but `isBuiltinPolicyAnchor` omits it). Budget Guard uses `{ before: "retry" }` instead (resolved order `199.5`, between cache `150` and retry `200`).
+- `{ after: "cache" }` and `{ before: "cache" }` are valid `@resili/core` relative order anchors. Budget Guard still uses `{ before: "retry" }` (resolved order `199.5`, between cache `150` and retry `200`).
 
 ## License
 

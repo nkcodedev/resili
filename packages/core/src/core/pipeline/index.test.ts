@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { Context } from "../context";
+import { DefaultEventBus } from "../events";
+import { TimeoutError } from "../errors";
 import type { Next, Policy, PolicyOrder } from "../policy";
 import { compilePipeline, type Operation } from "./index";
 
@@ -88,6 +90,52 @@ describe("compilePipeline", () => {
     ]);
 
     expect(policyNames(pipeline.policies)).toEqual(["before-cache", "cache", "after-cache"]);
+  });
+
+  it("resolves cache relative anchors to the canonical 149.5 / 150.5 slots", () => {
+    const pipeline = compilePipeline([
+      passThroughPolicy("numeric-149", 149),
+      passThroughPolicy("before-cache", { before: "cache" }),
+      passThroughPolicy("cache", 150),
+      passThroughPolicy("after-cache", { after: "cache" }),
+      passThroughPolicy("numeric-151", 151),
+      passThroughPolicy("retry", 200),
+    ]);
+
+    expect(policyNames(pipeline.policies)).toEqual([
+      "numeric-149",
+      "before-cache",
+      "cache",
+      "after-cache",
+      "numeric-151",
+      "retry",
+    ]);
+  });
+
+  it("keeps the canonical built-in numeric order unchanged", () => {
+    const pipeline = compilePipeline([
+      passThroughPolicy("bulkhead", 600),
+      passThroughPolicy("rate-limiter", 500),
+      passThroughPolicy("hedge", 450),
+      passThroughPolicy("dedupe", 425),
+      passThroughPolicy("timeout", 400),
+      passThroughPolicy("circuit-breaker", 300),
+      passThroughPolicy("retry", 200),
+      passThroughPolicy("cache", 150),
+      passThroughPolicy("fallback", 100),
+    ]);
+
+    expect(policyNames(pipeline.policies)).toEqual([
+      "fallback",
+      "cache",
+      "retry",
+      "circuit-breaker",
+      "timeout",
+      "dedupe",
+      "hedge",
+      "rate-limiter",
+      "bulkhead",
+    ]);
   });
 
   it("sorts hedge between timeout and rate limiter in the built-in order", () => {
@@ -223,6 +271,57 @@ describe("compilePipeline", () => {
 
     await expect(pipeline.execute(operation)).resolves.toBe("cached");
     expect(operation).not.toHaveBeenCalled();
+  });
+
+  it("emits one RequestStarted/RequestCompleted pair per top-level execute", async () => {
+    const events = new DefaultEventBus();
+    const observed: string[] = [];
+    events.on("RequestStarted", () => {
+      observed.push("started");
+    });
+    events.on("RequestCompleted", (event) => {
+      observed.push(`completed:${event.status}:${String(event.attempts)}`);
+    });
+
+    const pipeline = compilePipeline([], { events });
+
+    await expect(pipeline.execute(() => Promise.resolve("ok"))).resolves.toBe("ok");
+    await expect(pipeline.execute(() => Promise.reject(new Error("boom")))).rejects.toThrow("boom");
+
+    expect(observed).toEqual(["started", "completed:success:1", "started", "completed:error:1"]);
+  });
+
+  it("records Resili error codes on failed completion", async () => {
+    const events = new DefaultEventBus();
+    const completed = vi.fn();
+    events.on("RequestCompleted", completed);
+
+    await expect(
+      compilePipeline([failingPolicy("failing", 100, new TimeoutError({ timeoutMs: 5 }))], {
+        events,
+      }).execute(() => Promise.resolve("ok")),
+    ).rejects.toBeInstanceOf(TimeoutError);
+
+    expect(completed).toHaveBeenCalledTimes(1);
+    expect(completed.mock.calls[0]?.[0]).toMatchObject({
+      status: "error",
+      errorCode: "ERR_TIMEOUT",
+      attempts: 1,
+    });
+  });
+
+  it("does not fail execution when a lifecycle listener throws", async () => {
+    const events = new DefaultEventBus();
+    events.on("RequestStarted", () => {
+      throw new Error("listener failed");
+    });
+    events.on("RequestCompleted", () => {
+      throw new Error("listener failed");
+    });
+
+    await expect(
+      compilePipeline([], { events }).execute(() => Promise.resolve("ok")),
+    ).resolves.toBe("ok");
   });
 });
 

@@ -277,10 +277,10 @@ interface Client<Args extends readonly unknown[], R> {
   /** Run an arbitrary context-aware operation through the same pipeline & state. */
   execute<T = R>(operation: (ctx: Context) => Promise<T>, init?: ContextInit): Promise<T>;
 
-  /** Live snapshot of runtime state (breaker states, bulkhead occupancy, counters). */
+  /** Snapshot of live execution counters plus reserved (currently empty) policy maps. */
   stats(): ClientStats;
 
-  /** Derived health verdict for readiness/liveness probes. */
+  /** Health derived from available policy snapshot maps (not live built-in policy state yet). */
   health(): ClientHealth;
 
   /** Subscribe to events at runtime. Returns an unsubscribe function. */
@@ -295,8 +295,8 @@ interface Client<Args extends readonly unknown[], R> {
 |--------|---------|--------|---------|
 | `call` | Primary execution path; preserves the wrapped function's types. | Any [Resili error](#6-error-api) or the operation's own error (when not handled by fallback). | `await client.call("https://api/x")` |
 | `execute` | Run ad-hoc work (not the bound operation) with access to `Context` (signal, deadline). | Same as `call`. | `await client.execute(ctx => db.query(sql, { signal: ctx.signal }))` |
-| `stats` | Observability/debugging; cheap synchronous snapshot. | never | `client.stats().circuit['user-service'].state` |
-| `health` | Probe endpoints; aggregates breaker states. | never | `app.get('/ready', () => client.health().status)` |
+| `stats` | Observability/debugging; cheap synchronous snapshot. | never | `client.stats().totals.retries` |
+| `health` | Probe endpoints; derived from policy snapshot maps (currently empty). | never | `app.get('/ready', () => client.health().status)` |
 | `on` | Runtime event subscription (handlers are isolated). | never | `client.on('CircuitOpened', e => log(e))` |
 | `destroy` | Cleanup for tests, hot-reload, and Lambda teardown. | never | `await client.destroy()` |
 
@@ -317,7 +317,11 @@ interface ClientHealth {
 }
 ```
 
-**`health()` mapping:** `healthy` = all circuits closed; `degraded` = any half-open or saturated bulkhead; `unhealthy` = any circuit open.
+**`stats()` (alpha):** `totals` (`calls`, `successes`, `failures`, `retries`) are live execution counters. `retries` counts extra attempts after the first (`RetryStarted` events), not total attempts. `circuit`, `bulkhead`, and `rateLimiter` are reserved policy snapshot maps and are currently always `{}` — built-in circuit breaker, bulkhead, and rate limiter runtime state is not wired into `stats()` yet.
+
+**`health()` mapping:** `healthy` = no open circuits in the snapshot; `degraded` = any half-open circuit or queued bulkhead in the snapshot; `unhealthy` = any open circuit in the snapshot. Because those maps are empty, `health()` does not yet aggregate live built-in policy state and remains `healthy` until a snapshot hook exists.
+
+`RequestStarted` / `RequestCompleted` are emitted once per top-level `call()`/`execute()`, wrapping the pipeline. Retry attempts emit `Retry*` events only. `RequestCompleted.errorCode` is present only for Resili errors.
 
 ---
 
@@ -427,7 +431,9 @@ interface RateLimiterOptions {
 | `limit` | **yes** | `>= 1` | — |
 | `intervalMs` | **yes** | `> 0` | — |
 | `burst` | no | `>= 1` | set with `strategy:'sliding-window'` → error |
-| `maxWaitMs` | conditionally | `> 0` | `onLimit:'wait'` without `maxWaitMs` → error |
+| `maxWaitMs` | conditionally | `> 0` | `onLimit:'wait'` without `maxWaitMs` → error; `maxWaitMs` with `onLimit:'reject'` → error |
+
+Wait mode waits for capacity using the injected `Clock` (no busy loop). Same-key waiters are admitted FIFO. If the next required wait exceeds the remaining `maxWaitMs` budget, the request is rejected immediately (`RateLimitExceededError`) instead of sleeping past the limit. Caller `AbortSignal` / context abort cancels the wait without consuming a token.
 
 ### 5.6 FallbackOptions / MetricsOptions / EventOptions
 

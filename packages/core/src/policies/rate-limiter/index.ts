@@ -1,5 +1,5 @@
 import type { Context } from "../../core/context";
-import { ConfigurationError, RateLimitExceededError } from "../../core/errors";
+import { AbortError, ConfigurationError, RateLimitExceededError } from "../../core/errors";
 import {
   definePolicy,
   type Next,
@@ -56,11 +56,19 @@ export interface RateLimiterOptions {
 
   /**
    * Limit handling mode.
+   *
+   * `"reject"` fails immediately. `"wait"` waits for capacity up to
+   * {@link RateLimiterOptions.maxWaitMs}, then rejects if the remaining wait
+   * would exceed that budget. Waiters for the same key are admitted FIFO.
    */
   readonly onLimit?: RateLimiterLimitBehavior;
 
   /**
    * Maximum wait duration for wait mode.
+   *
+   * Required when {@link RateLimiterOptions.onLimit} is `"wait"`. If the next
+   * token would not become available within this remaining budget, the request
+   * is rejected immediately instead of sleeping past the limit.
    */
   readonly maxWaitMs?: number;
 
@@ -75,7 +83,8 @@ interface NormalizedRateLimiterOptions {
   readonly limit: number;
   readonly intervalMs: number;
   readonly burst: number;
-  readonly onLimit: "reject";
+  readonly onLimit: RateLimiterLimitBehavior;
+  readonly maxWaitMs?: number;
   readonly key?: string | KeyResolver;
 }
 
@@ -106,7 +115,7 @@ export const rateLimiterPolicy: PolicyFactory = definePolicy({
       name: "rate-limiter",
       order: 500,
       async execute<T>(ctx: Context, next: Next<T>): Promise<T> {
-        limiter.acquire(ctx);
+        await limiter.acquire(ctx);
 
         return await next(ctx);
       },
@@ -119,42 +128,133 @@ class InMemoryRateLimiter {
   readonly #options: NormalizedRateLimiterOptions;
   readonly #tokenBuckets = new Map<string, TokenBucketState>();
   readonly #slidingWindows = new Map<string, SlidingWindowState>();
+  readonly #keyLocks = new Map<string, Promise<void>>();
 
   constructor(services: PolicyServices, options: NormalizedRateLimiterOptions) {
     this.#services = services;
     this.#options = options;
   }
 
-  acquire(ctx: Context): void {
+  async acquire(ctx: Context): Promise<void> {
     const key = resolveKey(this.#options.key, ctx);
+
+    if (this.#options.onLimit === "reject") {
+      this.#acquireOrThrow(ctx, key, false);
+
+      return;
+    }
+
+    await this.#withKeyLock(key, async () => {
+      await this.#waitForAdmission(ctx, key);
+    });
+  }
+
+  async #waitForAdmission(ctx: Context, key: string): Promise<void> {
+    const maxWaitMs = this.#options.maxWaitMs ?? 0;
+    const waitDeadline = this.#services.clock.now() + maxWaitMs;
+    let waited = false;
+    let announcedLimit = false;
+
+    for (;;) {
+      if (ctx.signal.aborted) {
+        throw createAbortError(ctx);
+      }
+
+      const now = this.#services.clock.now();
+      const result = this.#tryAcquire(key, now);
+
+      if (result.allowed) {
+        return;
+      }
+
+      const remainingWaitMs = waitDeadline - now;
+
+      if (!announcedLimit) {
+        this.#emitRateLimited(ctx, key, now, result.retryAfterMs, false);
+        announcedLimit = true;
+      }
+
+      if (result.retryAfterMs > remainingWaitMs) {
+        if (waited) {
+          this.#emitRateLimited(ctx, key, now, result.retryAfterMs, true);
+        }
+
+        throw new RateLimitExceededError({
+          retryAfterMs: result.retryAfterMs,
+          context: ctx.snapshot(),
+        });
+      }
+
+      await sleep(this.#services, result.retryAfterMs, ctx);
+      waited = true;
+    }
+  }
+
+  #acquireOrThrow(ctx: Context, key: string, waited: boolean): void {
     const now = this.#services.clock.now();
-    const result =
-      this.#options.strategy === "token-bucket"
-        ? this.#acquireTokenBucket(key, now)
-        : this.#acquireSlidingWindow(key, now);
+    const result = this.#tryAcquire(key, now);
 
     if (result.allowed) {
       return;
     }
 
-    const error = new RateLimitExceededError({
+    this.#emitRateLimited(ctx, key, now, result.retryAfterMs, waited);
+
+    throw new RateLimitExceededError({
       retryAfterMs: result.retryAfterMs,
       context: ctx.snapshot(),
     });
+  }
 
+  #emitRateLimited(
+    ctx: Context,
+    key: string,
+    timestamp: number,
+    retryAfterMs: number,
+    waited: boolean,
+  ): void {
     this.#services.emit({
       type: "RateLimited",
-      timestamp: now,
+      timestamp,
       requestId: ctx.requestId,
       operationName: ctx.operationName,
       serviceName: ctx.serviceName,
       key,
       strategy: this.#options.strategy,
-      retryAfterMs: result.retryAfterMs,
-      waited: false,
+      retryAfterMs,
+      waited,
+    });
+  }
+
+  #tryAcquire(
+    key: string,
+    now: number,
+  ): { readonly allowed: true } | { readonly allowed: false; readonly retryAfterMs: number } {
+    return this.#options.strategy === "token-bucket"
+      ? this.#acquireTokenBucket(key, now)
+      : this.#acquireSlidingWindow(key, now);
+  }
+
+  async #withKeyLock<T>(key: string, fn: () => Promise<T>): Promise<T> {
+    const previous = this.#keyLocks.get(key) ?? Promise.resolve();
+    let release!: () => void;
+    const current = new Promise<void>((resolve) => {
+      release = resolve;
     });
 
-    throw error;
+    this.#keyLocks.set(key, current);
+
+    try {
+      await previous.catch(() => undefined);
+
+      return await fn();
+    } finally {
+      release();
+
+      if (this.#keyLocks.get(key) === current) {
+        this.#keyLocks.delete(key);
+      }
+    }
   }
 
   #acquireTokenBucket(
@@ -259,17 +359,24 @@ function normalizeOptions(options: unknown): NormalizedRateLimiterOptions {
   }
 
   if (candidate.maxWaitMs !== undefined) {
-    throw new ConfigurationError("rateLimiter.maxWaitMs is not implemented yet.", {
-      field: "rateLimiter.maxWaitMs",
-    });
+    validateNumberGreaterThan(candidate.maxWaitMs, 0, "rateLimiter.maxWaitMs");
   }
 
   validateOnLimit(onLimit);
 
-  if (onLimit === "wait") {
-    throw new ConfigurationError("rateLimiter wait mode is not implemented yet.", {
-      field: "rateLimiter.onLimit",
+  if (onLimit === "wait" && candidate.maxWaitMs === undefined) {
+    throw new ConfigurationError("rateLimiter.maxWaitMs is required when onLimit is 'wait'.", {
+      field: "rateLimiter.maxWaitMs",
     });
+  }
+
+  if (onLimit === "reject" && candidate.maxWaitMs !== undefined) {
+    throw new ConfigurationError(
+      "rateLimiter.maxWaitMs is only supported when onLimit is 'wait'.",
+      {
+        field: "rateLimiter.maxWaitMs",
+      },
+    );
   }
 
   if (candidate.key !== undefined) {
@@ -282,8 +389,45 @@ function normalizeOptions(options: unknown): NormalizedRateLimiterOptions {
     intervalMs: candidate.intervalMs,
     burst: candidate.burst ?? candidate.limit,
     onLimit,
+    ...(candidate.maxWaitMs === undefined ? {} : { maxWaitMs: candidate.maxWaitMs }),
     ...(candidate.key === undefined ? {} : { key: candidate.key }),
   });
+}
+
+function sleep(services: PolicyServices, delayMs: number, ctx: Context): Promise<void> {
+  if (delayMs <= 0) {
+    if (ctx.signal.aborted) {
+      throw createAbortError(ctx);
+    }
+
+    return Promise.resolve();
+  }
+
+  if (ctx.signal.aborted) {
+    throw createAbortError(ctx);
+  }
+
+  return new Promise((resolve, reject) => {
+    const timer = services.clock.setTimeout(() => {
+      ctx.signal.removeEventListener("abort", onAbort);
+      services.clock.clearTimeout(timer);
+      resolve();
+    }, delayMs);
+
+    const onAbort = (): void => {
+      services.clock.clearTimeout(timer);
+      ctx.signal.removeEventListener("abort", onAbort);
+      reject(createAbortError(ctx));
+    };
+
+    ctx.signal.addEventListener("abort", onAbort, { once: true });
+  });
+}
+
+function createAbortError(ctx: Context): Error {
+  const reason: unknown = ctx.signal.reason;
+
+  return reason instanceof Error ? reason : new AbortError({ reason, context: ctx.snapshot() });
 }
 
 function resolveKey(key: string | KeyResolver | undefined, ctx: Context): string {

@@ -18,8 +18,12 @@ export type CircuitState = "closed" | "open" | "half_open";
 /**
  * Live client runtime stats.
  *
- * Policy-specific maps are populated by concrete policy implementations as
- * they become available. The client owns aggregate call totals.
+ * Aggregate call totals are owned by the client. `totals.retries` counts extra
+ * attempts after the first attempt (`RetryStarted` events), not total attempts.
+ *
+ * Policy-specific maps (`circuit`, `bulkhead`, `rateLimiter`) stay empty until
+ * a future hook publishes live policy snapshots. Built-in policies currently
+ * keep that state on the policy instance, not on this client snapshot.
  *
  * @public
  */
@@ -137,6 +141,7 @@ class ImmutableClient<Args extends readonly unknown[], R> implements Client<Args
     failures: 0,
     retries: 0,
   };
+  readonly #unsubscribeRetryStats: Unsubscribe;
   #destroyed = false;
 
   constructor(init: CoreClientInit<Args, R>) {
@@ -149,6 +154,9 @@ class ImmutableClient<Args extends readonly unknown[], R> implements Client<Args
     if (init.dispose !== undefined) {
       this.#dispose = init.dispose;
     }
+    this.#unsubscribeRetryStats = this.#events.on("RetryStarted", () => {
+      this.#totals.retries += 1;
+    });
 
     Object.freeze(this);
   }
@@ -201,6 +209,7 @@ class ImmutableClient<Args extends readonly unknown[], R> implements Client<Args
     }
 
     this.#destroyed = true;
+    this.#unsubscribeRetryStats();
 
     try {
       await this.#dispose?.();
