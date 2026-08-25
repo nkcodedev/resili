@@ -8,12 +8,32 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [LLM streaming timeout fix] - 2026-08-25
+
+Corrective release for the streaming commit point. `@resili/core` remains `0.2.0-alpha.3`.
+
+- `@resili/llm` `0.1.0-alpha.4`
+- `@resili/llm-openai` `0.1.0-alpha.4`
+- `@resili/llm-anthropic` `0.1.0-alpha.4`
+- `@resili/llm-gemini` `0.1.0-alpha.3`
+
+The provider adapters are republished with no adapter behavior change so their packed dependencies resolve to `@resili/llm@0.1.0-alpha.4`.
+
 ### Fixed
 
-#### `@resili/llm` streaming
+#### `@resili/llm`
 
-- After the first user-visible `text-delta` is delivered, a core per-attempt timeout no longer starts another provider generation. Visible text from a committed stream comes from one attempt only.
-- Post-commit timeouts surface as `LlmError` with `classification: "timeout"` and `retryable: false` at the stream boundary (including `result()` and `LlmStreamFailed`).
+- A logical stream is **committed** once the first non-empty user-visible `text-delta` has been delivered to the consumer. Metadata frames and empty text do not commit.
+- After commit, a core per-attempt timeout can no longer start another provider generation. In `@resili/llm` `0.1.0-alpha.3` a `timeout.perAttemptMs` expiry after committed text was still classified retryable, so `retry.maxAttempts > 1` could run additional generations.
+- Visible text in one logical stream now comes from exactly one provider generation. Duplicate text concatenated from multiple generations is prevented.
+- Post-commit timeouts surface as `LlmError` with `classification: "timeout"` and `retryable: false` at the public stream boundary, including iteration, `result()`, and the `LlmStreamFailed` event (`committed: true`).
+- Pre-commit retry behavior is unchanged: retryable provider failures and per-attempt timeouts before the first delivered non-empty text still retry according to the configured retry policy and classifier.
+- Unary `generate()` retry, timeout, and `RetryExceededError` behavior is unchanged. Pre-commit timeout exhaustion on a stream also still surfaces `RetryExceededError`.
+
+### Package Compatibility
+
+- Republished `@resili/llm-openai`, `@resili/llm-anthropic`, and `@resili/llm-gemini` against `@resili/llm@0.1.0-alpha.4`.
+- No provider adapter, `@resili/core`, or HTTP adapter runtime behavior changed in this release.
 
 ## [LLM streaming] - 2026-08-25
 
@@ -23,6 +43,8 @@ Independently versioned LLM packages. `@resili/core` remains `0.2.0-alpha.3`.
 - `@resili/llm-openai` `0.1.0-alpha.3`
 - `@resili/llm-anthropic` `0.1.0-alpha.3`
 - `@resili/llm-gemini` `0.1.0-alpha.2`
+
+> **Published with a known defect.** These versions were released to npm. In `@resili/llm` `0.1.0-alpha.3` the retry commit point below was not enforced for core per-attempt timeouts, so a timeout after committed text could start another provider generation. Fixed in `@resili/llm` `0.1.0-alpha.4`.
 
 ### Added
 
