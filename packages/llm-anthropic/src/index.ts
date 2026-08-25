@@ -10,5 +10,6 @@ export type {
   AnthropicMessage,
   AnthropicMessageCreateParams,
   AnthropicRequestOptions,
+  AnthropicStreamEvent,
   AnthropicUsage,
 } from "./anthropic-types";

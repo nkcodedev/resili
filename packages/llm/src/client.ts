@@ -30,6 +30,7 @@ import {
 import { recordLlmMetrics, resolveMetrics } from "./metrics";
 import { calculateCost, type LlmCost, type PricingResolver } from "./pricing";
 import { freezeRequest, freezeResponse, normalizeUsage } from "./provider";
+import { createLlmStream, type LlmStream } from "./stream";
 
 /**
  * Generation input accepted by {@link LlmClient.generate}.
@@ -79,6 +80,7 @@ export interface CreateLlmClientOptions extends ResiliConfig<LlmResponse> {
  */
 export interface LlmClient {
   generate(request: LlmGenerateRequest): Promise<LlmGenerateResult>;
+  stream(request: LlmGenerateRequest): LlmStream;
   on<T extends LlmEventType>(type: T, handler: LlmEventHandler<T>): LlmUnsubscribe;
   onCore<T extends ResiliEventType>(type: T, handler: EventHandler<T>): Unsubscribe;
   destroy(): Promise<void>;
@@ -157,6 +159,16 @@ export function createLlmClient(options: CreateLlmClientOptions): LlmClient {
         request,
       });
     },
+    stream(request: LlmGenerateRequest): LlmStream {
+      return streamOnce({
+        client,
+        events,
+        metrics,
+        options,
+        defaultModel,
+        request,
+      });
+    },
     on: events.on.bind(events),
     onCore: client.on.bind(client),
     destroy: async (): Promise<void> => {
@@ -173,6 +185,32 @@ interface GenerateOnceInput {
   readonly options: CreateLlmClientOptions;
   readonly defaultModel: string | undefined;
   readonly request: LlmGenerateRequest;
+}
+
+function streamOnce(input: GenerateOnceInput): LlmStream {
+  if (typeof input.options.provider.stream !== "function") {
+    throw new ConfigurationError(
+      "This provider does not support streaming. Implement optional LlmProvider.stream or use generate().",
+      { field: "provider.stream" },
+    );
+  }
+
+  const requestId = randomUUID();
+  const model = resolveModel(input.request.model, input.defaultModel);
+  const normalizedRequest = freezeRequest(createNormalizedRequest(input, model));
+  const streamFn = input.options.provider.stream.bind(input.options.provider);
+
+  return createLlmStream({
+    execute: (operation, init) => input.client.execute(operation, init),
+    stream: (request, ctx) => streamFn(request, ctx),
+    events: input.events,
+    metrics: input.metrics,
+    pricing: input.options.pricing,
+    request: normalizedRequest,
+    requestId,
+    callerSignal: input.request.signal,
+    metadata: { [LLM_REQUEST_METADATA_KEY]: normalizedRequest },
+  });
 }
 
 async function generateOnce(input: GenerateOnceInput): Promise<LlmGenerateResult> {

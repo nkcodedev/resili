@@ -14,7 +14,7 @@ pnpm add @resili/core @resili/llm @resili/llm-gemini @google/genai
 
 Node.js 20 or newer is required. `@google/genai@2.18.0` documents **Node.js 20 or later** (Node 22+ is required starting with SDK 3.0.0).
 
-You supply the Gemini SDK client. This package does not depend on `@google/genai` at runtime (optional peer `>=1.0.0`). The adapter is **structural** and was inspected against **`@google/genai@2.18.0`**. It supports **`models.generateContent` only** (plain text in / text out). It sets **`httpOptions.retryOptions.attempts` to `1`** on every call so **Resili owns retries**.
+You supply the Gemini SDK client. This package does not depend on `@google/genai` at runtime (optional peer `>=1.0.0`). The adapter is **structural** and was inspected against **`@google/genai@2.18.0`**. It supports **`models.generateContent` and `generateContentStream`** (plain text in / text out). It sets **`httpOptions.retryOptions.attempts` to `1`** on every call so **Resili owns retries**.
 
 ## Relationship to `@resili/llm`
 
@@ -87,6 +87,16 @@ result.usage.totalTokens;
 result.cost?.totalCostUsd;
 ```
 
+## Streaming
+
+`llm.stream()` uses `models.generateContentStream` with `abortSignal` and `retryOptions.attempts: 1`. `timeout.perAttemptMs` is the full stream attempt including consumer pull wait.
+
+Official `@google/genai` samples **append** each chunk's text (incremental deltas). This adapter also treats a chunk whose text starts with the previous chunk snapshot as cumulative and emits only the new suffix, so overlapping prefixes are not duplicated.
+
+Gemini may still bill tokens after a client abort; Resili does not invent usage for unreported tokens.
+
+See `examples/llm-gemini/stream.mjs`.
+
 ## Retry ownership
 
 `@google/genai` retries HTTP calls by default (`HttpRetryOptions.attempts` defaults to **5**, including the original request) using `p-retry` for statuses 408, 429, 500, 502, 503, and 504.
@@ -140,7 +150,7 @@ Abort / 499 is rethrown so Resili owns cancellation. `cause` is a sanitized snap
 
 ## Alpha limitations
 
-- `models.generateContent` only (no streaming, tools, multimodal input, embeddings, files, grounding, Vertex-specific setup, or Live API)
+- `models.generateContent` and `generateContentStream` (no tools, multimodal input, embeddings, files, grounding, Vertex-specific setup, or Live API)
 - Single user text from `LlmRequest.input` (`contents` string)
 - Text parts only; thought parts and other part types are ignored
 - Missing Gemini `usageMetadata` becomes zero counts

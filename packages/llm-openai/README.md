@@ -85,6 +85,14 @@ result.usage.totalTokens;
 result.cost?.totalCostUsd;
 ```
 
+## Streaming
+
+`llm.stream()` uses Chat Completions `stream: true` and `stream_options.include_usage: true` on the raw iterable (not an accumulator helper). SDK `maxRetries` remains `0`. `timeout.perAttemptMs` is the full stream attempt including consumer pull wait.
+
+Retries follow `@resili/llm`: only before the first yielded non-empty text. Interrupted streams may omit billed tokens from Resili usage.
+
+See `examples/llm-openai/stream.mjs`.
+
 ## Retry ownership
 
 The official OpenAI Node SDK retries **2 times by default** (connection errors, 408, 409, 429, and 5xx).
@@ -137,7 +145,7 @@ Do not hard-code vendor prices here. Example USD amounts in this README are **il
 
 ## Alpha limitations
 
-- Chat Completions only (no Responses API, Assistants, embeddings, images, or streaming)
+- Chat Completions only (no Responses API, Assistants, embeddings, or images). Unary `generate()` and pull-through `stream()` are supported. Streaming reads `choices[0]` only.
 - Single user message from `LlmRequest.input`
 - No tool calls, vision, or JSON-schema mapping
 - Missing OpenAI `usage` becomes zero counts (the `LlmUsage` contract requires numbers; tokens are not estimated)

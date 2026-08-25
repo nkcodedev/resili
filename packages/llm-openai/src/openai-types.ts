@@ -23,6 +23,10 @@ export interface OpenAiChatCompletionCreateParams {
     readonly role: "user";
     readonly content: string;
   }[];
+  readonly stream?: boolean;
+  readonly stream_options?: {
+    readonly include_usage?: boolean;
+  };
 }
 
 /**
@@ -39,7 +43,7 @@ export interface OpenAiClient {
       create(
         body: OpenAiChatCompletionCreateParams,
         options?: OpenAiRequestOptions,
-      ): Promise<OpenAiChatCompletion>;
+      ): Promise<OpenAiChatCompletion | AsyncIterable<OpenAiChatCompletionChunk>>;
     };
   };
 }
@@ -61,6 +65,27 @@ export interface OpenAiChatCompletion {
 export interface OpenAiChatCompletionChoice {
   readonly finish_reason?: string | null;
   readonly message?: {
+    readonly content?: string | null;
+  };
+}
+
+/**
+ * Streaming Chat Completions chunk fields this adapter reads.
+ *
+ * @public
+ */
+export interface OpenAiChatCompletionChunk {
+  readonly model?: string;
+  readonly choices?: readonly OpenAiChatCompletionChunkChoice[];
+  readonly usage?: OpenAiCompletionUsage | null;
+}
+
+/**
+ * @public
+ */
+export interface OpenAiChatCompletionChunkChoice {
+  readonly finish_reason?: string | null;
+  readonly delta?: {
     readonly content?: string | null;
   };
 }

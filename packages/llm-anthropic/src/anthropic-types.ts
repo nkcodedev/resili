@@ -25,6 +25,7 @@ export interface AnthropicMessageCreateParams {
     readonly role: "user";
     readonly content: string;
   }[];
+  readonly stream?: boolean;
 }
 
 /**
@@ -40,7 +41,7 @@ export interface AnthropicClient {
     create(
       body: AnthropicMessageCreateParams,
       options?: AnthropicRequestOptions,
-    ): Promise<AnthropicMessage>;
+    ): Promise<AnthropicMessage | AsyncIterable<AnthropicStreamEvent>>;
   };
 }
 
@@ -79,4 +80,23 @@ export interface AnthropicUsage {
   readonly output_tokens_details?: {
     readonly thinking_tokens?: number | null;
   } | null;
+}
+
+/**
+ * Raw Messages streaming event fields this adapter reads.
+ *
+ * @public
+ */
+export interface AnthropicStreamEvent {
+  readonly type?: string;
+  readonly message?: {
+    readonly model?: string;
+    readonly usage?: AnthropicUsage | null;
+  };
+  readonly delta?: {
+    readonly type?: string;
+    readonly text?: string;
+    readonly stop_reason?: string | null;
+  };
+  readonly usage?: AnthropicUsage | null;
 }

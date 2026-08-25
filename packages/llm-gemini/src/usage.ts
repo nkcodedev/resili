@@ -45,3 +45,39 @@ export function mapUsage(usage: GeminiUsageMetadata | null | undefined): LlmUsag
       : {}),
   });
 }
+
+/**
+ * Streaming usage merge helper. Omitted fields stay unset.
+ *
+ * @internal
+ */
+export function mapStreamUsage(usage: GeminiUsageMetadata | null | undefined): Partial<LlmUsage> {
+  if (usage === undefined || usage === null) {
+    return {};
+  }
+
+  const cachedTokens = usage.cachedContentTokenCount;
+  const thoughtsTokens = usage.thoughtsTokenCount;
+  const toolUsePromptTokens = usage.toolUsePromptTokenCount;
+  const hasDimensions =
+    cachedTokens !== undefined || thoughtsTokens !== undefined || toolUsePromptTokens !== undefined;
+
+  return {
+    ...(usage.promptTokenCount === undefined ? {} : { inputTokens: usage.promptTokenCount }),
+    ...(usage.candidatesTokenCount === undefined
+      ? {}
+      : { outputTokens: usage.candidatesTokenCount }),
+    ...(usage.totalTokenCount === undefined ? {} : { totalTokens: usage.totalTokenCount }),
+    ...(hasDimensions
+      ? {
+          dimensions: {
+            ...(cachedTokens === undefined ? {} : { cachedContentTokenCount: cachedTokens }),
+            ...(thoughtsTokens === undefined ? {} : { thoughtsTokenCount: thoughtsTokens }),
+            ...(toolUsePromptTokens === undefined
+              ? {}
+              : { toolUsePromptTokenCount: toolUsePromptTokens }),
+          },
+        }
+      : {}),
+  };
+}

@@ -143,4 +143,40 @@ export interface LlmProvider {
    * Executes one normalized generation request.
    */
   execute(request: LlmRequest, ctx: Context): Promise<LlmResponse>;
+
+  /**
+   * Optional streaming generation. Missing `stream` is not an error until
+   * `LlmClient.stream()` is called.
+   *
+   * Frames may include metadata without text. Only non-empty `text` is yielded
+   * to consumers as `text-delta`.
+   */
+  stream?(request: LlmRequest, ctx: Context): Promise<AsyncIterable<LlmProviderStreamFrame>>;
+}
+
+/**
+ * Adapter-normalized streaming frame. Not a public consumer event.
+ *
+ * @public
+ */
+export interface LlmProviderStreamFrame {
+  /**
+   * Incremental or cumulative text. Empty/omitted frames do not commit retry.
+   */
+  readonly text?: string;
+
+  /**
+   * Model identity when the provider reports it mid-stream.
+   */
+  readonly model?: string;
+
+  /**
+   * Finish reason when the provider reports it.
+   */
+  readonly finishReason?: LlmFinishReason;
+
+  /**
+   * Partial or final usage. Missing counts are not estimated.
+   */
+  readonly usage?: Partial<LlmUsage>;
 }

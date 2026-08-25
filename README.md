@@ -78,9 +78,9 @@ Resili gives those failure modes explicit, typed, testable policy boundaries.
 | Axios adapter              | `@resili/axios`         | Available | Minimal Axios-compatible structural wrapper               |
 | Undici adapter             | `@resili/undici`        | Available | Minimal Undici-compatible request wrapper                 |
 | LLM foundation             | `@resili/llm`           | Alpha     | Provider-neutral usage, cost, budget, and LLM telemetry   |
-| OpenAI LLM adapter         | `@resili/llm-openai`    | Alpha     | Chat Completions provider for `@resili/llm`               |
-| Anthropic LLM adapter      | `@resili/llm-anthropic` | Alpha     | Messages API provider for `@resili/llm`                   |
-| Gemini LLM adapter         | `@resili/llm-gemini`    | Alpha     | generateContent provider for `@resili/llm`                |
+| OpenAI LLM adapter         | `@resili/llm-openai`    | Alpha     | Chat Completions unary + streaming for `@resili/llm`      |
+| Anthropic LLM adapter      | `@resili/llm-anthropic` | Alpha     | Messages unary + streaming for `@resili/llm`              |
+| Gemini LLM adapter         | `@resili/llm-gemini`    | Alpha     | generateContent / generateContentStream for `@resili/llm` |
 
 ## Built-in Policies at a glance
 

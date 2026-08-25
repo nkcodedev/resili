@@ -26,6 +26,14 @@ export function defineProvider(provider: LlmProvider): LlmProvider {
     });
   }
 
+  if (typeof provider.stream === "function") {
+    return Object.freeze({
+      name: provider.name.trim(),
+      execute: provider.execute.bind(provider),
+      stream: provider.stream.bind(provider),
+    });
+  }
+
   return Object.freeze({
     name: provider.name.trim(),
     execute: provider.execute.bind(provider),

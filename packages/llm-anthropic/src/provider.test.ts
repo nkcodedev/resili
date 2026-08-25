@@ -15,6 +15,7 @@ import {
   type AnthropicClient,
   type AnthropicMessage,
   type AnthropicRequestOptions,
+  type AnthropicStreamEvent,
 } from "./index";
 
 const PROMPT = "SECRET_PROMPT_DO_NOT_LEAK";
@@ -41,9 +42,10 @@ function mockClient(
       readonly model: string;
       readonly max_tokens: number;
       readonly messages: readonly unknown[];
+      readonly stream?: boolean;
     },
     options?: AnthropicRequestOptions,
-  ) => Promise<AnthropicMessage>,
+  ) => Promise<AnthropicMessage | AsyncIterable<AnthropicStreamEvent>>,
 ): AnthropicClient {
   return {
     messages: {

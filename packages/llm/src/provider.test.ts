@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/require-await */
 import { ConfigurationError } from "@resili/core";
 import { describe, expect, it, vi } from "vitest";
 
@@ -30,6 +31,34 @@ describe("defineProvider", () => {
 
     expect(response.content).toBe("ok");
     expect(execute).toHaveBeenCalledTimes(1);
+  });
+
+  it("binds an optional stream method", async () => {
+    const stream = vi.fn(async () => {
+      return {
+        async *[Symbol.asyncIterator]() {
+          yield { text: "x" };
+        },
+      };
+    });
+    const provider = defineProvider({
+      name: "example",
+      execute: () =>
+        Promise.resolve({
+          provider: "example",
+          model: "model-a",
+          content: "ok",
+          usage: { inputTokens: 1, outputTokens: 1, totalTokens: 2 },
+          finishReason: "stop",
+        }),
+      stream,
+    });
+
+    expect(typeof provider.stream).toBe("function");
+    await provider.stream?.({ provider: "example", model: "model-a", input: "hi" }, {
+      signal: new AbortController().signal,
+    } as Context);
+    expect(stream).toHaveBeenCalledTimes(1);
   });
 
   it("rejects an invalid provider", () => {

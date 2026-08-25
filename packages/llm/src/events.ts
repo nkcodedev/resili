@@ -13,7 +13,10 @@ export type LlmEventType =
   | "LlmRequestFailed"
   | "LlmUsageRecorded"
   | "LlmBudgetWarning"
-  | "LlmBudgetRejected";
+  | "LlmBudgetRejected"
+  | "LlmStreamStarted"
+  | "LlmStreamCompleted"
+  | "LlmStreamFailed";
 
 /**
  * Common immutable fields on every LLM event.
@@ -74,6 +77,26 @@ export interface LlmEventMap {
     readonly accumulatedMicroUsd: number;
     readonly attemptedMicroUsd: number;
     readonly limitMicroUsd: number;
+  };
+  readonly LlmStreamStarted: LlmEventBase & {
+    readonly type: "LlmStreamStarted";
+  };
+  readonly LlmStreamCompleted: LlmEventBase & {
+    readonly type: "LlmStreamCompleted";
+    readonly durationMs: number;
+    readonly ttftMs?: number;
+    readonly chunkCount: number;
+    readonly inputTokens: number;
+    readonly outputTokens: number;
+    readonly totalTokens: number;
+    readonly costMicroUsd?: number;
+  };
+  readonly LlmStreamFailed: LlmEventBase & {
+    readonly type: "LlmStreamFailed";
+    readonly durationMs: number;
+    readonly classification: string;
+    readonly retryable: boolean;
+    readonly committed: boolean;
   };
 }
 

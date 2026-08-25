@@ -36,3 +36,31 @@ export function mapUsage(usage: OpenAiCompletionUsage | null | undefined): LlmUs
         }),
   });
 }
+
+/**
+ * Streaming usage merge helper. Omitted fields stay unset.
+ *
+ * @internal
+ */
+export function mapStreamUsage(usage: OpenAiCompletionUsage | null | undefined): Partial<LlmUsage> {
+  if (usage === undefined || usage === null) {
+    return {};
+  }
+
+  const cachedTokens = usage.prompt_tokens_details?.cached_tokens;
+  const reasoningTokens = usage.completion_tokens_details?.reasoning_tokens;
+
+  return {
+    ...(usage.prompt_tokens === undefined ? {} : { inputTokens: usage.prompt_tokens }),
+    ...(usage.completion_tokens === undefined ? {} : { outputTokens: usage.completion_tokens }),
+    ...(usage.total_tokens === undefined ? {} : { totalTokens: usage.total_tokens }),
+    ...(cachedTokens === undefined && reasoningTokens === undefined
+      ? {}
+      : {
+          dimensions: {
+            ...(cachedTokens === undefined ? {} : { cachedTokens }),
+            ...(reasoningTokens === undefined ? {} : { reasoningTokens }),
+          },
+        }),
+  };
+}
