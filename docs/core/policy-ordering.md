@@ -83,8 +83,8 @@ without ever exercising the retry policy.
 
 Both semantics are legitimate; they answer different questions. Resili answers "how long may one
 attempt take?" with `perAttemptMs`. For "how long may the whole request take?", use the context
-deadline, which every policy respects through the composed signal. Note that `TimeoutOptions.deadlineMs`
-is validated but inert — it is not the way to get an overall bound.
+deadline, which every policy respects through the composed signal. `TimeoutOptions.deadlineMs` is
+rejected; it is not the way to get an overall bound.
 
 ### Cache outside retry
 

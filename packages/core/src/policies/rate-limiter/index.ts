@@ -2,17 +2,13 @@ import type { Context } from "../../core/context";
 import { AbortError, ConfigurationError, RateLimitExceededError } from "../../core/errors";
 import {
   definePolicy,
+  type KeyResolver,
   type Next,
   type PolicyFactory,
   type PolicyServices,
 } from "../../core/policy";
 
-/**
- * Resolves a rate-limiter partition key from the current context.
- *
- * @public
- */
-export type KeyResolver = (ctx: Context) => string;
+export type { KeyResolver } from "../../core/policy";
 
 /**
  * Rate limiter strategy.

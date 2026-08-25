@@ -13,8 +13,8 @@ const llm = createLlmClient({
 });
 ```
 
-`perAttemptMs` is required — there is no default. `deadlineMs` is accepted and validated but has no
-runtime effect; use a context deadline for an end-to-end bound.
+`perAttemptMs` is required — there is no default. `timeout.deadlineMs` throws; use a context deadline
+for an end-to-end bound.
 
 The timeout is **per attempt** and renewed on each retry, so `perAttemptMs: 60_000` with
 `maxAttempts: 3` is a worst case near three minutes plus backoff, not one.
@@ -150,7 +150,8 @@ Three timeout flavors you might expect from a streaming API are **not** availabl
   50 seconds before its first token is only caught by the full `perAttemptMs`.
 - **Idle / inter-chunk timeout.** No bound on the gap between deltas. A stream that stops mid-sentence
   without closing is only caught by `perAttemptMs`.
-- **Overall multi-attempt deadline via `deadlineMs`.** The option is validated and inert.
+- **Overall multi-attempt deadline via timeout policy.** `timeout.deadlineMs` throws. Use
+  `ContextInit.deadline` / `deadlineMs`.
 
 Until these exist, `perAttemptMs` is the only timing control, and it is a blunt one. A caller
 `AbortController` gives you application-level control:

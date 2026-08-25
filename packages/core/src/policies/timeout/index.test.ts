@@ -21,12 +21,11 @@ describe("timeoutPolicy", () => {
     expect(Object.isFrozen(policy)).toBe(true);
   });
 
-  it("allows object options with a valid deadline budget", async () => {
+  it("rejects timeout.deadlineMs instead of accepting an unused overall budget", () => {
     const services = createServices();
-    const policy = timeoutPolicy.create(services, { perAttemptMs: 50, deadlineMs: 100 });
 
-    await expect(policy.execute(createTestContext(), () => Promise.resolve("ok"))).resolves.toBe(
-      "ok",
+    expect(() => timeoutPolicy.create(services, { perAttemptMs: 50, deadlineMs: 100 })).toThrow(
+      ConfigurationError,
     );
   });
 

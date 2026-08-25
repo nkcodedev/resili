@@ -2,6 +2,7 @@ node_modules
 .corepack
 .corepack-*
 dist
+tsbuild
 coverage
 temp
 docs/api

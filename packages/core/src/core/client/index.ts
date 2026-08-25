@@ -18,24 +18,16 @@ export type CircuitState = "closed" | "open" | "half_open";
 /**
  * Live client runtime stats.
  *
- * Aggregate call totals are owned by the client. `totals.retries` counts extra
- * attempts after the first attempt (`RetryStarted` events), not total attempts.
+ * Totals are owned by the client. `totals.retries` counts extra attempts after
+ * the first attempt (`RetryStarted` events), not total attempts.
  *
- * Policy-specific maps (`circuit`, `bulkhead`, `rateLimiter`) stay empty until
- * a future hook publishes live policy snapshots. Built-in policies currently
- * keep that state on the policy instance, not on this client snapshot.
+ * This snapshot does not include circuit, bulkhead, or rate-limiter maps.
+ * Those policies keep process-local state on the policy instance; it is not
+ * published through this client API.
  *
  * @public
  */
 export interface ClientStats {
-  readonly circuit: Readonly<
-    Record<
-      string,
-      { readonly state: CircuitState; readonly failureRate: number; readonly calls: number }
-    >
-  >;
-  readonly bulkhead: Readonly<Record<string, { readonly active: number; readonly queued: number }>>;
-  readonly rateLimiter: Readonly<Record<string, { readonly available: number }>>;
   readonly totals: {
     readonly calls: number;
     readonly successes: number;
@@ -45,13 +37,16 @@ export interface ClientStats {
 }
 
 /**
- * Derived health verdict for readiness and liveness checks.
+ * Process-local snapshot derived from {@link Client.stats}.
+ *
+ * `status` is always `"healthy"` because Resili does not currently publish
+ * policy snapshots (open circuits, queued bulkhead work) on the client.
+ * Do not use this as a dependency readiness probe.
  *
  * @public
  */
 export interface ClientHealth {
-  readonly status: "healthy" | "degraded" | "unhealthy";
-  readonly openCircuits: readonly string[];
+  readonly status: "healthy";
   readonly details: ClientStats;
 }
 
@@ -111,10 +106,6 @@ interface ClientTotals {
   failures: number;
   retries: number;
 }
-
-const EMPTY_CIRCUIT_STATS = Object.freeze({}) as ClientStats["circuit"];
-const EMPTY_BULKHEAD_STATS = Object.freeze({}) as ClientStats["bulkhead"];
-const EMPTY_RATE_LIMITER_STATS = Object.freeze({}) as ClientStats["rateLimiter"];
 
 /**
  * Creates an immutable core client.
@@ -176,26 +167,9 @@ class ImmutableClient<Args extends readonly unknown[], R> implements Client<Args
   }
 
   health(): ClientHealth {
-    const details = this.stats();
-    const openCircuits = Object.entries(details.circuit)
-      .filter(([, circuit]) => circuit.state === "open")
-      .map(([key]) => key);
-    const hasHalfOpenCircuit = Object.values(details.circuit).some(
-      (circuit) => circuit.state === "half_open",
-    );
-    const hasQueuedBulkhead = Object.values(details.bulkhead).some(
-      (bulkhead) => bulkhead.queued > 0,
-    );
-
     return Object.freeze({
-      status:
-        openCircuits.length > 0
-          ? "unhealthy"
-          : hasHalfOpenCircuit || hasQueuedBulkhead
-            ? "degraded"
-            : "healthy",
-      openCircuits: Object.freeze(openCircuits),
-      details,
+      status: "healthy",
+      details: this.stats(),
     });
   }
 
@@ -237,9 +211,6 @@ class ImmutableClient<Args extends readonly unknown[], R> implements Client<Args
 
 function createStatsSnapshot(totals: ClientTotals): ClientStats {
   return Object.freeze({
-    circuit: EMPTY_CIRCUIT_STATS,
-    bulkhead: EMPTY_BULKHEAD_STATS,
-    rateLimiter: EMPTY_RATE_LIMITER_STATS,
     totals: Object.freeze({ ...totals }),
   });
 }

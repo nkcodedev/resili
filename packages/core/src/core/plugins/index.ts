@@ -6,11 +6,10 @@ import { definePolicy, type PolicyFactory } from "../policy";
 import type { StateStore } from "../state";
 
 /**
- * Plugin contract used by future builder integration.
+ * Plugin contract installed by the builder during client construction.
  *
- * Plugins describe metadata and a setup hook. The setup hook is intentionally
- * not executed by this module; lifecycle and dependency ordering belong to the
- * builder/plugin installer layer.
+ * Plugins describe metadata and a setup hook. The builder installer runs setup
+ * in dependency and priority order, then applies service overrides.
  *
  * @public
  */
@@ -49,9 +48,8 @@ export interface ResiliPlugin<O = void> {
 /**
  * Setup-time context available to plugins.
  *
- * This is a contract only. Runtime registration, dependency ordering, service
- * override application, and lifecycle handling are implemented by future
- * builder integration.
+ * The builder plugin installer implements registration, dependency ordering,
+ * service overrides, and disposal.
  *
  * @public
  */

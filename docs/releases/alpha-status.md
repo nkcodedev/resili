@@ -94,10 +94,9 @@ text, raw provider chunks, API keys, or `Authorization` headers.
 
 ### Core
 
-- `retry.jitter` accepts only `"none"`; `"full"` and `"equal"` throw `ConfigurationError`.
-- `retry.idempotentOnly` must remain `false`.
-- `timeout.deadlineMs` is validated but not enforced as a runtime limit — there is no total-request
-  deadline, only per-attempt timeouts.
+- `retry.jitter` is `"none"` only. Other values throw `ConfigurationError`.
+- `retry.idempotentOnly` is not a public option; `true` throws if passed at runtime.
+- `timeout.deadlineMs` throws. Timeouts are per-attempt; use a context deadline for an overall bound.
 - `hedge.maxAttempts` must be `2`.
 - All policy state is in-memory and per-process. Breaker state, rate limits, bulkhead slots, cache
   entries, and budget totals are **not** shared across instances or replicas. `StateStore` is the seam

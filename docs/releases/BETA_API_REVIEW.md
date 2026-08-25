@@ -54,7 +54,7 @@ No currently exported symbol should be deleted before beta except as part of the
 
 Same as the readiness plan. Independent version lines. Dual ESM/CJS. Node `>=20`.
 
-API Extractor exists **only** for `@resili/core`, and that report still contains `ae-forgotten-export` warnings.
+API Extractor exists **only** for `@resili/core`. Milestone 4 cleared Core `ae-forgotten-export` warnings. LLM and HTTP packages still have no report.
 
 ---
 
@@ -62,33 +62,33 @@ API Extractor exists **only** for `@resili/core`, and that report still contains
 
 ### Summary of non-KEEP items
 
-| Symbol                             | Package | Class              | Why                                              |
-| ---------------------------------- | ------- | ------------------ | ------------------------------------------------ |
-| `RESILI_VERSION`                   | core    | CHANGE BEFORE BETA | Literal `"0.0.0"`                                |
-| `TimeoutOptions`                   | core    | CHANGE BEFORE BETA | `deadlineMs` validates and is unused             |
-| `RetryOptions`                     | core    | CHANGE BEFORE BETA | `jitter` / `idempotentOnly` wider than runtime   |
-| `ClientStats`                      | core    | CHANGE BEFORE BETA | Policy maps always empty                         |
-| `ClientHealth`                     | core    | CHANGE BEFORE BETA | Derived from empty maps                          |
-| `Client`                           | core    | CHANGE BEFORE BETA | `stats()` / `health()` contract                  |
-| `ResiliConfig`                     | core    | CHANGE BEFORE BETA | No `metrics` field; clock/store/classifier exist |
-| `Builder`                          | core    | CHANGE BEFORE BETA | `withClock` / `withStore` but no `withMetrics`   |
-| `createFetch` / `ResilientFetch`   | fetch   | CHANGE BEFORE BETA | Caller `signal` ignored; no lifecycle            |
-| `createAxios` / `ResilientAxios`   | axios   | CHANGE BEFORE BETA | Same                                             |
-| `createUndici` / `ResilientUndici` | undici  | CHANGE BEFORE BETA | Same                                             |
-| `FailureVerdict`                   | core    | REVIEW             | Not used by `FailureClassifier`                  |
-| `CacheEventKeyType`                | core    | REVIEW             | Event-payload only                               |
-| `CacheEventValueType`              | core    | REVIEW             | Event-payload only                               |
-| `AxiosRequestConfig`               | axios   | REVIEW             | `[key: string]: unknown`                         |
-| `AxiosResponse`                    | axios   | REVIEW             | Same index signature                             |
-| `UndiciRequestOptions`             | undici  | REVIEW             | Same                                             |
-| `UndiciResponse`                   | undici  | REVIEW             | Same                                             |
-| `LlmProviderIdentity`              | llm     | REVIEW             | Redundant with `LlmProvider.name`                |
-| `LlmProviderStreamFrame`           | llm     | REVIEW             | Easy to confuse with `LlmStreamEvent`            |
-| `evaluateBudget`                   | llm     | REVIEW             | Advanced / custom accountant                     |
-| `BudgetDecision`                   | llm     | REVIEW             | Pairs with `evaluateBudget`                      |
-| `BudgetDecisionInput`              | llm     | REVIEW             | Pairs with `evaluateBudget`                      |
-| `LlmFinishReason`                  | llm     | REVIEW             | Includes `tool_calls` with no tools API          |
-| `KeyResolver`                      | core    | REVIEW             | Only the circuit-breaker copy is exported        |
+| Symbol                             | Package | Class              | Why                                        |
+| ---------------------------------- | ------- | ------------------ | ------------------------------------------ |
+| `RESILI_VERSION`                   | core    | KEEP               | Build-injected package version             |
+| `TimeoutOptions`                   | core    | KEEP               | `perAttemptMs` only; `deadlineMs` rejected |
+| `RetryOptions`                     | core    | KEEP               | `jitter?: "none"`; no `idempotentOnly`     |
+| `ClientStats`                      | core    | KEEP               | Totals only                                |
+| `ClientHealth`                     | core    | KEEP               | Always `"healthy"`; not a policy probe     |
+| `Client`                           | core    | KEEP               | Honest `stats()` / `health()`              |
+| `ResiliConfig`                     | core    | KEEP               | Includes `metrics`                         |
+| `Builder`                          | core    | KEEP               | Includes `withMetrics`                     |
+| `createFetch` / `ResilientFetch`   | fetch   | CHANGE BEFORE BETA | Lifecycle (`on`/`destroy`) still hidden    |
+| `createAxios` / `ResilientAxios`   | axios   | CHANGE BEFORE BETA | Same                                       |
+| `createUndici` / `ResilientUndici` | undici  | CHANGE BEFORE BETA | Same                                       |
+| `FailureVerdict`                   | core    | REVIEW             | Not used by `FailureClassifier`            |
+| `CacheEventKeyType`                | core    | REVIEW             | Event-payload only                         |
+| `CacheEventValueType`              | core    | REVIEW             | Event-payload only                         |
+| `AxiosRequestConfig`               | axios   | REVIEW             | `[key: string]: unknown`                   |
+| `AxiosResponse`                    | axios   | REVIEW             | Same index signature                       |
+| `UndiciRequestOptions`             | undici  | REVIEW             | Same                                       |
+| `UndiciResponse`                   | undici  | REVIEW             | Same                                       |
+| `LlmProviderIdentity`              | llm     | REVIEW             | Redundant with `LlmProvider.name`          |
+| `LlmProviderStreamFrame`           | llm     | REVIEW             | Easy to confuse with `LlmStreamEvent`      |
+| `evaluateBudget`                   | llm     | REVIEW             | Advanced / custom accountant               |
+| `BudgetDecision`                   | llm     | REVIEW             | Pairs with `evaluateBudget`                |
+| `BudgetDecisionInput`              | llm     | REVIEW             | Pairs with `evaluateBudget`                |
+| `LlmFinishReason`                  | llm     | REVIEW             | Includes `tool_calls` with no tools API    |
+| `KeyResolver`                      | core    | KEEP               | Single shared type from policy module      |
 
 All other listed exports are **KEEP**. Full KEEP lists are in the package sections below (grouped, not 157 bullets).
 
@@ -463,11 +463,11 @@ CI: `api:check` for core already; add llm + adapters in Milestone 6.
 
 - [ ] Every exported symbol in this document classified (186)
 - [ ] All CHANGE BEFORE BETA items implemented or explicitly deferred with a dated note
-- [ ] No silent no-op config fields (`timeout.deadlineMs` rejected or removed)
-- [ ] `RetryOptions` types match runtime
-- [ ] `stats()` / `health()` public type matches behavior
-- [ ] `RESILI_VERSION` is the real core version
-- [ ] `ResiliConfig` / `Builder` can inject `MetricsRecorder` (or freeze notes say plugin-only)
+- [x] No silent no-op config fields (`timeout.deadlineMs` rejected or removed)
+- [x] `RetryOptions` types match runtime
+- [x] `stats()` / `health()` public type matches behavior
+- [x] `RESILI_VERSION` is the real core version
+- [x] `ResiliConfig` / `Builder` can inject `MetricsRecorder` (or freeze notes say plugin-only)
 - [x] HTTP cancellation shape approved: compose existing `signal`; no extra bag
 - [x] HTTP cancellation implemented and tested on fetch, axios, undici
 - [ ] HTTP lifecycle (`on` / `destroy`) additive or explicitly out of freeze
@@ -477,7 +477,7 @@ CI: `api:check` for core already; add llm + adapters in Milestone 6.
 - [ ] Structural SDK types documented as incomplete on purpose
 - [ ] Public error taxonomy approved (core codes + 12 LLM classifications)
 - [ ] Event maps approved (core closed map + 9 LLM events)
-- [ ] Forgotten core types exported; `api:check` clean
+- [x] Forgotten core types exported; `api:check` clean
 - [ ] API Extractor (or equivalent) agreed for llm + HTTP + providers
 - [ ] Internal LLM commit/budget keys remain unexported
 - [ ] Metadata shallow-reuse documented as a freeze invariant
@@ -505,36 +505,40 @@ Not required to freeze beta. Do not expand scope.
 
 ---
 
+## Core Beta Freeze Candidate
+
+These `@resili/core` contracts are now considered safe to freeze for the remainder of Beta hardening.
+This is **not** a freeze of HTTP adapter lifecycle APIs or the LLM public surface.
+
+- `createClient` / `resili` / `Builder` including `withMetrics`
+- `ResiliConfig` including `metrics`
+- `TimeoutOptions.perAttemptMs` only; context `deadline` / `deadlineMs` for overall bounds
+- `RetryOptions` with `jitter?: "none"` and implemented backoff/delay fields
+- `Client.stats().totals` and `Client.health()` as a non-probe snapshot
+- `RESILI_VERSION` matching `@resili/core` package.json
+- Policy factories and option types with exported unions (`RetryBackoff`, `CircuitBreakerWindow`, rate-limiter strategy/behavior, shared `KeyResolver`)
+- Error classes plus exported `ResiliErrorOptions`
+- Canonical policy order (fallback → cache → retry → circuit → timeout → dedupe → hedge → rate limiter → bulkhead)
+
+Do not freeze yet: HTTP `on`/`destroy`, LLM stream types, provider structural SDK types.
+
 ## Final Recommendation
 
-**Proceed to Milestone 3 (HTTP cancellation) using the compatibility-first signal composition.** Do not invent a new public options bag.
-
-In parallel with or immediately after that pass, land the **honesty** CHANGEs: `deadlineMs` throw, `RetryOptions` narrowing, `stats()` totals-only (or a written deferral), `RESILI_VERSION`, `metrics` on `ResiliConfig`, forgotten type exports.
-
-**Do not** INTERNALIZE provider structural types, retry constants, or error causes. **Do not** DEPRECATE working APIs. **Do not** freeze the current HTTP signal behavior or the silent `deadlineMs` field.
-
-API freeze is **not complete** until the checklist above is ticked. This document is the review; it is not the freeze.
-
-**Highest-risk APIs if frozen as-is**
-
-1. HTTP adapter `signal` (lies)
-2. `TimeoutOptions.deadlineMs` (lies)
-3. `Client.health()` / `ClientStats` maps (lies)
-4. `RetryOptions` unions (lies)
-5. Stream commit contract (must stay; already correct — protect it)
+Milestone 4 honesty pass is the Core freeze candidate. HTTP cancellation is already implemented.
+Remaining Beta API work is adapter lifecycle and LLM/provider freeze recording.
 
 ---
 
 ## Audit trail
 
-| Item                                             | Finding                                     |
-| ------------------------------------------------ | ------------------------------------------- |
-| Branch                                           | `main`                                      |
-| HEAD                                             | `cf1f224d053cb1000541cfaa4727e7be3db3a5df`  |
-| Public exports reviewed                          | 186                                         |
-| KEEP / REVIEW / CHANGE / INTERNALIZE / DEPRECATE | 157 / 15 / 14 / 0 / 0                       |
-| Forgotten types                                  | 7                                           |
-| Core API Extractor                               | Present; forgotten-export warnings          |
-| Other packages API Extractor                     | Absent                                      |
-| HTTP cancellation API                            | Compose existing `signal` via `ContextInit` |
-| `ContextInit.deadlineMs`                         | Working (distinct from timeout policy)      |
+| Item                                             | Finding                                             |
+| ------------------------------------------------ | --------------------------------------------------- |
+| Branch                                           | `main`                                              |
+| HEAD                                             | `cf1f224d053cb1000541cfaa4727e7be3db3a5df`          |
+| Public exports reviewed                          | 186                                                 |
+| KEEP / REVIEW / CHANGE / INTERNALIZE / DEPRECATE | 157 / 15 / 14 / 0 / 0                               |
+| Forgotten types                                  | 7                                                   |
+| Core API Extractor                               | Present; no forgotten-export warnings (Milestone 4) |
+| Other packages API Extractor                     | Absent                                              |
+| HTTP cancellation API                            | Compose existing `signal` via `ContextInit`         |
+| `ContextInit.deadlineMs`                         | Working (distinct from timeout policy)              |

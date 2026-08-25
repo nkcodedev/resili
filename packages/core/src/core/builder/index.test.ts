@@ -73,6 +73,38 @@ describe("createBuilder", () => {
     expect(create).toHaveBeenCalledTimes(1);
   });
 
+  it("injects a custom metrics recorder into policy services", async () => {
+    const metrics = Object.freeze({
+      counter(name: string, help?: string) {
+        return noopMetrics.counter(name, help);
+      },
+      gauge(name: string, help?: string) {
+        return noopMetrics.gauge(name, help);
+      },
+      histogram(name: string, help?: string, buckets?: readonly number[]) {
+        return noopMetrics.histogram(name, help, buckets);
+      },
+    });
+    let captured: PolicyServices | undefined;
+    const factory = definePolicy({
+      name: "metrics-capture",
+      order: 100,
+      create(services) {
+        captured = services;
+
+        return passThroughPolicy("metrics-capture", 100);
+      },
+    });
+
+    await createBuilder(() => Promise.resolve("ok"))
+      .withMetrics(metrics)
+      .policy(factory)
+      .build()
+      .call();
+
+    expect(captured?.metrics).toBe(metrics);
+  });
+
   it("uses verified defaults for policy services", async () => {
     let capturedServices: PolicyServices | undefined;
     const factory = definePolicy({
@@ -767,7 +799,7 @@ describe("createBuilder", () => {
     ).toThrow(ConfigurationError);
     expect(() =>
       createBuilder(() => Promise.resolve("ok"))
-        .retry({ jitter: "full" })
+        .retry({ jitter: "full" } as never)
         .build(),
     ).toThrow(ConfigurationError);
     expect(() =>
@@ -787,6 +819,7 @@ describe("createBuilder", () => {
     expect(() => builder.withClassifier({} as FailureClassifier)).toThrow(ConfigurationError);
     expect(() => builder.withStore({} as StateStore)).toThrow(ConfigurationError);
     expect(() => builder.withClock({} as Clock)).toThrow(ConfigurationError);
+    expect(() => builder.withMetrics({} as never)).toThrow(ConfigurationError);
     expect(() => builder.on("RequestStarted", undefined as never)).toThrow(ConfigurationError);
     expect(() => builder.policy(null as unknown as PolicyFactory)).toThrow(ConfigurationError);
   });

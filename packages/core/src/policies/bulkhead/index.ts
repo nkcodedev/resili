@@ -2,17 +2,13 @@ import type { Context } from "../../core/context";
 import { BulkheadRejectedError, ConfigurationError } from "../../core/errors";
 import {
   definePolicy,
+  type KeyResolver,
   type Next,
   type PolicyFactory,
   type PolicyServices,
 } from "../../core/policy";
 
-/**
- * Resolves a bulkhead partition key from the current context.
- *
- * @public
- */
-export type KeyResolver = (ctx: Context) => string;
+export type { KeyResolver } from "../../core/policy";
 
 /**
  * Bulkhead admission-control options.

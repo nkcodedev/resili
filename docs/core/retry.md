@@ -21,11 +21,10 @@ interface RetryOptions {
   readonly baseDelayMs?: number;
   readonly maxDelayMs?: number;
   readonly maxTotalDelayMs?: number;
-  readonly jitter?: "none" | "full" | "equal";
+  readonly jitter?: "none";
   readonly factor?: number;
   readonly retryOn?: (outcome: Outcome, ctx: Context) => boolean;
   readonly respectRetryAfter?: boolean;
-  readonly idempotentOnly?: boolean;
 }
 ```
 
@@ -36,20 +35,13 @@ interface RetryOptions {
 | `baseDelayMs`       | `100`           | First delay, and the constant delay when `backoff: "fixed"`.         |
 | `maxDelayMs`        | `10_000`        | Per-delay ceiling. Must be `>= baseDelayMs`.                         |
 | `maxTotalDelayMs`   | `30_000`        | Budget across all delays in one logical call.                        |
-| `jitter`            | `"none"`        | Only `"none"` is implemented — see below.                            |
+| `jitter`            | `"none"`        | Only `"none"` is implemented.                                        |
 | `factor`            | `2`             | Exponential multiplier. Rejected when `backoff: "fixed"`.            |
 | `retryOn`           | —               | Overrides the classifier entirely when supplied.                     |
 | `respectRetryAfter` | `true`          | Honor a classifier-supplied retry-after hint over the backoff curve. |
-| `idempotentOnly`    | `false`         | Not implemented — see below.                                         |
 
-### Options that are validated but not yet implemented
-
-Two values are deliberately rejected at build time rather than silently ignored:
-
-- `jitter: "full"` and `jitter: "equal"` throw `ConfigurationError`. Randomized jitter is withheld
-  until deterministic randomization is injectable, so tests stay reproducible. Use
-  `jitter: "none"`.
-- `idempotentOnly: true` throws `ConfigurationError`.
+`jitter: "full"` / `"equal"` and `idempotentOnly: true` still throw `ConfigurationError` if passed
+at runtime. They are not part of the public TypeScript contract.
 
 ## Behavior
 
@@ -157,4 +149,4 @@ const client = createClient(chargeCard, {
   executing attempts. Use `Context.deadline` for an end-to-end bound.
 - The delay budget can end the loop before any sleep occurs if the first computed delay already
   exceeds it.
-- Retry has no notion of idempotency; `idempotentOnly` is not implemented.
+- Retry has no notion of idempotency.
