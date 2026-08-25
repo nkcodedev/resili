@@ -13,20 +13,25 @@ For the full framework overview, see the [repository README](../../README.md).
 
 ## Installation
 
+Install from the `alpha` dist-tag — `latest` still points at an early `0.1.0-alpha.1` build.
+
 ```bash
-pnpm add @resili/core @resili/fetch
+pnpm add @resili/core@alpha @resili/fetch@alpha
 ```
 
 ```bash
-npm install @resili/core @resili/fetch
+npm install @resili/core@alpha @resili/fetch@alpha
 ```
 
 ```bash
-yarn add @resili/core @resili/fetch
+yarn add @resili/core@alpha @resili/fetch@alpha
 ```
 
-Node.js 20 or newer is required. By default, the adapter uses `globalThis.fetch`.
-You may also inject a fetch-compatible implementation for tests.
+Node.js 20 or newer is required. The current release is `0.2.0-alpha.3`; see
+[versioning](../../docs/releases/versioning.md).
+
+By default, the adapter uses `globalThis.fetch`. You may also inject a
+fetch-compatible implementation for tests.
 
 ## Quick Start
 
@@ -185,19 +190,28 @@ runtime environments.
 - The adapter does not classify HTTP status codes.
 - The adapter does not transform response bodies.
 - The adapter does not retry based on `Response.status` by itself.
-- The adapter does not add headers or mutate caller-provided `RequestInit`.
+- The adapter does not add headers. It shallow-copies `RequestInit` rather than
+  mutating yours, but **`init.signal` in that copy is replaced** with Resili's
+  context signal. Timeout-driven cancellation therefore works, but a caller signal
+  you pass in `init` has no effect and there is no per-call option for one. Wrap
+  the call with `@resili/core` directly if you need caller cancellation.
+- A one-shot request body (a stream) cannot be replayed on retry.
+- The adapter does not disable retry behavior inside an injected implementation.
 - The adapter does not provide OpenTelemetry or metrics exporters.
 - The adapter is intentionally a thin wrapper over `@resili/core`.
 
-If you need status-code classification, provide a core classifier or custom
-policy that matches your application contract.
+If you need status-code classification, provide a core classifier or `retry.retryOn`
+predicate that matches your application contract.
 
 ## Documentation
 
-- [Repository README](../../README.md)
+- [Documentation home](../../docs/README.md)
+- [fetch adapter guide](../../docs/http/fetch.md) — options, status codes, signals, examples
+- [HTTP adapters overview](../../docs/http/overview.md) — what all three adapters share
+- [Cancellation](../../docs/core/cancellation.md) · [All policies](../../docs/core/policies.md)
 - [`@resili/core` README](../core/README.md)
-- [Architecture](../../docs/ARCHITECTURE.md)
-- [API specification](../../docs/API_SPECIFICATION.md)
+- Specifications: [Architecture](../../docs/ARCHITECTURE.md),
+  [API specification](../../docs/API_SPECIFICATION.md)
 
 ## Maintainer
 

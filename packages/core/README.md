@@ -11,19 +11,22 @@ For the full project overview, see the [repository README](../../README.md).
 
 ## Installation
 
+Install from the `alpha` dist-tag — `latest` still points at an early `0.1.0-alpha.1` build.
+
 ```bash
-pnpm add @resili/core
+pnpm add @resili/core@alpha
 ```
 
 ```bash
-npm install @resili/core
+npm install @resili/core@alpha
 ```
 
 ```bash
-yarn add @resili/core
+yarn add @resili/core@alpha
 ```
 
-Resili targets Node.js 20 or newer and ships TypeScript declarations.
+Resili targets Node.js 20 or newer and ships ESM, CommonJS, and TypeScript declarations. The current
+release is `0.2.0-alpha.3`; see [versioning](../../docs/releases/versioning.md).
 
 ## Quick Start
 
@@ -100,13 +103,15 @@ const client = createClient((url: string) => fetch(url), {
   },
   circuitBreaker: {
     minimumThroughput: 10,
-    failureRateThreshold: 0.5,
+    failureRateThreshold: 50,
     resetTimeoutMs: 30_000,
   },
 });
 
 const response = await client.call("https://api.example.com/users");
 ```
+
+`failureRateThreshold` is a **percentage**: `50` means half the calls in the window.
 
 Supported config fields are:
 
@@ -115,15 +120,19 @@ Supported config fields are:
 | `retry`          | Retry failed downstream calls.                |
 | `timeout`        | Apply per-attempt timeout behavior.           |
 | `circuitBreaker` | Stop calls while a dependency is unhealthy.   |
-| `bulkhead`       | Bound concurrency and queue depth.            |
 | `rateLimiter`    | Limit request rate in memory.                 |
+| `bulkhead`       | Bound concurrency and queue depth.            |
+| `cache`          | Reuse successful results for a TTL.           |
 | `fallback`       | Return an alternate value on selected errors. |
+| `dedupe`         | Share concurrent same-key in-flight work.     |
+| `hedge`          | Start a delayed duplicate attempt.            |
 | `classifier`     | Override failure classification.              |
 | `store`          | Override the state store service.             |
 | `clock`          | Override timers and time source.              |
 | `policies`       | Register custom policy factories.             |
 
-Unsupported config fields throw `ConfigurationError` at runtime.
+Unsupported config fields throw `ConfigurationError` when the client is built, not at request time.
+See the [configuration reference](../../docs/reference/configuration.md) for every option and default.
 
 ## Built-in Policies
 
@@ -159,13 +168,13 @@ work through `Context`.
 ```ts
 .circuitBreaker({
   minimumThroughput: 10,
-  failureRateThreshold: 0.5,
+  failureRateThreshold: 50,
   resetTimeoutMs: 30_000,
   halfOpenMaxCalls: 2,
 })
 ```
 
-Circuit breaker state is stored in memory per client instance.
+Thresholds are percentages. Circuit breaker state is stored in memory per client instance.
 
 ### Bulkhead
 
@@ -225,6 +234,42 @@ unless those maps are populated.
 ```
 
 Fallback handlers may be synchronous or asynchronous.
+
+### Cache
+
+```ts
+.cache({
+  key: (id: string) => id,
+  ttl: 5_000,
+})
+```
+
+Stores successful values in a per-client in-memory cache. Entries expire lazily by TTL and are evicted
+with bounded FIFO behavior (`maxEntries`, default `1000`). Failures are never cached. Being near the
+outside of the pipeline, a hit bypasses retry, timeout, admission control, and the operation itself.
+
+### Request Deduplication
+
+```ts
+.dedupe({
+  key: (id: string) => id,
+})
+```
+
+Shares concurrent same-key in-flight executions so only one reaches the operation. It does not cache
+completed results — compose it with `cache` for that.
+
+### Hedged Requests
+
+```ts
+.hedge({
+  delay: 100,
+})
+```
+
+Starts the original execution immediately and, if no acceptable result arrives within `delay`, starts
+one duplicate. `maxAttempts` must be `2`. Use it only for safe or idempotent operations, since it
+increases downstream load.
 
 ## Plugin Support
 
@@ -299,17 +344,31 @@ Core modules are deliberately small:
 
 ## Current Limitations
 
-- Built-in policy state is in-memory unless a policy explicitly supports another store.
+- Built-in policy state is in-memory and per-process. Breaker state, rate limits, bulkhead slots, and
+  cache entries are not shared across instances. `StateStore` is the seam; no distributed
+  implementation ships yet.
+- `retry.jitter` accepts only `"none"`; `"full"` and `"equal"` throw `ConfigurationError`.
+- `retry.idempotentOnly` must remain `false`.
+- `timeout.deadlineMs` is validated but not enforced — timeouts are per-attempt, and there is no
+  total-request deadline.
+- `hedge.maxAttempts` must be `2`.
+- Cache eviction is FIFO rather than LRU, and concurrent misses are not deduplicated.
 - No OpenTelemetry or Prometheus exporters are included in core.
 - HTTP status classification is not performed by adapter packages.
-- Package versions are currently development placeholders.
+
+The full list is in [alpha status](../../docs/releases/alpha-status.md).
 
 ## Documentation
 
-- [Repository README](../../README.md)
-- [Architecture](../../docs/ARCHITECTURE.md)
-- [API specification](../../docs/API_SPECIFICATION.md)
-- [Internal design](../../docs/INTERNAL_DESIGN.md)
+- [Documentation home](../../docs/README.md)
+- [Core overview](../../docs/core/overview.md) — client entry points and configuration
+- [All policies](../../docs/core/policies.md) — one page per policy
+- [Policy ordering](../../docs/core/policy-ordering.md) — the default pipeline and why order matters
+- [Execution context](../../docs/core/execution-context.md) · [Cancellation](../../docs/core/cancellation.md)
+- [Configuration reference](../../docs/reference/configuration.md) · [Error reference](../../docs/reference/errors.md)
+- [Events](../../docs/observability/events.md) · [Metrics](../../docs/observability/metrics.md)
+- Specifications: [Architecture](../../docs/ARCHITECTURE.md),
+  [API specification](../../docs/API_SPECIFICATION.md), [Internal design](../../docs/INTERNAL_DESIGN.md)
 
 ## Maintainer
 

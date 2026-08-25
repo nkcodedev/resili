@@ -1,0 +1,9 @@
+{
+  "name": "@resili/example-core",
+  "private": true,
+  "type": "module",
+  "description": "Local-only @resili/core example. Not published and not run in CI.",
+  "engines": {
+    "node": ">=20"
+  }
+}

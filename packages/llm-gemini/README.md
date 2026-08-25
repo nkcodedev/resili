@@ -8,9 +8,16 @@ You create the official `@google/genai` client. Resili never stores API keys and
 
 ## Installation
 
+Install Resili packages from the `alpha` dist-tag — `latest` still points at an early `0.1.0-alpha.1`
+build. The current release of this package is `0.1.0-alpha.3`, which is one patch behind its LLM
+siblings by design; see [versioning](../../docs/releases/versioning.md).
+
 ```bash
-pnpm add @resili/core @resili/llm @resili/llm-gemini @google/genai
+pnpm add @resili/core@alpha @resili/llm@alpha @resili/llm-gemini@alpha @google/genai
 ```
+
+This adapter targets **`@google/genai`**, not the legacy `@google/generative-ai` SDK. The two have
+different client shapes and are not interchangeable.
 
 Node.js 20 or newer is required. `@google/genai@2.18.0` documents **Node.js 20 or later** (Node 22+ is required starting with SDK 3.0.0).
 
@@ -155,6 +162,19 @@ Abort / 499 is rethrown so Resili owns cancellation. `cause` is a sanitized snap
 - Text parts only; thought parts and other part types are ignored
 - Missing Gemini `usageMetadata` becomes zero counts
 - First candidate only
+
+The full limitation list is in [alpha status](../../docs/releases/alpha-status.md).
+
+## Documentation
+
+- [Gemini provider guide](../../docs/providers/gemini.md) — mapping, cumulative snapshot
+  de-duplication, errors
+- [LLM overview](../../docs/llm/overview.md) · [Streaming](../../docs/llm/streaming.md) ·
+  [Retries](../../docs/llm/retries.md)
+- [Budget Guard](../../docs/llm/budget-guard.md) · [Pricing](../../docs/llm/pricing.md) ·
+  [Errors](../../docs/llm/errors.md)
+- [Documentation home](../../docs/README.md) · [`@resili/llm` README](../llm/README.md)
+- Runnable examples: [`examples/llm-gemini`](../../examples/llm-gemini)
 
 ## License
 

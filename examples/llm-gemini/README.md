@@ -10,4 +10,16 @@ pnpm add @google/genai @resili/llm@file:../../packages/llm @resili/llm-gemini@fi
 node --env-file=.env example.mjs
 ```
 
-Pricing rows in `example.mjs` are **illustrative**, not Google's live price list.
+`stream.mjs` runs the same request through `llm.stream()`.
+
+Pricing rows in `example.mjs` are **illustrative**, not Google's live price list. Resili ships no
+price table.
+
+This adapter targets `@google/genai`, not the legacy `@google/generative-ai` SDK.
+
+## Documentation
+
+- [Gemini provider guide](../../docs/providers/gemini.md)
+- [Streaming](../../docs/llm/streaming.md) · [Budget Guard](../../docs/llm/budget-guard.md) ·
+  [Pricing](../../docs/llm/pricing.md)
+- [All examples](../README.md)

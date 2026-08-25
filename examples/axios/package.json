@@ -1,0 +1,9 @@
+{
+  "name": "@resili/example-axios",
+  "private": true,
+  "type": "module",
+  "description": "Local-only @resili/axios example. Not published and not run in CI.",
+  "engines": {
+    "node": ">=20"
+  }
+}

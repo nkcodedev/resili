@@ -10,19 +10,22 @@ Official adapters wrap **user-owned** vendor clients and return the contracts de
 
 ## Installation
 
+Install from the `alpha` dist-tag — `latest` still points at an early `0.1.0-alpha.1` build.
+
 ```bash
-pnpm add @resili/core @resili/llm
+pnpm add @resili/core@alpha @resili/llm@alpha
 ```
 
 ```bash
-npm install @resili/core @resili/llm
+npm install @resili/core@alpha @resili/llm@alpha
 ```
 
 ```bash
-yarn add @resili/core @resili/llm
+yarn add @resili/core@alpha @resili/llm@alpha
 ```
 
-Node.js 20 or newer is required. `@resili/llm` depends only on `@resili/core` at runtime.
+Node.js 20 or newer is required. `@resili/llm` depends only on `@resili/core` at runtime. The current
+release is `0.1.0-alpha.4`; see [versioning](../../docs/releases/versioning.md).
 
 ## What this package is responsible for
 
@@ -238,6 +241,22 @@ Metrics use Resili's `MetricsRecorder`. The only label is `result` = `success` |
 - `usage.dimensions` are recorded but not priced
 - Core's public event map is closed; LLM events are a typed bus on this package
 - `{ after: "cache" }` and `{ before: "cache" }` are valid `@resili/core` relative order anchors. Budget Guard still uses `{ before: "retry" }` (resolved order `199.5`, between cache `150` and retry `200`).
+
+The full list is in [alpha status](../../docs/releases/alpha-status.md).
+
+## Documentation
+
+- [Documentation home](../../docs/README.md)
+- [LLM overview](../../docs/llm/overview.md) — architecture and `createLlmClient()`
+- [generate()](../../docs/llm/generate.md) · [Streaming](../../docs/llm/streaming.md)
+- [Retries](../../docs/llm/retries.md) · [Timeouts](../../docs/llm/timeouts.md) ·
+  [Cancellation](../../docs/llm/cancellation.md)
+- [Budget Guard](../../docs/llm/budget-guard.md) · [Pricing](../../docs/llm/pricing.md) ·
+  [Usage](../../docs/llm/usage.md)
+- [Errors](../../docs/llm/errors.md) · [Events](../../docs/observability/events.md) ·
+  [Telemetry and privacy](../../docs/observability/telemetry.md)
+- Providers: [OpenAI](../../docs/providers/openai.md),
+  [Anthropic](../../docs/providers/anthropic.md), [Gemini](../../docs/providers/gemini.md)
 
 ## License
 

@@ -1,0 +1,9 @@
+{
+  "name": "@resili/example-fetch",
+  "private": true,
+  "type": "module",
+  "description": "Local-only @resili/fetch example. Not published and not run in CI.",
+  "engines": {
+    "node": ">=20"
+  }
+}

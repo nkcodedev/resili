@@ -8,6 +8,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Documentation
+
+No runtime, API, test, or package version changes.
+
+- Consolidated `docs/` into a topic-based structure (`getting-started/`, `core/`, `http/`, `llm/`, `providers/`, `observability/`, `architecture/`, `reference/`, `releases/`) with `docs/README.md` as the navigation home.
+- Retired the pre-implementation planning stubs `docs/01-project-overview.md` … `docs/10-release.md` and `docs/roadmap.md`, whose contents described an API and feature set that was never shipped. `docs/ARCHITECTURE.md` §16 now indexes the current structure.
+- Rewrote the root `README.md` around the current package inventory, per-line alpha versions, and quick starts for core, fetch, axios, undici, `generate()`, and `stream()`.
+- Documented every shipped core policy individually, including `dedupe` and `hedge`, which had no user-facing documentation.
+- Added dedicated pages for the policy pipeline, execution context, cancellation, LLM streaming and its commit point, Budget Guard, pricing, usage, the error model, events, metrics, and telemetry/privacy.
+- Corrected stale claims: `circuitBreaker.failureRateThreshold` is a percentage (`50`), not a fraction (`0.5`); the rate limiter implements both `reject` and `wait` modes, and `maxWaitMs` is required for one and rejected for the other; `@resili/core` config accepts `cache`, `dedupe`, and `hedge`; HTTP adapters replace the caller's request signal and expose no per-call options, so caller-initiated cancellation is not available through them; install commands need the `@alpha` dist-tag because `latest` still points at `0.1.0-alpha.1`.
+- Added offline, credential-free examples for `core`, `fetch`, `axios`, and `undici`, plus an `examples/README.md` index. All `.env.example` files remain empty placeholders.
+
 ## [LLM streaming timeout fix] - 2026-08-25
 
 Corrective release for the streaming commit point. `@resili/core` remains `0.2.0-alpha.3`.

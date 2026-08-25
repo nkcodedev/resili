@@ -1,17 +1,30 @@
 # Resili
 
-> TypeScript-first resilience toolkit for production Node.js services.
+> A TypeScript-first resilience toolkit for Node.js applications, HTTP clients, and LLM providers.
 
-[![CI](https://img.shields.io/badge/ci-placeholder-lightgrey.svg)](#)
-[![version](https://img.shields.io/badge/version-0.1.0--alpha.1-blue.svg)](packages/core/package.json)
+[![version](https://img.shields.io/badge/alpha-0.2.0--alpha.3-blue.svg)](docs/releases/versioning.md)
 [![license](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![typescript](https://img.shields.io/badge/types-TypeScript-blue.svg)](#)
 [![node](https://img.shields.io/badge/node-%3E%3D20-brightgreen.svg)](packages/core/package.json)
 [![core dependencies](https://img.shields.io/badge/core%20dependencies-zero-brightgreen.svg)](packages/core/package.json)
 
-Resili wraps unreliable work — HTTP calls, SDK calls, database calls, queues, or any async operation — with composable reliability policies.
+Resili puts a layer of composable, typed reliability policies between your application and whatever it
+depends on:
 
-Use it to bound latency, retry transient failures, stop calls to unhealthy dependencies, isolate concurrency, reduce duplicate work, cache safe reads, and observe policy behavior through typed events and metrics.
+```text
+Application
+    ↓
+Resili policies      retry · timeout · circuit breaker · rate limit · bulkhead · cache · fallback
+    ↓
+HTTP / LLM provider
+    ↓
+External service
+```
+
+The core idea is that a policy wraps an **async function** — not a request object, not a URL. So the
+same nine policies protect a `fetch` call, an SDK call, a database query, a queue publish, or an LLM
+generation. Configuration is declared once, validated at build time, and composed into a deterministic
+pipeline.
 
 ```ts
 import { resili } from "@resili/core";
@@ -25,94 +38,68 @@ const users = resili((id: string) => fetch(`https://api.example.com/users/${id}`
 const response = await users.call("42");
 ```
 
-## Table of Contents
+**[Full documentation →](docs/README.md)**
 
-- [Why Resili](#why-resili)
-- [Features](#features)
-- [Built-in Policies at a glance](#built-in-policies-at-a-glance)
-- [Installation](#installation)
-- [30-second Quick Start](#30-second-quick-start)
-- [Builder API](#builder-api)
-- [Built-in Policies](#built-in-policies)
-- [Policy Execution Order](#policy-execution-order)
-- [Adapters](#adapters)
-- [Plugins](#plugins)
-- [Architecture](#architecture)
-- [Development Status](#development-status)
-- [Roadmap](#roadmap)
-- [Contributing](#contributing)
-- [License](#license)
+## Status
 
-## Why Resili
+Alpha. Published on the npm `alpha` dist-tag, with the full test suite, type-checking, API-report
+verification, and public-registry consumer verification green.
 
-Distributed systems fail in ordinary, repeatable ways: slow downstreams, transient network errors, overload, cascading failures, duplicate in-flight requests, repeated reads, and partial outages.
+Suitable for evaluation, integration testing, and early adoption where you can pin exact versions.
+Not yet claiming API stability or semver guarantees. See
+[Alpha status](docs/releases/alpha-status.md).
 
-Resili gives those failure modes explicit, typed, testable policy boundaries.
+## Packages
 
-- **One abstraction:** wrap any async operation, not just HTTP.
-- **TypeScript-first:** operation argument and return types flow through clients.
-- **Composable policies:** retry, timeout, circuit breaker, cache, dedupe, hedge, rate limit, bulkhead, and fallback policies can run together in a deterministic order.
-- **Observable by design:** policies emit typed lifecycle events and record low-cardinality metrics through a framework-neutral contract.
-- **Small core:** no provider SDKs, exporters, or transport dependencies in `@resili/core`.
-- **Adapter packages:** fetch, Axios-compatible, and Undici-compatible wrappers live outside core.
+### Core
 
-## Features
+| Package                         | Purpose                                                                                | Alpha version   | Status |
+| ------------------------------- | -------------------------------------------------------------------------------------- | --------------- | ------ |
+| [`@resili/core`](packages/core) | Runtime: context, pipeline, nine policies, events, metrics, errors. Zero dependencies. | `0.2.0-alpha.3` | Alpha  |
 
-| Capability                 | Package                 | Status    | Notes                                                     |
-| -------------------------- | ----------------------- | --------- | --------------------------------------------------------- |
-| Fluent builder             | `@resili/core`          | Available | `resili(operation).retry().timeout(...).build()`          |
-| Declarative client factory | `@resili/core`          | Available | `createClient(operation, config)`                         |
-| Retry                      | `@resili/core`          | Available | Fixed/exponential backoff, deterministic `jitter: "none"` |
-| Timeout                    | `@resili/core`          | Available | Per-attempt timeout with context signal fork              |
-| Circuit breaker            | `@resili/core`          | Available | In-memory per-key breaker state                           |
-| Bulkhead                   | `@resili/core`          | Available | In-memory concurrency and queue limits                    |
-| Rate limiter               | `@resili/core`          | Available | Token bucket and sliding window, reject mode              |
-| Fallback                   | `@resili/core`          | Available | Async fallback handlers and predicates                    |
-| Hedged requests            | `@resili/core`          | Available | Starts a delayed duplicate attempt for safe operations    |
-| Request deduplication      | `@resili/core`          | Available | Shares concurrent same-key in-flight work                 |
-| Memory cache               | `@resili/core`          | Available | Per-client TTL cache with lazy expiry and FIFO eviction   |
-| Typed events               | `@resili/core`          | Available | Runtime subscriptions with typed event payloads           |
-| Metrics contract           | `@resili/core`          | Available | `MetricsRecorder` interface and `noopMetrics`             |
-| Plugin contracts/runtime   | `@resili/core`          | Available | Register policies/events/service overrides                |
-| Fetch adapter              | `@resili/fetch`         | Available | Native fetch-compatible wrapper                           |
-| Axios adapter              | `@resili/axios`         | Available | Minimal Axios-compatible structural wrapper               |
-| Undici adapter             | `@resili/undici`        | Available | Minimal Undici-compatible request wrapper                 |
-| LLM foundation             | `@resili/llm`           | Alpha     | Provider-neutral usage, cost, budget, and LLM telemetry   |
-| OpenAI LLM adapter         | `@resili/llm-openai`    | Alpha     | Chat Completions unary + streaming for `@resili/llm`      |
-| Anthropic LLM adapter      | `@resili/llm-anthropic` | Alpha     | Messages unary + streaming for `@resili/llm`              |
-| Gemini LLM adapter         | `@resili/llm-gemini`    | Alpha     | generateContent / generateContentStream for `@resili/llm` |
+### HTTP
 
-## Built-in Policies at a glance
+| Package                             | Purpose                                             | Alpha version   | Status |
+| ----------------------------------- | --------------------------------------------------- | --------------- | ------ |
+| [`@resili/fetch`](packages/fetch)   | fetch-compatible adapter                            | `0.2.0-alpha.3` | Alpha  |
+| [`@resili/axios`](packages/axios)   | axios-compatible adapter (injected implementation)  | `0.2.0-alpha.3` | Alpha  |
+| [`@resili/undici`](packages/undici) | undici-compatible adapter (injected implementation) | `0.2.0-alpha.3` | Alpha  |
 
-| Policy                | Use it when you need to                           | Default scope/state                         |
-| --------------------- | ------------------------------------------------- | ------------------------------------------- |
-| Fallback              | Return an alternate value for handled failures    | Per logical call                            |
-| Memory Cache          | Reuse successful completed values for a short TTL | Per built client, in-memory `Map`           |
-| Retry                 | Retry transient failures                          | Per logical call                            |
-| Circuit Breaker       | Stop calling unhealthy dependencies               | Per built client, in-memory per key         |
-| Timeout               | Bound one downstream attempt                      | Per attempt `AbortSignal` fork              |
-| Request Deduplication | Share concurrent same-key in-flight work          | Per built client, in-memory in-flight table |
-| Hedged Requests       | Reduce tail latency for safe/idempotent reads     | Per logical call                            |
-| Rate Limiter          | Limit request rate                                | Per built client, in-memory per key         |
-| Bulkhead              | Bound concurrency and queue depth                 | Per built client, in-memory per key         |
+### LLM
+
+| Package                                           | Purpose                                                          | Alpha version   | Status |
+| ------------------------------------------------- | ---------------------------------------------------------------- | --------------- | ------ |
+| [`@resili/llm`](packages/llm)                     | Provider-neutral client, usage, pricing, Budget Guard, telemetry | `0.1.0-alpha.4` | Alpha  |
+| [`@resili/llm-openai`](packages/llm-openai)       | OpenAI Chat Completions — unary + streaming                      | `0.1.0-alpha.4` | Alpha  |
+| [`@resili/llm-anthropic`](packages/llm-anthropic) | Anthropic Messages — unary + streaming                           | `0.1.0-alpha.4` | Alpha  |
+| [`@resili/llm-gemini`](packages/llm-gemini)       | Google Gemini (`@google/genai`) — unary + streaming              | `0.1.0-alpha.3` | Alpha  |
+
+The two version lines move independently. `@resili/llm-gemini` at `alpha.3` is its current release —
+see [Versioning](docs/releases/versioning.md).
 
 ## Installation
 
-```bash
-pnpm add @resili/core
-```
-
-Adapter packages are installed separately:
+Install with the `@alpha` tag. `latest` still points at `0.1.0-alpha.1`, an early build that predates
+streaming and several policies.
 
 ```bash
-pnpm add @resili/fetch
-pnpm add @resili/axios
-pnpm add @resili/undici
+npm install @resili/core@alpha
+
+# with an HTTP adapter
+npm install @resili/core@alpha @resili/fetch@alpha
+
+# with LLM support
+npm install @resili/core@alpha @resili/llm@alpha @resili/llm-openai@alpha openai
 ```
 
-Resili targets Node.js 20 or newer and ships TypeScript declarations.
+Node 20 or newer. Every package ships ESM and CommonJS builds with TypeScript declarations.
 
-## 30-second Quick Start
+Provider SDKs (`openai`, `@anthropic-ai/sdk`, `@google/genai`) are optional peer dependencies — you
+install and construct the client, so you control the version and the credentials.
+
+## Quick start
+
+### Core resilience
 
 ```ts
 import { createClient } from "@resili/core";
@@ -120,402 +107,213 @@ import { createClient } from "@resili/core";
 const client = createClient(
   async (id: string) => {
     const response = await fetch(`https://api.example.com/users/${id}`);
-    return response.json() as Promise<{ id: string; name: string }>;
+    return (await response.json()) as { id: string; name: string };
   },
   {
     timeout: { perAttemptMs: 1_000 },
-    retry: {
-      maxAttempts: 3,
-      backoff: "exponential",
-      baseDelayMs: 100,
-      maxDelayMs: 1_000,
-      jitter: "none",
-    },
-    circuitBreaker: {
-      minimumThroughput: 10,
-      failureRateThreshold: 0.5,
-      resetTimeoutMs: 30_000,
-    },
+    retry: { maxAttempts: 3, backoff: "exponential", baseDelayMs: 100, jitter: "none" },
+    circuitBreaker: { minimumThroughput: 10, failureRateThreshold: 50 },
   },
 );
 
 const user = await client.call("42");
 ```
 
-`client.call(...args)` preserves the wrapped operation signature. `client.execute(fn, init?)` runs context-aware work through the same policy pipeline.
+`failureRateThreshold` is a **percentage**, so `50` means half the calls in the window.
 
-## Builder API
+→ [Core docs](docs/core/overview.md) · [All policies](docs/core/policies.md)
 
-Use the fluent builder when configuration is close to the operation:
-
-```ts
-import { resili } from "@resili/core";
-
-const client = resili((url: string) => fetch(url))
-  .retry({ maxAttempts: 3, jitter: "none" })
-  .timeout({ perAttemptMs: 2_000 })
-  .bulkhead({ maxConcurrent: 20, maxQueue: 50 })
-  .rateLimiter({ limit: 100, intervalMs: 1_000 })
-  .fallback({
-    handler() {
-      return new Response("fallback", { status: 200 });
-    },
-  })
-  .build();
-
-const response = await client.call("https://api.example.com/health");
-```
-
-Use `createClient` when you prefer declarative config:
-
-```ts
-import { createClient } from "@resili/core";
-
-const client = createClient((url: string) => fetch(url), {
-  retry: { maxAttempts: 2, jitter: "none" },
-  timeout: 750,
-  rateLimiter: { limit: 50, intervalMs: 1_000 },
-});
-```
-
-### Custom policies
-
-```ts
-import { definePolicy } from "@resili/core";
-
-const loggingPolicy = definePolicy({
-  name: "logging",
-  order: { before: "timeout" },
-  create() {
-    return {
-      name: "logging",
-      order: { before: "timeout" },
-      async execute(ctx, next) {
-        console.log("request", ctx.requestId);
-        return await next(ctx);
-      },
-    };
-  },
-});
-
-const client = resili((url: string) => fetch(url))
-  .policy(loggingPolicy)
-  .build();
-```
-
-## Built-in Policies
-
-### Retry
-
-```ts
-.retry({
-  maxAttempts: 3,
-  backoff: "fixed",
-  baseDelayMs: 100,
-  maxDelayMs: 1_000,
-  jitter: "none",
-})
-```
-
-Supported today: fixed/exponential backoff, max attempts, delay budgets, `retryOn`, and `respectRetryAfter`. Deterministic `jitter: "none"` is supported; other jitter modes are intentionally rejected until deterministic randomization exists.
-
-### Timeout
-
-```ts
-.timeout({ perAttemptMs: 1_000 })
-// or
-.timeout(1_000)
-```
-
-Timeouts fork the execution context with an `AbortSignal` for each attempt.
-
-### Circuit Breaker
-
-```ts
-.circuitBreaker({
-  minimumThroughput: 10,
-  failureRateThreshold: 0.5,
-  resetTimeoutMs: 30_000,
-  halfOpenMaxCalls: 2,
-})
-```
-
-The current implementation stores breaker state in memory per client instance.
-
-### Bulkhead
-
-```ts
-.bulkhead({
-  maxConcurrent: 25,
-  maxQueue: 100,
-  queueTimeoutMs: 500,
-})
-```
-
-Bulkheads bound concurrency and queue depth per key.
-
-### Rate Limiter
-
-```ts
-.rateLimiter({
-  strategy: "token-bucket",
-  limit: 100,
-  intervalMs: 1_000,
-  burst: 200,
-  onLimit: "reject",
-})
-```
-
-Supported today: token bucket, sliding window, per-key in-memory state, and reject mode.
-
-### Fallback
-
-```ts
-.fallback({
-  fallbackOn(error) {
-    return error instanceof Error;
-  },
-  handler() {
-    return new Response("temporary fallback", { status: 200 });
-  },
-})
-```
-
-Fallback handlers may be synchronous or asynchronous.
-
-### Hedged Requests
-
-```ts
-.hedge({
-  delay: 100,
-})
-```
-
-Hedged requests start the original execution immediately and, if no acceptable result completes before the configured delay, start a second execution. Use hedging only for safe or idempotent operations because it can increase downstream load.
-
-### Request Deduplication
-
-```ts
-.dedupe({
-  key: (id: string) => id,
-})
-```
-
-Request deduplication shares concurrent same-key in-flight executions. It does not cache completed results.
-
-### Memory Cache
-
-```ts
-.cache({
-  key: (id: string) => id,
-  ttl: 5_000,
-})
-```
-
-Memory cache stores successful completed values in a per-client in-memory cache. Entries expire lazily by TTL and are evicted using bounded FIFO behavior.
-
-## Policy Execution Order
-
-Resili composes policies in a deterministic onion-style pipeline. Lower policies are reached only if earlier policies call downstream.
-
-```text
-Fallback
-↓
-Memory Cache
-↓
-Retry
-↓
-Circuit Breaker
-↓
-Timeout
-↓
-Request Deduplication
-↓
-Hedged Requests
-↓
-Rate Limiter
-↓
-Bulkhead
-↓
-Operation
-```
-
-This order matters. For example, a cache hit bypasses retry, timeout, dedupe, hedge, rate limiting, bulkhead admission, and the wrapped operation. A cache miss continues into the normal downstream pipeline.
-
-## Adapters
-
-Adapters are thin transport wrappers around `@resili/core`. They do not classify HTTP status codes or transform response bodies.
-
-### Fetch
+### fetch
 
 ```ts
 import { createFetch } from "@resili/fetch";
 
-const resilientFetch = createFetch({
-  timeout: { perAttemptMs: 1_000 },
+const fetchWithResilience = createFetch({
+  timeout: { perAttemptMs: 2_000 },
   retry: { maxAttempts: 3, jitter: "none" },
-  circuitBreaker: { minimumThroughput: 10 },
 });
 
-const response = await resilientFetch("https://api.example.com/users", {
-  method: "GET",
-});
+const response = await fetchWithResilience("https://api.example.com/users");
 ```
 
-The fetch adapter shallow-copies `RequestInit` and passes Resili's context signal as `init.signal`.
+→ [fetch docs](docs/http/fetch.md)
 
-### Axios-compatible
+### axios
 
-```ts
-import { createAxios, type AxiosImplementation, type AxiosRequestConfig } from "@resili/axios";
-
-const axiosImplementation: AxiosImplementation = async <T, D>(config: AxiosRequestConfig<D>) => ({
-  data: { ok: true } as T,
-  status: 200,
-  statusText: "OK",
-  config,
-});
-
-const axios = createAxios({
-  axios: axiosImplementation,
-  retry: { maxAttempts: 2, jitter: "none" },
-  timeout: { perAttemptMs: 1_000 },
-});
-
-const response = await axios.get("/users");
-```
-
-The Axios adapter provides a minimal structural API: callable `axios(config)`, `request`, `get`, `delete`, `post`, `put`, and `patch`. It does not implement interceptors, transforms, cancel tokens, or `axios.create()`.
-
-### Undici-compatible
+The adapter takes your axios instance, so its configuration stays yours.
 
 ```ts
-import { createUndici, type UndiciImplementation } from "@resili/undici";
+import axios from "axios";
+import { createAxios } from "@resili/axios";
 
-const requestImplementation: UndiciImplementation = async (options) => ({
-  statusCode: 200,
-  headers: {},
-  body: `requested ${options.path}`,
-});
-
-const request = createUndici({
-  request: requestImplementation,
+const client = createAxios({
+  axios: axios.create({ baseURL: "https://api.example.com" }),
+  timeout: { perAttemptMs: 2_000 },
   retry: { maxAttempts: 2, jitter: "none" },
 });
 
-const response = await request({
+const response = await client.get("/users");
+```
+
+→ [axios docs](docs/http/axios.md)
+
+### undici
+
+```ts
+import { request } from "undici";
+import { createUndici } from "@resili/undici";
+
+const client = createUndici({
+  request,
+  timeout: { perAttemptMs: 2_000 },
+  retry: { maxAttempts: 2, jitter: "none" },
+});
+
+const response = await client({
   origin: "https://api.example.com",
   path: "/users",
   method: "GET",
 });
 ```
 
-The Undici adapter is a minimal request wrapper. It does not implement Agent, Pool, Dispatcher, MockAgent, ProxyAgent, WebSocket, streaming helpers, or body handling.
+→ [undici docs](docs/http/undici.md)
 
-## Plugins
+HTTP status codes are **not** treated as failures by default — a 503 is a returned value, not a thrown
+error. Opt in with `retry.retryOn`. See
+[HTTP overview](docs/http/overview.md#status-codes-are-not-classified-by-default).
 
-Plugins bundle setup-time policy registration, event subscriptions, and service overrides.
+### LLM `generate()`
 
 ```ts
-import { definePlugin, definePolicy, resili } from "@resili/core";
+import OpenAI from "openai";
+import { createLlmClient, createPricingResolver } from "@resili/llm";
+import { createOpenAiProvider } from "@resili/llm-openai";
 
-const auditPlugin = definePlugin({
-  name: "audit",
-  version: "1.0.0",
-  apiVersion: "1.0.0",
-  setup(ctx) {
-    ctx.on("RequestCompleted", (event) => {
-      console.log(event.operationName, event.status);
-    });
+const openai = new OpenAI();
 
-    ctx.registerPolicy(
-      definePolicy({
-        name: "audit-policy",
-        order: { before: "timeout" },
-        create() {
-          return {
-            name: "audit-policy",
-            order: { before: "timeout" },
-            execute(_ctx, next) {
-              return next(_ctx);
-            },
-          };
-        },
-      }),
-    );
-
-    return { name: "audit" };
-  },
+const llm = createLlmClient({
+  provider: createOpenAiProvider({ client: openai, model: "gpt-4.1-mini" }),
+  model: "gpt-4.1-mini",
+  timeout: { perAttemptMs: 30_000 },
+  retry: { maxAttempts: 3, baseDelayMs: 500, jitter: "none" },
+  // Prices are yours to supply — Resili hard-codes none. Example values only.
+  pricing: createPricingResolver([
+    {
+      provider: "openai",
+      model: "gpt-4.1-mini",
+      inputPerMillionTokensUsd: 1,
+      outputPerMillionTokensUsd: 5,
+    },
+  ]),
+  budget: { maxCostPerRequestUsd: 0.05 },
 });
 
-const client = resili((url: string) => fetch(url))
-  .use(auditPlugin)
-  .build();
+const result = await llm.generate({
+  input: "Explain backpressure in one sentence.",
+  estimatedInputTokens: 20,
+  estimatedOutputTokens: 60,
+});
+
+console.log(result.response.content, result.usage.totalTokens, result.cost?.totalCostUsd);
 ```
 
-Plugin installation supports dependency validation, priority ordering, setup execution, policy registration, event registration, store/clock/metrics overrides, and reverse-order disposal on client destroy.
+Provider SDK retries are disabled by the adapter so that Resili owns retry behavior.
 
-## Architecture
+→ [LLM overview](docs/llm/overview.md) · [generate()](docs/llm/generate.md)
 
-Resili is built around a small set of runtime contracts:
+### LLM `stream()`
+
+```ts
+const stream = llm.stream({
+  input: "Write a haiku about backpressure.",
+});
+
+for await (const event of stream) {
+  if (event.type === "text-delta") {
+    process.stdout.write(event.text);
+  }
+}
+
+const { usage, cost } = await stream.result();
+```
+
+Streaming is **pull-through**: provider chunks are pulled in response to consumer demand, and nothing
+is executed until you start iterating. Once the first non-empty text delta reaches you, the stream is
+_committed_ and Resili will not start another provider generation — which is what stops a retry from
+concatenating two answers.
+
+→ [Streaming](docs/llm/streaming.md) · [the commit point](docs/llm/streaming.md#the-commit-point)
+
+## Policies
+
+Nine policies, composed in a deterministic order:
+
+| Policy                                          | Use it to                                 |
+| ----------------------------------------------- | ----------------------------------------- |
+| [Retry](docs/core/retry.md)                     | Recover from transient failures           |
+| [Timeout](docs/core/timeout.md)                 | Bound one attempt                         |
+| [Circuit breaker](docs/core/circuit-breaker.md) | Stop calling an unhealthy dependency      |
+| [Rate limiter](docs/core/rate-limiter.md)       | Stay inside a quota                       |
+| [Bulkhead](docs/core/bulkhead.md)               | Bound concurrency and queue depth         |
+| [Cache](docs/core/cache.md)                     | Reuse recent successful results           |
+| [Fallback](docs/core/fallback.md)               | Degrade instead of failing                |
+| [Dedupe](docs/core/dedupe.md)                   | Share concurrent identical in-flight work |
+| [Hedge](docs/core/hedge.md)                     | Cut tail latency                          |
 
 ```text
-operation args
-  ↓
-Client.call(...args)
-  ↓
-Context creation
-  ↓
-Pipeline.execute(ctx)
-  ↓
-Policies in canonical order
-  fallback → cache → retry → circuit-breaker → timeout → dedupe → hedge → rate-limiter → bulkhead
-  ↓
-wrapped operation / adapter
+Fallback → Cache → Retry → Circuit Breaker → Timeout → Dedupe → Hedge → Rate Limiter → Bulkhead → Operation
 ```
 
-Core concepts:
+A policy is installed only when you configure it. Order is configurable with relative anchors like
+`{ before: "retry" }`, and it changes semantics — retry outside timeout means each attempt gets its own
+budget. → [Policy ordering](docs/core/policy-ordering.md)
 
-- **Client** — immutable wrapper around an operation and compiled policy pipeline.
-- **Context** — immutable per-execution metadata, attempt number, deadline, cancellation signal, and policy metadata.
-- **Policy** — middleware-style unit that can observe, wrap, short-circuit, retry, time-box, or coordinate downstream work.
-- **Pipeline** — deterministic policy ordering with onion-style execution and stable relative anchors.
-- **Events** — typed lifecycle notifications emitted by clients and policies.
-- **Metrics** — framework-neutral counters, gauges, and histograms recorded through `MetricsRecorder`.
-- **Adapters** — package-level wrappers that turn transport APIs into Resili operations.
-- **Plugins** — setup-time extension points for policies, events, metrics, state stores, clocks, and disposal.
+## Documentation
 
-The core package has no runtime dependencies. Transport integrations, exporters, and ecosystem-specific behavior belong in adapter or plugin packages.
+| Section                                                 | Contents                                               |
+| ------------------------------------------------------- | ------------------------------------------------------ |
+| [Getting started](docs/getting-started/installation.md) | Installation, quick start, concepts                    |
+| [Core](docs/core/overview.md)                           | Every policy, ordering, context, cancellation          |
+| [HTTP](docs/http/overview.md)                           | fetch, axios, undici adapters                          |
+| [LLM](docs/llm/overview.md)                             | generate, streaming, budget, pricing, errors           |
+| [Providers](docs/providers/openai.md)                   | OpenAI, Anthropic, Gemini specifics                    |
+| [Observability](docs/observability/events.md)           | Events, metrics, telemetry and privacy                 |
+| [Architecture](docs/architecture/overview.md)           | Pipeline internals, classification, package boundaries |
+| [Reference](docs/reference/packages.md)                 | Packages, configuration, errors                        |
+| [Release status](docs/releases/alpha-status.md)         | What is implemented, known limitations, versioning     |
 
-## Development Status
+Runnable examples live in [`examples/`](examples). Generated API documentation is in `docs/api/`
+(`pnpm docs`).
 
-Resili is under active development. The core runtime, built-in policies, plugin runtime, public entry points, typed events, metrics contracts, and minimal fetch/Axios/Undici adapters are implemented and tested in this repository.
+## Design principles
 
-Current package version placeholders are still pre-1.0; publishing and release automation are intentionally separate from the runtime implementation.
-
-## Roadmap
-
-| Version | Theme                             | Focus                                                                 |
-| ------- | --------------------------------- | --------------------------------------------------------------------- |
-| v0.2    | Intelligent Request Management    | Hedged requests, request deduplication, memory cache                  |
-| v0.3    | Policy Composition                | Composition ergonomics, policy interaction hardening, advanced config |
-| v0.4    | Playground & Profiles             | Interactive examples, reusable policy profiles, production recipes    |
-| v1.0    | Stable API + Distributed adapters | Stable public API, distributed state adapters, release guarantees     |
+- **Wrap any async operation**, not just HTTP. One abstraction across transports and SDKs.
+- **Zero dependencies in core.** Transport and vendor code lives in adapter packages.
+- **Fail loudly at build time.** Invalid configuration throws immediately, never silently degrades.
+- **Injectable time.** Policies use a `Clock`, so retry and breaker behavior is deterministic in tests.
+- **Native primitives.** Cancellation is `AbortSignal`, nothing proprietary.
+- **Privacy by construction.** No outbound telemetry; events and metrics never carry prompts,
+  generated text, keys, or `Authorization` headers.
+- **Caller owns credentials.** Resili never constructs a provider client or reads an environment
+  variable.
 
 ## Contributing
 
-This repository uses pnpm workspaces and TypeScript project references.
+pnpm workspaces with TypeScript project references.
 
 ```bash
 pnpm install
 pnpm lint
-pnpm -r typecheck
+pnpm typecheck
 pnpm test
-pnpm -r build
+pnpm build
 pnpm --filter @resili/core api:check
 ```
 
-Development rules are documented in [`AGENTS.md`](AGENTS.md). Architecture and API decisions live in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md), [`docs/API_SPECIFICATION.md`](docs/API_SPECIFICATION.md), and [`docs/INTERNAL_DESIGN.md`](docs/INTERNAL_DESIGN.md).
+See [CONTRIBUTING.md](CONTRIBUTING.md) and [AGENTS.md](AGENTS.md). Architecture and API decisions are
+recorded in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md),
+[docs/API_SPECIFICATION.md](docs/API_SPECIFICATION.md), and
+[docs/INTERNAL_DESIGN.md](docs/INTERNAL_DESIGN.md).
 
 ## Maintainer
 
