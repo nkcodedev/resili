@@ -1,7 +1,7 @@
 {
   "name": "@resili/llm-gemini",
-  "version": "0.1.0-alpha.1",
-  "description": "Google Gemini generateContent adapter for the Resili LLM resilience foundation.",
+  "version": "0.1.0-alpha.2",
+  "description": "Google Gemini generateContent and generateContentStream adapter for the Resili LLM resilience foundation.",
   "type": "module",
   "license": "MIT",
   "sideEffects": false,
