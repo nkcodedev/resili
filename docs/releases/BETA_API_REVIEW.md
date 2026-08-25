@@ -54,7 +54,7 @@ No currently exported symbol should be deleted before beta except as part of the
 
 Same as the readiness plan. Independent version lines. Dual ESM/CJS. Node `>=20`.
 
-API Extractor exists **only** for `@resili/core`. Milestone 4 cleared Core `ae-forgotten-export` warnings. LLM and HTTP packages still have no report.
+API Extractor reports exist for all eight publishable packages. `pnpm api:check` validates them without `--local`.
 
 ---
 
@@ -62,33 +62,33 @@ API Extractor exists **only** for `@resili/core`. Milestone 4 cleared Core `ae-f
 
 ### Summary of non-KEEP items
 
-| Symbol                             | Package | Class              | Why                                        |
-| ---------------------------------- | ------- | ------------------ | ------------------------------------------ |
-| `RESILI_VERSION`                   | core    | KEEP               | Build-injected package version             |
-| `TimeoutOptions`                   | core    | KEEP               | `perAttemptMs` only; `deadlineMs` rejected |
-| `RetryOptions`                     | core    | KEEP               | `jitter?: "none"`; no `idempotentOnly`     |
-| `ClientStats`                      | core    | KEEP               | Totals only                                |
-| `ClientHealth`                     | core    | KEEP               | Always `"healthy"`; not a policy probe     |
-| `Client`                           | core    | KEEP               | Honest `stats()` / `health()`              |
-| `ResiliConfig`                     | core    | KEEP               | Includes `metrics`                         |
-| `Builder`                          | core    | KEEP               | Includes `withMetrics`                     |
-| `createFetch` / `ResilientFetch`   | fetch   | CHANGE BEFORE BETA | Lifecycle (`on`/`destroy`) still hidden    |
-| `createAxios` / `ResilientAxios`   | axios   | CHANGE BEFORE BETA | Same                                       |
-| `createUndici` / `ResilientUndici` | undici  | CHANGE BEFORE BETA | Same                                       |
-| `FailureVerdict`                   | core    | REVIEW             | Not used by `FailureClassifier`            |
-| `CacheEventKeyType`                | core    | REVIEW             | Event-payload only                         |
-| `CacheEventValueType`              | core    | REVIEW             | Event-payload only                         |
-| `AxiosRequestConfig`               | axios   | REVIEW             | `[key: string]: unknown`                   |
-| `AxiosResponse`                    | axios   | REVIEW             | Same index signature                       |
-| `UndiciRequestOptions`             | undici  | REVIEW             | Same                                       |
-| `UndiciResponse`                   | undici  | REVIEW             | Same                                       |
-| `LlmProviderIdentity`              | llm     | REVIEW             | Redundant with `LlmProvider.name`          |
-| `LlmProviderStreamFrame`           | llm     | REVIEW             | Easy to confuse with `LlmStreamEvent`      |
-| `evaluateBudget`                   | llm     | REVIEW             | Advanced / custom accountant               |
-| `BudgetDecision`                   | llm     | REVIEW             | Pairs with `evaluateBudget`                |
-| `BudgetDecisionInput`              | llm     | REVIEW             | Pairs with `evaluateBudget`                |
-| `LlmFinishReason`                  | llm     | REVIEW             | Includes `tool_calls` with no tools API    |
-| `KeyResolver`                      | core    | KEEP               | Single shared type from policy module      |
+| Symbol                             | Package | Class  | Why                                        |
+| ---------------------------------- | ------- | ------ | ------------------------------------------ |
+| `RESILI_VERSION`                   | core    | KEEP   | Build-injected package version             |
+| `TimeoutOptions`                   | core    | KEEP   | `perAttemptMs` only; `deadlineMs` rejected |
+| `RetryOptions`                     | core    | KEEP   | `jitter?: "none"`; no `idempotentOnly`     |
+| `ClientStats`                      | core    | KEEP   | Totals only                                |
+| `ClientHealth`                     | core    | KEEP   | Always `"healthy"`; not a policy probe     |
+| `Client`                           | core    | KEEP   | Honest `stats()` / `health()`              |
+| `ResiliConfig`                     | core    | KEEP   | Includes `metrics`                         |
+| `Builder`                          | core    | KEEP   | Includes `withMetrics`                     |
+| `createFetch` / `ResilientFetch`   | fetch   | KEEP   | `on` / `destroy` added in Milestone 6      |
+| `createAxios` / `ResilientAxios`   | axios   | KEEP   | Same                                       |
+| `createUndici` / `ResilientUndici` | undici  | KEEP   | Same                                       |
+| `FailureVerdict`                   | core    | REVIEW | Not used by `FailureClassifier`            |
+| `CacheEventKeyType`                | core    | REVIEW | Event-payload only                         |
+| `CacheEventValueType`              | core    | REVIEW | Event-payload only                         |
+| `AxiosRequestConfig`               | axios   | REVIEW | `[key: string]: unknown`                   |
+| `AxiosResponse`                    | axios   | REVIEW | Same index signature                       |
+| `UndiciRequestOptions`             | undici  | REVIEW | Same                                       |
+| `UndiciResponse`                   | undici  | REVIEW | Same                                       |
+| `LlmProviderIdentity`              | llm     | REVIEW | Redundant with `LlmProvider.name`          |
+| `LlmProviderStreamFrame`           | llm     | REVIEW | Easy to confuse with `LlmStreamEvent`      |
+| `evaluateBudget`                   | llm     | REVIEW | Advanced / custom accountant               |
+| `BudgetDecision`                   | llm     | REVIEW | Pairs with `evaluateBudget`                |
+| `BudgetDecisionInput`              | llm     | REVIEW | Pairs with `evaluateBudget`                |
+| `LlmFinishReason`                  | llm     | REVIEW | Includes `tool_calls` with no tools API    |
+| `KeyResolver`                      | core    | KEEP   | Single shared type from policy module      |
 
 All other listed exports are **KEEP**. Full KEEP lists are in the package sections below (grouped, not 157 bullets).
 
@@ -508,7 +508,7 @@ Not required to freeze beta. Do not expand scope.
 ## Core Beta Freeze Candidate
 
 These `@resili/core` contracts are now considered safe to freeze for the remainder of Beta hardening.
-This is **not** a freeze of HTTP adapter lifecycle APIs or the LLM public surface.
+HTTP lifecycle (`on` / `destroy`) is frozen as documented in [`BETA_HTTP_API_REVIEW.md`](./BETA_HTTP_API_REVIEW.md). LLM: [`BETA_LLM_API_REVIEW.md`](./BETA_LLM_API_REVIEW.md).
 
 - `createClient` / `resili` / `Builder` including `withMetrics`
 - `ResiliConfig` including `metrics`
@@ -520,12 +520,12 @@ This is **not** a freeze of HTTP adapter lifecycle APIs or the LLM public surfac
 - Error classes plus exported `ResiliErrorOptions`
 - Canonical policy order (fallback → cache → retry → circuit → timeout → dedupe → hedge → rate limiter → bulkhead)
 
-Do not freeze yet: HTTP `on`/`destroy`. LLM/provider freeze: see `docs/releases/BETA_LLM_API_REVIEW.md`.
+HTTP `on`/`destroy`: see `docs/releases/BETA_HTTP_API_REVIEW.md`. LLM/provider freeze: see `docs/releases/BETA_LLM_API_REVIEW.md`.
 
 ## Final Recommendation
 
 Milestone 4 is the Core freeze candidate. Milestone 5 is the LLM/provider freeze candidate.
-Remaining Beta API work is HTTP adapter lifecycle (`on`/`destroy`) and pack CI (Milestone 6).
+Milestone 6 is the HTTP freeze candidate plus the packed-consumer CI gate. Remaining Beta work is release-cut (versions, `--tag beta`, Gemini line alignment), not API invention.
 
 ---
 

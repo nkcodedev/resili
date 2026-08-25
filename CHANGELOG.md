@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - `@resili/core` public contract honesty: `timeout.deadlineMs` is rejected; `RetryOptions.jitter` is `"none"` only; `idempotentOnly` is not a public field; `stats()` is totals-only; `health()` no longer claims circuit/bulkhead knowledge; `RESILI_VERSION` is generated from `package.json` (tsup/Vitest) so packed ESM and CJS match; `ResiliConfig.metrics` / `Builder.withMetrics` inject policy metrics. Core `tsc` emit is `tsbuild/` so it does not overwrite the tsup `dist` bundle.
 - `@resili/llm` `CreateLlmClientOptions` omits Core `metrics`; LLM `metrics` records `resili_llm_*` only. LLM and provider packages emit `tsc` to `tsbuild/` so typecheck cannot overwrite packed ESM.
+- HTTP adapters (`fetch`, `axios`, `undici`) emit `tsc` to `tsbuild/` the same way. `createFetch` / `createAxios` / `createUndici` expose Core `on` / `destroy` without leaking `Client`. `pnpm pack:check` packs with pnpm, forbids workspace/file/link leaks and unsafe tarball paths, and runs a fresh external ESM+CJS consumer (Node 20 and 22 in CI). `pnpm api:check` covers all eight publishable packages.
 
 ### Documentation
 
@@ -21,7 +22,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Documented every shipped core policy individually, including `dedupe` and `hedge`, which had no user-facing documentation.
 - Added dedicated pages for the policy pipeline, execution context, cancellation, LLM streaming and its commit point, Budget Guard, pricing, usage, the error model, events, metrics, and telemetry/privacy.
 - Corrected stale claims: `circuitBreaker.failureRateThreshold` is a percentage (`50`), not a fraction (`0.5`); the rate limiter implements both `reject` and `wait` modes, and `maxWaitMs` is required for one and rejected for the other; `@resili/core` config accepts `cache`, `dedupe`, and `hedge`; HTTP adapters replace the caller's request signal and expose no per-call options, so caller-initiated cancellation is not available through them; install commands need the `@alpha` dist-tag because `latest` still points at `0.1.0-alpha.1`.
-- Added offline, credential-free examples for `core`, `fetch`, `axios`, and `undici`, plus an `examples/README.md` index. All `.env.example` files remain empty placeholders.
+- Added `docs/releases/BETA_HTTP_API_REVIEW.md` (HTTP freeze candidate: YES for fetch, axios, and undici).
 
 ## [LLM streaming timeout fix] - 2026-08-25
 

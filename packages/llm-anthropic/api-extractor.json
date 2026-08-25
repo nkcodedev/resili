@@ -1,5 +1,8 @@
 {
   "$schema": "https://developer.microsoft.com/json-schemas/api-extractor/v7/api-extractor.schema.json",
+  "compiler": {
+    "tsconfigFilePath": "<projectFolder>/tsconfig.tsup.json"
+  },
   "mainEntryPointFilePath": "<projectFolder>/dist/index.d.ts",
   "apiReport": {
     "enabled": true,

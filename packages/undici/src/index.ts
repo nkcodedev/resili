@@ -3,7 +3,10 @@ import {
   createClient,
   type Client,
   type Context,
+  type EventHandler,
   type ResiliConfig,
+  type ResiliEventType,
+  type Unsubscribe,
 } from "@resili/core";
 
 /**
@@ -53,11 +56,15 @@ export interface CreateUndiciOptions extends ResiliConfig<UndiciResponse> {
 }
 
 /**
- * Minimal resilient Undici-compatible request function.
+ * Minimal resilient Undici-compatible request function with Core lifecycle hooks.
  *
  * @public
  */
-export type ResilientUndici = (options: UndiciRequestOptions) => Promise<UndiciResponse>;
+export interface ResilientUndici {
+  (options: UndiciRequestOptions): Promise<UndiciResponse>;
+  on<T extends ResiliEventType>(type: T, handler: EventHandler<T>): Unsubscribe;
+  destroy(): Promise<void>;
+}
 
 /**
  * Creates a resilient wrapper around an Undici-compatible request function.
@@ -71,7 +78,7 @@ export function createUndici(options: CreateUndiciOptions): ResilientUndici {
     createCoreConfig(options),
   );
 
-  return (requestOptions: UndiciRequestOptions): Promise<UndiciResponse> =>
+  const resilientRequest = ((requestOptions: UndiciRequestOptions): Promise<UndiciResponse> =>
     client.execute<UndiciResponse>(
       (ctx: Context) => {
         throwIfAborted(ctx.signal);
@@ -79,7 +86,12 @@ export function createUndici(options: CreateUndiciOptions): ResilientUndici {
         return requestImplementation({ ...requestOptions, signal: ctx.signal });
       },
       requestOptions.signal === undefined ? undefined : { signal: requestOptions.signal },
-    );
+    )) as ResilientUndici;
+
+  resilientRequest.on = client.on.bind(client);
+  resilientRequest.destroy = () => client.destroy();
+
+  return Object.freeze(resilientRequest);
 }
 
 function throwIfAborted(signal: AbortSignal): void {
