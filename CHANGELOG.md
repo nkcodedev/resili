@@ -10,6 +10,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+#### `@resili/llm-gemini` `0.1.0-alpha.1`
+
+- Google Gemini `models.generateContent` adapter for `@resili/llm` using a user-owned `@google/genai` client.
+- Normalized usage and Gemini/HTTP error mapping to `LlmError`.
+- SDK HTTP retry suppression (`httpOptions.retryOptions.attempts: 1`) so Resili owns retries.
+- AbortSignal integration via `config.abortSignal`.
+- Text-in / text-out only (no streaming, tools, multimodal, or Vertex setup).
+
 #### `@resili/llm` `0.1.0-alpha.1`
 
 - Provider-neutral LLM foundation for Resili (`createLlmClient`, `defineProvider`).

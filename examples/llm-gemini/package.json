@@ -1,0 +1,9 @@
+{
+  "name": "@resili/example-llm-gemini",
+  "private": true,
+  "type": "module",
+  "description": "Local-only Gemini example. Not published and not run in CI.",
+  "engines": {
+    "node": ">=20"
+  }
+}

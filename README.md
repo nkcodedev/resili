@@ -80,6 +80,7 @@ Resili gives those failure modes explicit, typed, testable policy boundaries.
 | LLM foundation             | `@resili/llm`           | Alpha     | Provider-neutral usage, cost, budget, and LLM telemetry   |
 | OpenAI LLM adapter         | `@resili/llm-openai`    | Alpha     | Chat Completions provider for `@resili/llm`               |
 | Anthropic LLM adapter      | `@resili/llm-anthropic` | Alpha     | Messages API provider for `@resili/llm`                   |
+| Gemini LLM adapter         | `@resili/llm-gemini`    | Alpha     | generateContent provider for `@resili/llm`                |
 
 ## Built-in Policies at a glance
 
