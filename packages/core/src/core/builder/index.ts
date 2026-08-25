@@ -118,6 +118,14 @@ export interface Builder<Args extends readonly unknown[], R> {
   withClock(clock: Clock): this;
 
   /**
+   * Replaces the default metrics recorder.
+   *
+   * Plugins that call {@link PluginContext.useMetrics} during setup override
+   * this value.
+   */
+  withMetrics(metrics: MetricsRecorder): this;
+
+  /**
    * Subscribes a handler to the client event bus at build time.
    */
   on<T extends ResiliEventType>(type: T, handler: EventHandler<T>): this;
@@ -258,6 +266,12 @@ class ImmutableBuilder<Args extends readonly unknown[], R> implements Builder<Ar
     validateClock(clock);
 
     return this.#next({ clock });
+  }
+
+  withMetrics(metrics: MetricsRecorder): this {
+    validateMetrics(metrics);
+
+    return this.#next({ metrics });
   }
 
   on<T extends ResiliEventType>(type: T, handler: EventHandler<T>): this {
@@ -456,6 +470,22 @@ function validateClock(clock: unknown): asserts clock is Clock {
     typeof candidate.clearTimeout !== "function"
   ) {
     throw new ConfigurationError("clock must implement Clock.", { field: "clock" });
+  }
+}
+
+function validateMetrics(metrics: unknown): asserts metrics is MetricsRecorder {
+  if (metrics === null || typeof metrics !== "object") {
+    throw new ConfigurationError("metrics must be an object.", { field: "metrics" });
+  }
+
+  const candidate = metrics as Partial<MetricsRecorder>;
+
+  if (
+    typeof candidate.counter !== "function" ||
+    typeof candidate.gauge !== "function" ||
+    typeof candidate.histogram !== "function"
+  ) {
+    throw new ConfigurationError("metrics must implement MetricsRecorder.", { field: "metrics" });
   }
 }
 

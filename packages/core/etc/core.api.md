@@ -6,7 +6,6 @@
 
 // @public
 export class AbortError extends ResiliError {
-    // Warning: (ae-forgotten-export) The symbol "ResiliErrorOptions" needs to be exported by the entry point index.d.ts
     constructor(options?: ResiliErrorOptions & {
         readonly reason?: unknown;
     });
@@ -31,13 +30,13 @@ export interface Builder<Args extends readonly unknown[], R> {
     use<O = void>(plugin: ResiliPlugin<O>, options?: O): this;
     withClassifier(classifier: FailureClassifier): this;
     withClock(clock: Clock): this;
+    withMetrics(metrics: MetricsRecorder): this;
     withStore(store: StateStore): this;
 }
 
 // @public
 export interface BulkheadOptions {
-    // Warning: (ae-forgotten-export) The symbol "KeyResolver$2" needs to be exported by the entry point index.d.ts
-    readonly key?: string | KeyResolver$2;
+    readonly key?: string | KeyResolver;
     readonly maxConcurrent: number;
     readonly maxQueue?: number;
     readonly queueTimeoutMs?: number;
@@ -95,14 +94,21 @@ export interface CircuitBreakerOptions {
     readonly slowCallRateThreshold?: number;
     // (undocumented)
     readonly successThreshold?: number;
-    // Warning: (ae-forgotten-export) The symbol "CircuitBreakerWindow" needs to be exported by the entry point index.d.ts
-    //
     // (undocumented)
     readonly window?: CircuitBreakerWindow;
 }
 
 // @public
 export const circuitBreakerPolicy: PolicyFactory;
+
+// @public
+export type CircuitBreakerWindow = {
+    readonly type: "count";
+    readonly size: number;
+} | {
+    readonly type: "time";
+    readonly durationMs: number;
+};
 
 // @public
 export class CircuitOpenError extends ResiliError {
@@ -133,28 +139,11 @@ export interface ClientHealth {
     // (undocumented)
     readonly details: ClientStats;
     // (undocumented)
-    readonly openCircuits: readonly string[];
-    // (undocumented)
-    readonly status: "healthy" | "degraded" | "unhealthy";
+    readonly status: "healthy";
 }
 
 // @public
 export interface ClientStats {
-    // (undocumented)
-    readonly bulkhead: Readonly<Record<string, {
-        readonly active: number;
-        readonly queued: number;
-    }>>;
-    // (undocumented)
-    readonly circuit: Readonly<Record<string, {
-        readonly state: CircuitState;
-        readonly failureRate: number;
-        readonly calls: number;
-    }>>;
-    // (undocumented)
-    readonly rateLimiter: Readonly<Record<string, {
-        readonly available: number;
-    }>>;
     // (undocumented)
     readonly totals: {
         readonly calls: number;
@@ -397,21 +386,24 @@ export interface PolicyServices {
 export type PolicyState = Readonly<Record<string, unknown>>;
 
 // @public
+export type RateLimiterLimitBehavior = "reject" | "wait";
+
+// @public
 export interface RateLimiterOptions {
     readonly burst?: number;
     readonly intervalMs: number;
-    // Warning: (ae-forgotten-export) The symbol "KeyResolver_2" needs to be exported by the entry point index.d.ts
-    readonly key?: string | KeyResolver_2;
+    readonly key?: string | KeyResolver;
     readonly limit: number;
     readonly maxWaitMs?: number;
-    // Warning: (ae-forgotten-export) The symbol "RateLimiterLimitBehavior" needs to be exported by the entry point index.d.ts
     readonly onLimit?: RateLimiterLimitBehavior;
-    // Warning: (ae-forgotten-export) The symbol "RateLimiterStrategy" needs to be exported by the entry point index.d.ts
     readonly strategy?: RateLimiterStrategy;
 }
 
 // @public
 export const rateLimiterPolicy: PolicyFactory;
+
+// @public
+export type RateLimiterStrategy = "token-bucket" | "sliding-window";
 
 // @public
 export class RateLimitExceededError extends ResiliError {
@@ -426,7 +418,7 @@ export class RateLimitExceededError extends ResiliError {
 export function resili<Args extends readonly unknown[], R>(operation: Operation<Args, R>): Builder<Args, R>;
 
 // @public
-export const RESILI_VERSION = "0.0.0";
+export const RESILI_VERSION: string;
 
 // @public
 export interface ResiliConfig<R = unknown, Args extends readonly unknown[] = readonly unknown[]> {
@@ -446,6 +438,8 @@ export interface ResiliConfig<R = unknown, Args extends readonly unknown[] = rea
     readonly fallback?: FallbackOptions<R> | FallbackFn<R>;
     // (undocumented)
     readonly hedge?: HedgeOptions<R>;
+    // (undocumented)
+    readonly metrics?: MetricsRecorder;
     // (undocumented)
     readonly policies?: readonly {
         readonly factory: PolicyFactory;
@@ -471,6 +465,14 @@ export abstract class ResiliError extends Error {
 
 // @public
 export type ResiliErrorCode = "ERR_CONFIG" | "ERR_CIRCUIT_OPEN" | "ERR_TIMEOUT" | "ERR_RETRY_EXCEEDED" | "ERR_BULKHEAD_FULL" | "ERR_RATE_LIMITED" | "ERR_ABORTED";
+
+// @public
+export interface ResiliErrorOptions {
+    // (undocumented)
+    readonly cause?: unknown;
+    // (undocumented)
+    readonly context?: ContextSnapshot;
+}
 
 // @public
 export type ResiliEvent = ResiliEventMap[ResiliEventType];
@@ -692,6 +694,9 @@ export interface ResiliPlugin<O = void> {
 }
 
 // @public
+export type RetryBackoff = "fixed" | "exponential";
+
+// @public
 export class RetryExceededError extends ResiliError {
     constructor(options: Omit<ResiliErrorOptions, "cause"> & {
         readonly attempts: number;
@@ -703,19 +708,16 @@ export class RetryExceededError extends ResiliError {
 }
 
 // @public
+export type RetryJitter = "none";
+
+// @public
 export interface RetryOptions {
-    // Warning: (ae-forgotten-export) The symbol "RetryBackoff" needs to be exported by the entry point index.d.ts
-    //
     // (undocumented)
     readonly backoff?: RetryBackoff;
     // (undocumented)
     readonly baseDelayMs?: number;
     // (undocumented)
     readonly factor?: number;
-    // (undocumented)
-    readonly idempotentOnly?: boolean;
-    // Warning: (ae-forgotten-export) The symbol "RetryJitter" needs to be exported by the entry point index.d.ts
-    //
     // (undocumented)
     readonly jitter?: RetryJitter;
     // (undocumented)
@@ -760,7 +762,6 @@ export class TimeoutError extends ResiliError {
 
 // @public
 export interface TimeoutOptions {
-    readonly deadlineMs?: number;
     readonly perAttemptMs: number;
 }
 

@@ -24,6 +24,7 @@ Accepted by `createClient(operation, config)` and, extended, by `createLlmClient
 | `hedge`          | `HedgeOptions`                                             | not installed    |
 | `classifier`     | `FailureClassifier`                                        | `httpClassifier` |
 | `clock`          | `Clock`                                                    | system clock     |
+| `metrics`        | `MetricsRecorder`                                          | `noopMetrics`    |
 | `store`          | `StateStore`                                               | in-memory        |
 | `policies`       | `readonly { factory: PolicyFactory; options?: unknown }[]` | `[]`             |
 
@@ -40,32 +41,31 @@ the seam, and the default is in-memory and per-process.
 
 ### `retry` → [Retry](../core/retry.md)
 
-| Option              | Type                          | Default         | Notes                                                |
-| ------------------- | ----------------------------- | --------------- | ---------------------------------------------------- |
-| `maxAttempts`       | `number`                      | `3`             | Total attempts, not extra retries. `>= 1`            |
-| `backoff`           | `"fixed" \| "exponential"`    | `"exponential"` |                                                      |
-| `baseDelayMs`       | `number`                      | `100`           |                                                      |
-| `maxDelayMs`        | `number`                      | `10_000`        | Per-delay cap                                        |
-| `maxTotalDelayMs`   | `number`                      | `30_000`        | Cumulative delay budget across attempts              |
-| `factor`            | `number`                      | `2`             | Exponential multiplier                               |
-| `jitter`            | `"none" \| "full" \| "equal"` | `"none"`        | **Only `"none"` is implemented**                     |
-| `respectRetryAfter` | `boolean`                     | `true`          | Honor a classifier delay hint over the backoff curve |
-| `idempotentOnly`    | `boolean`                     | `false`         | **Must remain `false`** — not implemented            |
-| `retryOn`           | `(outcome, ctx) => boolean`   | classifier      | Overrides the classifier for retry decisions only    |
+| Option              | Type                        | Default         | Notes                                                |
+| ------------------- | --------------------------- | --------------- | ---------------------------------------------------- |
+| `maxAttempts`       | `number`                    | `3`             | Total attempts, not extra retries. `>= 1`            |
+| `backoff`           | `"fixed" \| "exponential"`  | `"exponential"` |                                                      |
+| `baseDelayMs`       | `number`                    | `100`           |                                                      |
+| `maxDelayMs`        | `number`                    | `10_000`        | Per-delay cap                                        |
+| `maxTotalDelayMs`   | `number`                    | `30_000`        | Cumulative delay budget across attempts              |
+| `factor`            | `number`                    | `2`             | Exponential multiplier                               |
+| `jitter`            | `"none"`                    | `"none"`        | Only `"none"` is in the public type                  |
+| `respectRetryAfter` | `boolean`                   | `true`          | Honor a classifier delay hint over the backoff curve |
+| `retryOn`           | `(outcome, ctx) => boolean` | classifier      | Overrides the classifier for retry decisions only    |
 
-`jitter: "full"` or `"equal"` and `idempotentOnly: true` throw `ConfigurationError`. They are in the
-type to reserve the shape, and rejecting them is deliberate: silently ignoring a jitter setting you
-believe is active would be worse than failing.
+`jitter` values other than `"none"` and `idempotentOnly: true` throw `ConfigurationError` if passed
+at runtime. They are not part of the public TypeScript contract.
 
 ### `timeout` → [Timeout](../core/timeout.md)
 
-| Option         | Type     | Default    | Notes                                              |
-| -------------- | -------- | ---------- | -------------------------------------------------- |
-| `perAttemptMs` | `number` | _required_ | Applies to each attempt independently              |
-| `deadlineMs`   | `number` | —          | Validated, but **not enforced** as a runtime limit |
+| Option         | Type     | Default    | Notes                                 |
+| -------------- | -------- | ---------- | ------------------------------------- |
+| `perAttemptMs` | `number` | _required_ | Applies to each attempt independently |
 
-A total-deadline timeout is not implemented. With `maxAttempts: 3` and `perAttemptMs: 1000`, worst-case
-wall time is roughly three seconds plus backoff — there is no single ceiling.
+`timeout.deadlineMs` throws `ConfigurationError`. Use `ContextInit.deadline` / `deadlineMs` for an
+overall bound. A total-deadline timeout policy is not implemented. With `maxAttempts: 3` and
+`perAttemptMs: 1000`, worst-case wall time is roughly three seconds plus backoff — there is no single
+ceiling from the timeout policy.
 
 ### `circuitBreaker` → [Circuit breaker](../core/circuit-breaker.md)
 
@@ -253,12 +253,12 @@ Estimates affect only budget preflight — they never change the request sent to
 Configuration that is accepted by the types and rejected at build time, so nothing silently does
 nothing:
 
-| Option                             | Behavior                           |
-| ---------------------------------- | ---------------------------------- |
-| `retry.jitter: "full" \| "equal"`  | Throws `ConfigurationError`        |
-| `retry.idempotentOnly: true`       | Throws `ConfigurationError`        |
-| `timeout.deadlineMs`               | Validated; not enforced at runtime |
-| `hedge.maxAttempts` other than `2` | Throws `ConfigurationError`        |
+| Option                             | Behavior                    |
+| ---------------------------------- | --------------------------- |
+| `retry.jitter` other than `"none"` | Throws `ConfigurationError` |
+| `retry.idempotentOnly: true`       | Throws `ConfigurationError` |
+| `timeout.deadlineMs`               | Throws `ConfigurationError` |
+| `hedge.maxAttempts` other than `2` | Throws `ConfigurationError` |
 
 Also absent: distributed policy state (`StateStore` is the seam, no implementation ships), separate
 time-to-first-token or idle-chunk timeouts for streaming

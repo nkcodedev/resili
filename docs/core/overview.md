@@ -40,6 +40,7 @@ fail loudly.
 | `classifier`     | `FailureClassifier`             | [Error classification](../architecture/error-classification.md) |
 | `store`          | `StateStore`                    | Pluggable policy state backing                                  |
 | `clock`          | `Clock`                         | Injectable time source (see below)                              |
+| `metrics`        | `MetricsRecorder`               | Policy metrics; default `noopMetrics`. Also `withMetrics`       |
 | `policies`       | `{ factory, options? }[]`       | [Custom policies](policy-ordering.md#custom-policies)           |
 
 Note there is no `metadata` or `events` config key. Subscribe to events with `client.on(...)` after

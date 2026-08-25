@@ -1,13 +1,9 @@
-/**
- * Current package version placeholder.
- *
- * @public
- */
 import { createBuilder, type Builder, type Operation } from "./core/builder/index";
 import type { Client } from "./core/client/index";
 import type { FailureClassifier } from "./core/classification/index";
 import type { Clock } from "./core/clock/index";
 import { ConfigurationError } from "./core/errors/index";
+import type { MetricsRecorder } from "./core/metrics/index";
 import type { PolicyFactory } from "./core/policy/index";
 import type { StateStore } from "./core/state/index";
 import type { BulkheadOptions } from "./policies/bulkhead/index";
@@ -20,7 +16,13 @@ import type { RateLimiterOptions } from "./policies/rate-limiter/index";
 import type { RetryOptions } from "./policies/retry/index";
 import type { TimeoutOptions } from "./policies/timeout/index";
 
-export const RESILI_VERSION = "0.0.0";
+/**
+ * Current `@resili/core` package version, injected at build time from
+ * `package.json`.
+ *
+ * @public
+ */
+export { RESILI_VERSION } from "./version";
 
 /**
  * Supported declarative client configuration.
@@ -40,6 +42,7 @@ export interface ResiliConfig<R = unknown, Args extends readonly unknown[] = rea
   readonly classifier?: FailureClassifier;
   readonly store?: StateStore;
   readonly clock?: Clock;
+  readonly metrics?: MetricsRecorder;
   readonly policies?: readonly {
     readonly factory: PolicyFactory;
     readonly options?: unknown;
@@ -80,6 +83,10 @@ export function createClient<Args extends readonly unknown[], R>(
 
   if (config.clock !== undefined) {
     builder = builder.withClock(config.clock);
+  }
+
+  if (config.metrics !== undefined) {
+    builder = builder.withMetrics(config.metrics);
   }
 
   if (config.retry !== undefined) {
@@ -138,6 +145,7 @@ const SUPPORTED_CONFIG_KEYS = new Set<string>([
   "classifier",
   "store",
   "clock",
+  "metrics",
   "policies",
 ]);
 
@@ -172,7 +180,7 @@ export type {
   ResiliEventType,
   Unsubscribe,
 } from "./core/events/index";
-export type { ResiliErrorCode } from "./core/errors/index";
+export type { ResiliErrorCode, ResiliErrorOptions } from "./core/errors/index";
 export {
   AbortError,
   BulkheadRejectedError,
@@ -186,7 +194,14 @@ export {
 } from "./core/errors/index";
 export type { Counter, Gauge, Histogram, Labels, MetricsRecorder } from "./core/metrics/index";
 export { noopMetrics } from "./core/metrics/index";
-export type { Next, Policy, PolicyFactory, PolicyOrder, PolicyServices } from "./core/policy/index";
+export type {
+  KeyResolver,
+  Next,
+  Policy,
+  PolicyFactory,
+  PolicyOrder,
+  PolicyServices,
+} from "./core/policy/index";
 export { definePolicy } from "./core/policy/index";
 export type { PluginContext, PluginInstance, ResiliPlugin } from "./core/plugins/index";
 export { definePlugin } from "./core/plugins/index";
@@ -196,7 +211,7 @@ export type { BulkheadOptions } from "./policies/bulkhead/index";
 export { bulkheadPolicy } from "./policies/bulkhead/index";
 export type { CacheOptions } from "./policies/cache/index";
 export { cachePolicy } from "./policies/cache/index";
-export type { CircuitBreakerOptions, KeyResolver } from "./policies/circuit-breaker/index";
+export type { CircuitBreakerOptions, CircuitBreakerWindow } from "./policies/circuit-breaker/index";
 export { circuitBreakerPolicy } from "./policies/circuit-breaker/index";
 export type { DedupeKey, DedupeOptions } from "./policies/dedupe/index";
 export { dedupePolicy } from "./policies/dedupe/index";
@@ -204,9 +219,18 @@ export type { FallbackFn, FallbackOptions } from "./policies/fallback/index";
 export { fallbackPolicy } from "./policies/fallback/index";
 export type { HedgeOptions } from "./policies/hedge/index";
 export { hedgePolicy } from "./policies/hedge/index";
-export type { RateLimiterOptions } from "./policies/rate-limiter/index";
+export type {
+  RateLimiterLimitBehavior,
+  RateLimiterOptions,
+  RateLimiterStrategy,
+} from "./policies/rate-limiter/index";
 export { rateLimiterPolicy } from "./policies/rate-limiter/index";
-export type { RetryOptions, RetryPredicate } from "./policies/retry/index";
+export type {
+  RetryBackoff,
+  RetryJitter,
+  RetryOptions,
+  RetryPredicate,
+} from "./policies/retry/index";
 export { retryPolicy } from "./policies/retry/index";
 export type { TimeoutOptions } from "./policies/timeout/index";
 export { timeoutPolicy } from "./policies/timeout/index";

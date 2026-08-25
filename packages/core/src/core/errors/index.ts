@@ -27,7 +27,12 @@ const RESILI_ERROR_CODES = new Set<string>([
   "ERR_ABORTED",
 ]);
 
-interface ResiliErrorOptions {
+/**
+ * Options shared by Resili error constructors.
+ *
+ * @public
+ */
+export interface ResiliErrorOptions {
   readonly cause?: unknown;
   readonly context?: ContextSnapshot;
 }

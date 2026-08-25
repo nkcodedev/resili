@@ -75,7 +75,7 @@ A context deadline aborts the composed signal when the absolute time is reached,
 named `AbortError`. Unlike a per-attempt timeout this bounds the **whole logical call**, retries
 included, which makes it the right tool for an end-to-end budget.
 
-`TimeoutOptions.deadlineMs` is validated but has no runtime effect — use the context deadline.
+`TimeoutOptions.deadlineMs` is rejected. Use the context deadline.
 
 ## How policies handle cancellation
 

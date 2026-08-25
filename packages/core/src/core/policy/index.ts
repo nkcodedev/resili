@@ -47,6 +47,15 @@ export type PolicyOrder =
 export type Next<T> = (ctx: Context) => Promise<T>;
 
 /**
+ * Resolves a policy partition key from the current context.
+ *
+ * Shared by circuit breaker, bulkhead, and rate limiter options.
+ *
+ * @public
+ */
+export type KeyResolver = (ctx: Context) => string;
+
+/**
  * Middleware abstraction implemented by built-in and custom policies.
  *
  * A policy may observe, short-circuit, retry, time-box, or wrap the downstream

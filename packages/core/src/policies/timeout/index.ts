@@ -17,14 +17,6 @@ export interface TimeoutOptions {
    * Maximum duration for one attempt in milliseconds.
    */
   readonly perAttemptMs: number;
-
-  /**
-   * Optional overall budget across all attempts.
-   *
-   * The timeout policy validates this value but does not apply whole-request
-   * deadline behavior; root context deadlines own that responsibility.
-   */
-  readonly deadlineMs?: number;
 }
 
 /**
@@ -54,7 +46,7 @@ function executeWithTimeout<T>(
   ctx: Context,
   next: Next<T>,
   services: PolicyServices,
-  options: TimeoutOptions,
+  options: { readonly perAttemptMs: number },
 ): Promise<T> {
   const timeoutController = new AbortController();
   const childContext = ctx.fork({
@@ -109,28 +101,20 @@ function normalizeOptions(options: unknown): TimeoutOptions {
     });
   }
 
-  const candidate = options as Partial<TimeoutOptions>;
+  const candidate = options as Partial<TimeoutOptions> & { readonly deadlineMs?: unknown };
 
   validatePositiveFinite(candidate.perAttemptMs, "timeout.perAttemptMs");
 
   if (candidate.deadlineMs !== undefined) {
-    validatePositiveFinite(candidate.deadlineMs, "timeout.deadlineMs");
-
-    if (candidate.deadlineMs < candidate.perAttemptMs) {
-      throw new ConfigurationError(
-        "timeout.deadlineMs must be greater than or equal to perAttemptMs.",
-        {
-          field: "timeout.deadlineMs",
-        },
-      );
-    }
+    throw new ConfigurationError(
+      "timeout.deadlineMs is not implemented. Use ContextInit.deadlineMs or ContextInit.deadline for an overall request deadline.",
+      {
+        field: "timeout.deadlineMs",
+      },
+    );
   }
 
-  return Object.freeze(
-    candidate.deadlineMs === undefined
-      ? { perAttemptMs: candidate.perAttemptMs }
-      : { perAttemptMs: candidate.perAttemptMs, deadlineMs: candidate.deadlineMs },
-  );
+  return Object.freeze({ perAttemptMs: candidate.perAttemptMs });
 }
 
 function validatePositiveFinite(value: unknown, field: string): asserts value is number {

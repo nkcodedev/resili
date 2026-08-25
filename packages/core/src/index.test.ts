@@ -21,6 +21,7 @@ import {
   httpClassifier,
   isResiliError,
   memoryStore,
+  noopMetrics,
   definePolicy,
   rateLimiterPolicy,
   resili,
@@ -61,8 +62,16 @@ import {
 } from "./index";
 
 describe("@resili/core package entry", () => {
-  it("exposes the package version placeholder", () => {
-    expect(RESILI_VERSION).toBe("0.0.0");
+  it("exposes the package version from the core package.json", async () => {
+    const { readFileSync } = await import("node:fs");
+    const { dirname, join } = await import("node:path");
+    const { fileURLToPath } = await import("node:url");
+    const pkg = JSON.parse(
+      readFileSync(join(dirname(fileURLToPath(import.meta.url)), "../package.json"), "utf8"),
+    ) as { readonly version: string };
+
+    expect(RESILI_VERSION).toBe(pkg.version);
+    expect(RESILI_VERSION).not.toBe("0.0.0");
   });
 
   it("exposes the state store contract", async () => {
@@ -113,14 +122,10 @@ describe("@resili/core package entry", () => {
 
   it("exposes the client contract", () => {
     const stats: ClientStats = {
-      circuit: {},
-      bulkhead: {},
-      rateLimiter: {},
       totals: { calls: 0, successes: 0, failures: 0, retries: 0 },
     };
     const health: ClientHealth = {
       status: "healthy",
-      openCircuits: [],
       details: stats,
     };
     const client: Pick<Client<readonly [string], string>, "stats" | "health"> = {
@@ -267,6 +272,7 @@ describe("@resili/core package entry", () => {
       classifier: httpClassifier,
       store: memoryStore(),
       clock: systemClock,
+      metrics: noopMetrics,
       policies: [],
     };
     const client = createClient(() => Promise.resolve("ok"), config);
@@ -360,6 +366,53 @@ describe("@resili/core package entry", () => {
 
     await expect(client.call()).resolves.toBe("ok");
     expect(events).toEqual(["operation"]);
+  });
+
+  it("injects metrics through createClient and rejects timeout.deadlineMs", async () => {
+    const recorded: string[] = [];
+    const metrics = Object.freeze({
+      counter(name: string) {
+        recorded.push(name);
+
+        return noopMetrics.counter(name);
+      },
+      gauge(name: string) {
+        return noopMetrics.gauge(name);
+      },
+      histogram(name: string) {
+        return noopMetrics.histogram(name);
+      },
+    });
+    let captured: PolicyServices | undefined;
+    const factory = definePolicy({
+      name: "config-metrics",
+      order: 100,
+      create(services) {
+        captured = services;
+        services.metrics.counter("resili_honesty_test_total");
+
+        return {
+          name: "config-metrics",
+          order: 100,
+          execute<T>(ctx: Context, next: (ctx: Context) => Promise<T>): Promise<T> {
+            return next(ctx);
+          },
+        };
+      },
+    });
+    const client = createClient(() => Promise.resolve("ok"), {
+      metrics,
+      policies: [{ factory }],
+    });
+
+    await expect(client.call()).resolves.toBe("ok");
+    expect(captured?.metrics).toBe(metrics);
+    expect(recorded).toEqual(["resili_honesty_test_total"]);
+    expect(() =>
+      createClient(() => Promise.resolve("ok"), {
+        timeout: { perAttemptMs: 50, deadlineMs: 100 } as never,
+      }),
+    ).toThrow(ConfigurationError);
   });
 
   it("rejects unsupported runtime config fields", () => {

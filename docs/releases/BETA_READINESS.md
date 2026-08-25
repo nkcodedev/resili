@@ -36,7 +36,7 @@ Resili is a **public alpha** with two independently versioned lines, eight publi
 
 - Public APIs have not been through an explicit freeze review.
 - HTTP adapters do expose caller-initiated per-call cancellation through the existing `signal` field.
-- Several public config/stats surfaces are honest in comments and dishonest in shape (`timeout.deadlineMs`, `stats()` policy maps, `RESILI_VERSION`).
+- Core honesty items from Milestone 4 are implemented on `fix/core-beta-api-honesty` (`timeout.deadlineMs` rejected, stats/health narrowed, `RESILI_VERSION` injected). HTTP/LLM freeze and pack CI remain.
 - CI runs Node 22 only. Packed-consumer, ESM/CJS, and Node 20/24 gates are manual or absent.
 - `@resili/llm` and HTTP adapters have no API Extractor report.
 
@@ -115,13 +115,13 @@ Do not leave “wrap with `createClient` yourself” as the only path for the pr
 
 **Classification: P0 (process). Beta blocker: yes.**
 
-There is an API Extractor report for `@resili/core` only. It currently records forgotten-export warnings (`ResiliErrorOptions`, `RetryBackoff`, `RetryJitter`, `RateLimiterStrategy`, `RateLimiterLimitBehavior`, `CircuitBreakerWindow`, duplicate `KeyResolver*` types). `@resili/llm` and the HTTP adapters have no equivalent freeze artifact.
+There is an API Extractor report for `@resili/core` only. Milestone 4 exported the previously forgotten Core types and unified `KeyResolver`. `@resili/llm` and the HTTP adapters have no equivalent freeze artifact.
 
 Beta requires a written review of every public export on all eight packages, a decision per export (keep / export properly / hide), and then treating the remainder as mostly stable.
 
 ### P0-3. `timeout.deadlineMs` decision executed
 
-**Classification: P0 to decide and stop lying; implementation of a real overall deadline is not required for beta. Beta blocker: the unresolved no-op is yes.**
+**Status (Milestone 4):** Executed. `TimeoutOptions` no longer includes `deadlineMs`. Passing it throws `ConfigurationError`. `ContextInit.deadline` / `deadlineMs` remains the overall bound.
 
 `TimeoutOptions.deadlineMs` is public, validated (`>= perAttemptMs`), stored, and **never applied** by the timeout policy. Runtime timeout is `perAttemptMs` only. Root `ContextInit.deadline` / `deadlineMs` is a separate, working mechanism.
 
@@ -577,15 +577,15 @@ Change these **now**, while still alpha. Do not implement in this planning task.
 
 ## Beta Exit Criteria
 
-- [ ] HTTP cancellation design approved (caller signal aborts the logical request on all three adapters)
-- [ ] HTTP cancellation implemented and tested (caller abort, timeout abort, composition, no retry)
-- [ ] Public API review completed for all eight packages (keep / export / hide)
-- [ ] Forgotten `@resili/core` API Extractor warnings resolved or explicitly accepted
+- [x] HTTP cancellation design approved (caller signal aborts the logical request on all three adapters)
+- [x] HTTP cancellation implemented and tested (caller abort, timeout abort, composition, no retry)
+- [x] Public API review completed for all eight packages (keep / export / hide)
+- [x] Forgotten `@resili/core` API Extractor warnings resolved or explicitly accepted
 - [ ] `@resili/llm` public surface recorded (API Extractor or equivalent)
-- [ ] `timeout.deadlineMs` decision shipped (reject or remove; not a silent no-op)
-- [ ] `RESILI_VERSION` reports the real core version
-- [ ] `stats()` / `health()` decision shipped (narrow, wire, or documented totals-only **and** types match)
-- [ ] `retry.jitter` / `idempotentOnly` types match runtime
+- [x] `timeout.deadlineMs` decision shipped (reject or remove; not a silent no-op)
+- [x] `RESILI_VERSION` reports the real core version
+- [x] `stats()` / `health()` decision shipped (narrow, wire, or documented totals-only **and** types match)
+- [x] `retry.jitter` / `idempotentOnly` types match runtime
 - [ ] Core interaction test matrix passes (retry×timeout, retry×breaker, retry×admission, cache×retry)
 - [ ] Cancellation matrix passes (core + HTTP + LLM stream)
 - [ ] LLM adversarial matrix passes (pre/post-commit timeout, no duplicate generation, Budget Guard settle)
@@ -654,6 +654,7 @@ Shortest path from current `main` to a beta tag. Adjust only with a written scop
 
 ### Milestone 4 — Core contract honesty + interaction hardening
 
+- **Status:** Complete on `fix/core-beta-api-honesty` (not merged). Proven by Core tests, `api:check`, and packed ESM/CJS version smoke (this branch).
 - **Objective:** Implement Milestone 2 decisions (`deadlineMs` reject/remove, version, stats types). Add interaction and cancellation tests.
 - **Areas:** `packages/core` (timeout validation, client stats types, version), tests, core docs.
 - **Exit:** P0-3, P1-1, P1-2, P1-6.

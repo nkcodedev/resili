@@ -8,9 +8,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
-### Documentation
+### Changed
 
-No runtime, API, test, or package version changes.
+- `@resili/core` public contract honesty: `timeout.deadlineMs` is rejected; `RetryOptions.jitter` is `"none"` only; `idempotentOnly` is not a public field; `stats()` is totals-only; `health()` no longer claims circuit/bulkhead knowledge; `RESILI_VERSION` is generated from `package.json` (tsup/Vitest) so packed ESM and CJS match; `ResiliConfig.metrics` / `Builder.withMetrics` inject policy metrics. Core `tsc` emit is `tsbuild/` so it does not overwrite the tsup `dist` bundle.
+
+### Documentation
 
 - Consolidated `docs/` into a topic-based structure (`getting-started/`, `core/`, `http/`, `llm/`, `providers/`, `observability/`, `architecture/`, `reference/`, `releases/`) with `docs/README.md` as the navigation home.
 - Retired the pre-implementation planning stubs `docs/01-project-overview.md` … `docs/10-release.md` and `docs/roadmap.md`, whose contents described an API and feature set that was never shipped. `docs/ARCHITECTURE.md` §16 now indexes the current structure.

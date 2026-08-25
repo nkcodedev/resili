@@ -31,7 +31,7 @@
   },
   "scripts": {
     "build": "tsup",
-    "clean": "rm -rf dist coverage temp",
+    "clean": "rm -rf dist tsbuild coverage temp",
     "dev": "tsup --watch",
     "typecheck": "tsc -b --pretty false",
     "api:extract": "api-extractor run --local",

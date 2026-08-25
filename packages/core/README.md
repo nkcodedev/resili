@@ -216,9 +216,9 @@ mode. `RateLimited` is emitted when a request first cannot be admitted
 for Resili errors. Fallback success completes as `"success"`.
 
 `client.stats().totals` tracks calls, successes, failures, and retries (extra
-attempts after the first). Circuit, bulkhead, and rate-limiter maps are empty
-until a future snapshot hook exists; `health()` therefore stays `"healthy"`
-unless those maps are populated.
+attempts after the first). The snapshot does not include circuit, bulkhead, or
+rate-limiter maps. `health().status` is always `"healthy"` because those maps
+are not published; do not use it as a dependency readiness probe.
 
 ### Fallback
 
@@ -347,10 +347,10 @@ Core modules are deliberately small:
 - Built-in policy state is in-memory and per-process. Breaker state, rate limits, bulkhead slots, and
   cache entries are not shared across instances. `StateStore` is the seam; no distributed
   implementation ships yet.
-- `retry.jitter` accepts only `"none"`; `"full"` and `"equal"` throw `ConfigurationError`.
-- `retry.idempotentOnly` must remain `false`.
-- `timeout.deadlineMs` is validated but not enforced — timeouts are per-attempt, and there is no
-  total-request deadline.
+- `retry.jitter` is `"none"` only. Other values throw `ConfigurationError`.
+- `retry.idempotentOnly` is not a public option; `true` still throws if passed at runtime.
+- `timeout.deadlineMs` is rejected. Use `ContextInit.deadlineMs` / `deadline` for an overall bound.
+  Timeouts remain per-attempt.
 - `hedge.maxAttempts` must be `2`.
 - Cache eviction is FIFO rather than LRU, and concurrent misses are not deduplicated.
 - No OpenTelemetry or Prometheus exporters are included in core.

@@ -16,7 +16,6 @@ upstream callers time out with no useful signal.
 ```ts
 interface TimeoutOptions {
   readonly perAttemptMs: number;
-  readonly deadlineMs?: number;
 }
 ```
 
@@ -27,9 +26,9 @@ createClient(operation, { timeout: 1_000 });
 createClient(operation, { timeout: { perAttemptMs: 1_000 } });
 ```
 
-`deadlineMs` is accepted and validated (must be `> 0` and `>= perAttemptMs`) but is **not applied at
-runtime**. Whole-request deadlines are owned by the root context, not this policy. Setting it has no
-effect today; use `Context.deadline` for an end-to-end bound.
+There is no `TimeoutOptions.deadlineMs`. Passing it throws `ConfigurationError`. Whole-request
+deadlines are owned by the root context: pass `deadline` or `deadlineMs` to `execute` /
+`ContextInit`.
 
 ## Behavior
 
@@ -99,8 +98,8 @@ retry
 - If every attempt times out, the caller sees `RetryExceededError` with
   `lastError instanceof TimeoutError`.
 
-If you want a single overall bound instead, do not reach for `deadlineMs` — set a deadline on the
-context, or keep `maxAttempts: 1`.
+If you want a single overall bound, set a deadline on the context (`execute(..., { deadlineMs })`).
+Do not pass `timeout.deadlineMs` — it throws. Or keep `maxAttempts: 1`.
 
 ## Events
 
@@ -130,7 +129,8 @@ try {
 
 ## Limitations
 
-- `deadlineMs` is inert. It is validated for forward compatibility only.
+- `TimeoutOptions.deadlineMs` is rejected. Use `ContextInit.deadline` / `deadlineMs` for an
+  overall bound.
 - There is no connect-only, time-to-first-byte, or idle timeout. `perAttemptMs` covers the full
   attempt. For LLM streaming this includes time spent waiting for the consumer to pull — see
   [LLM timeouts](../llm/timeouts.md).

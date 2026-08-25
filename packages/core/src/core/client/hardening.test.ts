@@ -247,14 +247,10 @@ describe("core client hardening", () => {
     });
 
     expect(client.stats()).toEqual({
-      circuit: {},
-      bulkhead: {},
-      rateLimiter: {},
       totals: { calls: 0, successes: 0, failures: 0, retries: 0 },
     });
     expect(client.health()).toEqual({
       status: "healthy",
-      openCircuits: [],
       details: client.stats(),
     });
   });
@@ -267,9 +263,9 @@ describe("core client hardening", () => {
     await client.call(false);
     await expect(client.call(true)).rejects.toThrow("nope");
 
-    expect(client.stats().circuit).toEqual({});
-    expect(client.stats().bulkhead).toEqual({});
-    expect(client.stats().rateLimiter).toEqual({});
+    expect("circuit" in client.stats()).toBe(false);
+    expect("bulkhead" in client.stats()).toBe(false);
+    expect("rateLimiter" in client.stats()).toBe(false);
     expect(client.stats().totals).toEqual({
       calls: 2,
       successes: 1,

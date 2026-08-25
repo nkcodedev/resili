@@ -27,7 +27,7 @@ export type RetryBackoff = "fixed" | "exponential";
  *
  * @public
  */
-export type RetryJitter = "none" | "full" | "equal";
+export type RetryJitter = "none";
 
 /**
  * Retry policy options.
@@ -44,7 +44,6 @@ export interface RetryOptions {
   readonly factor?: number;
   readonly retryOn?: RetryPredicate;
   readonly respectRetryAfter?: boolean;
-  readonly idempotentOnly?: boolean;
 }
 
 interface NormalizedRetryOptions {
@@ -56,7 +55,6 @@ interface NormalizedRetryOptions {
   readonly jitter: "none";
   readonly factor: number;
   readonly respectRetryAfter: boolean;
-  readonly idempotentOnly: false;
   readonly retryOn?: RetryPredicate;
 }
 
@@ -284,10 +282,10 @@ function normalizeOptions(options: unknown): NormalizedRetryOptions {
   const baseDelayMs = candidate.baseDelayMs ?? 100;
   const maxDelayMs = candidate.maxDelayMs ?? 10_000;
   const maxTotalDelayMs = candidate.maxTotalDelayMs ?? 30_000;
-  const jitter = candidate.jitter ?? "none";
+  const jitter = (candidate as { readonly jitter?: unknown }).jitter ?? "none";
   const factor = candidate.factor ?? 2;
   const respectRetryAfter = candidate.respectRetryAfter ?? true;
-  const idempotentOnly = candidate.idempotentOnly ?? false;
+  const idempotentOnly = (candidate as { readonly idempotentOnly?: unknown }).idempotentOnly;
 
   validateIntegerAtLeast(maxAttempts, 1, "retry.maxAttempts");
   validateBackoff(backoff);
@@ -297,7 +295,6 @@ function normalizeOptions(options: unknown): NormalizedRetryOptions {
   validateJitter(jitter);
   validateNumberAtLeast(factor, 1, "retry.factor");
   validateBoolean(respectRetryAfter, "retry.respectRetryAfter");
-  validateBoolean(idempotentOnly, "retry.idempotentOnly");
 
   if (backoff === "fixed" && candidate.factor !== undefined) {
     throw new ConfigurationError("retry.factor is only valid for exponential backoff.", {
@@ -306,15 +303,19 @@ function normalizeOptions(options: unknown): NormalizedRetryOptions {
   }
 
   if (jitter !== "none") {
-    throw new ConfigurationError("retry jitter modes 'full' and 'equal' are not implemented yet.", {
+    throw new ConfigurationError("retry jitter modes other than 'none' are not implemented.", {
       field: "retry.jitter",
     });
   }
 
-  if (idempotentOnly) {
-    throw new ConfigurationError("retry.idempotentOnly is not implemented yet.", {
-      field: "retry.idempotentOnly",
-    });
+  if (idempotentOnly !== undefined) {
+    validateBoolean(idempotentOnly, "retry.idempotentOnly");
+
+    if (idempotentOnly) {
+      throw new ConfigurationError("retry.idempotentOnly is not implemented.", {
+        field: "retry.idempotentOnly",
+      });
+    }
   }
 
   if (candidate.retryOn !== undefined && typeof candidate.retryOn !== "function") {
@@ -330,7 +331,6 @@ function normalizeOptions(options: unknown): NormalizedRetryOptions {
     jitter,
     factor,
     respectRetryAfter,
-    idempotentOnly,
     ...(candidate.retryOn === undefined ? {} : { retryOn: candidate.retryOn }),
   });
 }
@@ -344,7 +344,6 @@ const DEFAULT_OPTIONS: NormalizedRetryOptions = Object.freeze({
   jitter: "none",
   factor: 2,
   respectRetryAfter: true,
-  idempotentOnly: false,
 });
 
 function validateBackoff(value: unknown): asserts value is RetryBackoff {
@@ -355,9 +354,9 @@ function validateBackoff(value: unknown): asserts value is RetryBackoff {
   }
 }
 
-function validateJitter(value: unknown): asserts value is RetryJitter {
+function validateJitter(value: unknown): asserts value is RetryJitter | "full" | "equal" {
   if (value !== "none" && value !== "full" && value !== "equal") {
-    throw new ConfigurationError("retry.jitter must be 'none', 'full', or 'equal'.", {
+    throw new ConfigurationError("retry.jitter must be 'none'.", {
       field: "retry.jitter",
     });
   }

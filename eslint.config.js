@@ -8,6 +8,7 @@ export default tseslint.config(
       ".corepack/**",
       ".corepack-*/**",
       "**/dist/**",
+      "**/tsbuild/**",
       "**/coverage/**",
       "**/temp/**",
       "docs/api/**",
