@@ -1,6 +1,6 @@
 {
   "name": "@resili/llm-openai",
-  "version": "0.1.0-alpha.3",
+  "version": "0.1.0-alpha.4",
   "description": "OpenAI provider adapter for the Resili LLM resilience foundation.",
   "type": "module",
   "license": "MIT",
