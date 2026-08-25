@@ -1,6 +1,6 @@
 {
   "name": "@resili/axios",
-  "version": "0.2.0-alpha.2",
+  "version": "0.2.0-alpha.3",
   "description": "Axios-compatible adapter for the Resili resilience toolkit.",
   "type": "module",
   "license": "MIT",
