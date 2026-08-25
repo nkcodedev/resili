@@ -81,40 +81,26 @@ const client = createClient(
 );
 ```
 
-## Cancellation, and the signal you cannot pass
+## Cancellation and caller `AbortSignal`
 
-Each adapter overwrites the signal on your request arguments with `ctx.signal`:
-
-```ts
-// The adapter replaces this signal. It has no effect.
-await resilientFetch(url, { signal: controller.signal });
-```
-
-The adapters call `client.execute(operation)` without a `ContextInit`, so there is no seam for a
-caller signal either. **Caller-initiated cancellation is not supported through the HTTP adapters in
-this alpha.** Timeout-driven cancellation works normally — that is exactly what the overwritten signal
-carries.
-
-If you need to abort a request from the caller, wrap the HTTP call with `@resili/core` directly, where
-`execute` does take a per-call signal:
+Each adapter reads the caller `signal` from the existing call shape (`init.signal`,
+`config.signal`, or `options.signal`) and passes it to `client.execute` as
+`ContextInit.signal`. Core composes that with timeout and other policy signals.
+The copy sent to the HTTP implementation uses `ctx.signal`, not the original
+caller signal. Caller objects are not mutated.
 
 ```ts
-import { createClient } from "@resili/core";
-
-const client = createClient(() => undefined, {
-  timeout: { perAttemptMs: 2_000 },
-  retry: { maxAttempts: 3, jitter: "none" },
-});
-
 const controller = new AbortController();
 
-// ctx.signal is aborted by the caller, the timeout, or both.
-const response = await client.execute((ctx) => fetch(url, { signal: ctx.signal }), {
+const request = resilientFetch(url, {
   signal: controller.signal,
 });
+
+controller.abort();
 ```
 
-See [Cancellation](../core/cancellation.md).
+Abort remains non-retryable. AbortSignal is the only supported cancellation
+mechanism. See [Cancellation](../core/cancellation.md).
 
 ## Request bodies and retries
 

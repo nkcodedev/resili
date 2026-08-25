@@ -150,7 +150,9 @@ Per attempt, the adapter shallow-copies your options and sets `signal` to `ctx.s
 requestImplementation({ ...requestOptions, signal: ctx.signal });
 ```
 
-A `signal` you place on the options is **replaced, not merged**; your options object is not mutated.
+The adapter reads `options.signal` and passes it to `client.execute`. Each attempt
+shallow-copies your options and sets `signal` to composed `ctx.signal`. Your options
+object is not mutated.
 
 Because undici honors `signal`, a per-attempt timeout closes the socket rather than merely abandoning
 the promise.
@@ -188,7 +190,7 @@ retryOn: (outcome) =>
 | Call shape                           | `(url, options)`                | `(options)` with required `origin` + `path`                  |
 | Return value                         | Response object                 | The same object, unwrapped                                   |
 | Status handling                      | Resolves on all statuses        | Same — no automatic classification                           |
-| `options.signal`                     | Honored                         | **Replaced** by the context signal                           |
+| `options.signal`                     | Honored                         | Composed into Resili; transport gets `ctx.signal`            |
 | `Agent`/`Pool`/`Dispatcher`          | Yes                             | **Not implemented** — configure on your instance             |
 | `MockAgent`, `ProxyAgent`, WebSocket | Yes                             | **Not implemented**                                          |
 | Body helpers (`.json()`, `.text()`)  | Yes                             | Untouched on the returned object; the adapter never reads it |
@@ -248,7 +250,7 @@ const users = await (response.body as { json(): Promise<unknown> }).json();
 
 - No `Agent`, `Pool`, `Dispatcher`, `MockAgent`, `ProxyAgent`, WebSocket, or streaming helpers.
 - No body handling — the adapter never reads, clones, or dumps a response body.
-- `options.signal` is overwritten.
+- Pass caller cancellation as `options.signal`; the transport receives composed `ctx.signal`.
 - `origin` and `path` are required and must be supplied separately.
 - Structural types only; not the real undici type definitions.
 - The injected implementation's own retry behavior is not disabled.

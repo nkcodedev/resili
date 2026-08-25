@@ -109,9 +109,8 @@ text, raw provider chunks, API keys, or `Authorization` headers.
 
 - HTTP status codes are **not** classified as failures by default. A 503 is a returned value; opt in
   with `retry.retryOn`. → [HTTP overview](../http/overview.md#status-codes-are-not-classified-by-default)
-- Adapters overwrite the signal on your request arguments and expose no per-call options, so
-  caller-initiated cancellation is not supported through them — only timeout-driven cancellation.
-  Wrap the HTTP call with `@resili/core` directly if you need to abort from the caller.
+- Adapters compose the caller `AbortSignal` from the existing call shape into Resili execution.
+  The HTTP implementation receives `ctx.signal`. Caller abort is not retryable.
 - Adapters do not disable retry behavior in an injected client. An axios instance with a retry
   interceptor, or an undici `RetryAgent`, will retry inside each Resili attempt.
 - A one-shot request body (a stream) cannot be replayed on retry.

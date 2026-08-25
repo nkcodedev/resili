@@ -114,8 +114,24 @@ const response = await axios.get<{ users: string[] }>("/users", {
 });
 ```
 
-The adapter shallow-copies config and sets `config.signal` to the Resili context
-signal for the active execution.
+The adapter shallow-copies config and sets `config.signal` to the composed Resili
+context signal for the active execution. Pass caller cancellation as `config.signal`;
+it is forwarded to `client.execute` and composed with policy signals.
+
+## Cancellation Example
+
+```ts
+const controller = new AbortController();
+
+const request = axios.get("/users", {
+  signal: controller.signal,
+});
+
+controller.abort();
+```
+
+The caller signal enters Resili's execution context. Axios receives the composed
+context signal. AbortSignal is the only supported cancellation mechanism.
 
 ## POST Example
 
@@ -193,9 +209,9 @@ Supported methods are `request`, `get`, `delete`, `post`, `put`, and `patch`.
   you opt in with `retry.retryOn`.
 - No response body handling beyond returning the injected implementation result.
 - No OpenTelemetry or metrics exporters.
-- `config.signal` is replaced with Resili's context signal. Timeout-driven
-  cancellation works, but a caller signal you pass in `config` has no effect and
-  there is no per-call option for one.
+- Pass caller cancellation as `config.signal`. The copy sent to axios receives
+  the composed Resili `ctx.signal`. AbortSignal is the only supported mechanism
+  (no CancelToken).
 - Retry behavior inside the injected implementation is **not** disabled. If your
   axios instance has a retry interceptor, it will retry inside each Resili attempt,
   multiplying total requests.

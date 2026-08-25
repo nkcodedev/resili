@@ -35,7 +35,7 @@ Resili is a **public alpha** with two independently versioned lines, eight publi
 **What is not yet true**
 
 - Public APIs have not been through an explicit freeze review.
-- HTTP adapters do not expose caller-initiated per-call cancellation.
+- HTTP adapters do expose caller-initiated per-call cancellation through the existing `signal` field.
 - Several public config/stats surfaces are honest in comments and dishonest in shape (`timeout.deadlineMs`, `stats()` policy maps, `RESILI_VERSION`).
 - CI runs Node 22 only. Packed-consumer, ESM/CJS, and Node 20/24 gates are manual or absent.
 - `@resili/llm` and HTTP adapters have no API Extractor report.
@@ -94,7 +94,10 @@ Must be fixed or explicitly decided before a beta tag exists.
 
 Source: `packages/fetch/src/index.ts`, `packages/axios/src/index.ts`, `packages/undici/src/index.ts`.
 
-All three adapters call `client.execute(operation)` **without** `ContextInit`. They overwrite `init.signal` / `config.signal` / `options.signal` with `ctx.signal`. Timeout-driven abort therefore works. A caller `AbortSignal` on the HTTP call does **not** abort the Resili execution. Tests assert this override.
+**Status (Milestone 3):** Implemented on `fix/http-caller-cancellation`. Adapters pass the caller
+`signal` to `client.execute(operation, { signal })`. Transport still receives composed `ctx.signal`.
+
+**Historical bug:** All three adapters called `client.execute(operation)` **without** `ContextInit`. They overwrote `init.signal` / `config.signal` / `options.signal` with `ctx.signal`. Timeout-driven abort worked. A caller `AbortSignal` on the HTTP call did **not** abort the Resili execution.
 
 Native `fetch` honors `init.signal`. Shipping a fetch-shaped API that silently ignores it is a high-impact DX and correctness gap, not a missing extra feature.
 
@@ -277,7 +280,7 @@ In-memory, process-local policy state is an accepted alpha/beta limitation, not 
 | Peer dependency         | none                          | none (structural)          | none (structural)                           |
 | Status classification   | None                          | None                       | None                                        |
 | Signal to transport     | Overwrites `init.signal`      | Overwrites `config.signal` | Overwrites `options.signal`                 |
-| Caller signal to Resili | **Not passed**                | **Not passed**             | **Not passed**                              |
+| Caller signal to Resili | Passed via `ContextInit`      | Passed via `ContextInit`   | Passed via `ContextInit`                    |
 | Client `on` / `destroy` | Hidden                        | Hidden                     | Hidden                                      |
 | Body replay             | Same reference                | Same reference             | Same reference; body must be drained        |
 

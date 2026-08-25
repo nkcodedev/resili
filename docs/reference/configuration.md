@@ -187,10 +187,9 @@ All three accept every `ResiliConfig` key plus one required injection or impleme
 
 Two things to keep in mind:
 
-- Adapters **overwrite** the signal on your request arguments with the Resili context signal, and
-  expose no per-call options, so caller-initiated cancellation is not supported through them. Only
-  timeout-driven cancellation works.
-  → [HTTP overview](../http/overview.md#cancellation-and-the-signal-you-cannot-pass)
+- Adapters **compose** the caller `AbortSignal` from the existing call shape into Resili execution.
+  The HTTP implementation receives `ctx.signal`.
+  → [HTTP overview](../http/overview.md#cancellation-and-caller-abortsignal)
 - HTTP status codes are **not** classified by default. A 503 is a returned value, not an error. Use
   `retry.retryOn` to opt in. → [HTTP overview](../http/overview.md#status-codes-are-not-classified-by-default)
 

@@ -58,7 +58,7 @@ Then go to the layer you need: [Core](#core), [HTTP](#http), or [LLM](#llm).
 Two things to read before your first request: HTTP status codes are
 [not classified as failures by default](./http/overview.md#status-codes-are-not-classified-by-default),
 and adapters
-[overwrite the signal on your request arguments](./http/overview.md#cancellation-and-the-signal-you-cannot-pass).
+[compose the caller `AbortSignal` into Resili execution](./http/overview.md#cancellation-and-caller-abortsignal).
 
 ## LLM
 

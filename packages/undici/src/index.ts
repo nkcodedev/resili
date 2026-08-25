@@ -1,4 +1,10 @@
-import { createClient, type Client, type Context, type ResiliConfig } from "@resili/core";
+import {
+  AbortError,
+  createClient,
+  type Client,
+  type Context,
+  type ResiliConfig,
+} from "@resili/core";
 
 /**
  * Minimal structural Undici request options supported by this adapter.
@@ -66,9 +72,24 @@ export function createUndici(options: CreateUndiciOptions): ResilientUndici {
   );
 
   return (requestOptions: UndiciRequestOptions): Promise<UndiciResponse> =>
-    client.execute<UndiciResponse>((ctx: Context) =>
-      requestImplementation({ ...requestOptions, signal: ctx.signal }),
+    client.execute<UndiciResponse>(
+      (ctx: Context) => {
+        throwIfAborted(ctx.signal);
+
+        return requestImplementation({ ...requestOptions, signal: ctx.signal });
+      },
+      requestOptions.signal === undefined ? undefined : { signal: requestOptions.signal },
     );
+}
+
+function throwIfAborted(signal: AbortSignal): void {
+  if (!signal.aborted) {
+    return;
+  }
+
+  const reason: unknown = signal.reason;
+
+  throw reason instanceof Error ? reason : new AbortError({ reason });
 }
 
 function createCoreConfig(options: CreateUndiciOptions): ResiliConfig<UndiciResponse> {
