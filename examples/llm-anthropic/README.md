@@ -16,4 +16,14 @@ pnpm add @anthropic-ai/sdk @resili/llm@file:../../packages/llm @resili/llm-anthr
 node --env-file=.env example.mjs
 ```
 
-Pricing numbers in `example.mjs` are **example configuration**, not Anthropic's current price list.
+`example.mjs` uses `llm.generate()`; `stream.mjs` runs the same request through `llm.stream()`.
+
+Pricing numbers in these files are **example configuration**, not Anthropic's current price list.
+Resili ships no price table.
+
+## Documentation
+
+- [Anthropic provider guide](../../docs/providers/anthropic.md)
+- [generate()](../../docs/llm/generate.md) · [Streaming](../../docs/llm/streaming.md) ·
+  [Budget Guard](../../docs/llm/budget-guard.md)
+- [All examples](../README.md)

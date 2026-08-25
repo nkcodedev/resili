@@ -13,19 +13,25 @@ For the full framework overview, see the [repository README](../../README.md).
 
 ## Installation
 
+Install from the `alpha` dist-tag — `latest` still points at an early `0.1.0-alpha.1` build.
+
 ```bash
-pnpm add @resili/core @resili/axios
+pnpm add @resili/core@alpha @resili/axios@alpha
 ```
 
 ```bash
-npm install @resili/core @resili/axios
+npm install @resili/core@alpha @resili/axios@alpha
 ```
 
 ```bash
-yarn add @resili/core @resili/axios
+yarn add @resili/core@alpha @resili/axios@alpha
 ```
 
-Node.js 20 or newer is required.
+Node.js 20 or newer is required. The current release is `0.2.0-alpha.3`; see
+[versioning](../../docs/releases/versioning.md).
+
+`axios` itself is **not** a dependency or peer dependency of this package. You inject
+an implementation, so you keep control of the version and its configuration.
 
 ## Quick Start
 
@@ -183,19 +189,29 @@ Supported methods are `request`, `get`, `delete`, `post`, `put`, and `patch`.
 - No response transforms.
 - No `axios.create()`.
 - No cancel token support.
-- No HTTP status classification.
+- No HTTP status classification. A 4xx or 5xx response is a returned value unless
+  you opt in with `retry.retryOn`.
 - No response body handling beyond returning the injected implementation result.
 - No OpenTelemetry or metrics exporters.
+- `config.signal` is replaced with Resili's context signal. Timeout-driven
+  cancellation works, but a caller signal you pass in `config` has no effect and
+  there is no per-call option for one.
+- Retry behavior inside the injected implementation is **not** disabled. If your
+  axios instance has a retry interceptor, it will retry inside each Resili attempt,
+  multiplying total requests.
 
 The adapter is intentionally thin. Use `@resili/core` policies or custom policies
 for behavior beyond request wrapping.
 
 ## Documentation
 
-- [Repository README](../../README.md)
+- [Documentation home](../../docs/README.md)
+- [axios adapter guide](../../docs/http/axios.md) — options, verb helpers, status codes, examples
+- [HTTP adapters overview](../../docs/http/overview.md) — what all three adapters share
+- [Cancellation](../../docs/core/cancellation.md) · [All policies](../../docs/core/policies.md)
 - [`@resili/core` README](../core/README.md)
-- [Architecture](../../docs/ARCHITECTURE.md)
-- [API specification](../../docs/API_SPECIFICATION.md)
+- Specifications: [Architecture](../../docs/ARCHITECTURE.md),
+  [API specification](../../docs/API_SPECIFICATION.md)
 
 ## Maintainer
 

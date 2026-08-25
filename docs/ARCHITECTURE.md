@@ -3,7 +3,7 @@
 > **Status:** Approved for implementation
 > **Type:** Architecture Specification & Implementation Contract
 > **Audience:** Maintainers and contributors
-> **Authoritative:** This document supersedes the stub in `02-architecture.md`. No implementation may begin until a feature's section here is satisfied.
+> **Authoritative:** This document is the architecture contract. No implementation may begin until a feature's section here is satisfied. For user-facing documentation of what is currently shipped, start at [`docs/README.md`](./README.md).
 
 Resili is a production-ready, TypeScript-first resilience toolkit for modern Node.js (>=20), inspired by Resilience4j and Polly but designed around native primitives (`AbortController`, `AbortSignal`, `fetch`, ESM).
 
@@ -971,28 +971,41 @@ resili/
 
 ## 16. Documentation Index
 
+User-facing documentation lives under `docs/` in a topic-based structure, with
+[`docs/README.md`](./README.md) as its home. The pre-implementation numbered stubs
+(`01-project-overview.md` … `10-release.md`, `roadmap.md`) have been retired; their topics are now
+covered by pages written against the shipped implementation.
+
+### Specifications (maintainer contracts)
+
 | Doc | Title | Purpose | Status |
 |-----|-------|---------|--------|
 | `ARCHITECTURE.md` | Architecture Specification | This document — the implementation contract. | Authoritative |
-| `01-project-overview.md` | Project Overview | Vision, goals, scope. | Existing |
-| `02-architecture.md` | Architecture (legacy stub) | Superseded by `ARCHITECTURE.md`. | Deprecated |
-| `03-circuit-breaker.md` | Circuit Breaker | Detailed CB config & state machine. | To update per [§8](#8-circuit-breaker-design) |
-| `04-retry.md` | Retry | Backoff, jitter, budgets, idempotency. | To update per [§9](#9-retry-timeout-bulkhead-rate-limiter) |
-| `05-timeout.md` | Timeout | Per-attempt vs deadline, signal model. | To update |
-| `06-bulkhead.md` | Bulkhead | Bounded queue & reject semantics. | To update |
-| `07-rate-limiter.md` | Rate Limiter | Token-bucket / sliding-window. | To update |
-| `08-fetch-adapter.md` | Fetch Adapter | Response→outcome mapping. | To update |
-| `09-testing.md` | Testing | Determinism, fakes, chaos, gates. | To update per [§13](#13-testing-architecture) |
-| `10-release.md` | Release & Publish | Build, pack-verify, CI/CD. | Existing |
-| `roadmap.md` | Roadmap | Version scope (reconcile with feature list). | To update |
-| `CURSOR_RULES.md` | Contributor Rules | Workflow & coding standards. | Existing |
-| *new* `11-failure-classification.md` | Failure Classification | The default matrix & custom classifiers. | Planned |
-| *new* `12-state-store.md` | State Store | In-memory & distributed adapters. | Planned |
-| *new* `13-events.md` | Events | Event catalog & payloads. | Planned |
-| *new* `14-metrics.md` | Metrics | Recorder interface & exporters. | Planned |
-| *new* `15-error-handling.md` | Errors | Hierarchy & handling patterns. | Planned |
-| *new* `adr/` | ADR Records | One file per ADR (mirrors [§14](#14-architecture-decision-records)). | Planned |
+| [`API_SPECIFICATION.md`](./API_SPECIFICATION.md) | API Specification | Public surface contract. | Authoritative |
+| [`INTERNAL_DESIGN.md`](./INTERNAL_DESIGN.md) | Internal Design | Module-level design decisions. | Authoritative |
+| [`CURSOR_RULES.md`](./CURSOR_RULES.md) | Contributor Rules | Workflow & coding standards. | Existing |
+| [`COMMIT_GUIDELINES.md`](./COMMIT_GUIDELINES.md) | Commit Guidelines | Message format. | Existing |
+| [`REVIEW_CHECKLIST.md`](./REVIEW_CHECKLIST.md) | Review Checklist | Pre-merge gates. | Existing |
+| [`AI_WORKFLOW.md`](./AI_WORKFLOW.md) | AI Workflow | Assisted-development rules. | Existing |
+| `design/` | Design Notes | Per-feature decision records (cache, dedupe, hedge). | Existing |
+
+### User documentation
+
+| Area | Entry point | Covers |
+|------|-------------|--------|
+| Getting started | [`getting-started/`](./getting-started/installation.md) | Installation, quick start, concepts |
+| Core | [`core/overview.md`](./core/overview.md) | Nine policies, ordering, context, cancellation |
+| HTTP | [`http/overview.md`](./http/overview.md) | fetch, axios, undici adapters |
+| LLM | [`llm/overview.md`](./llm/overview.md) | generate, streaming, budget, pricing, usage, errors |
+| Providers | [`providers/`](./providers/openai.md) | OpenAI, Anthropic, Gemini specifics |
+| Observability | [`observability/`](./observability/events.md) | Events, metrics, telemetry and privacy |
+| Architecture | [`architecture/overview.md`](./architecture/overview.md) | Pipeline, classification, package boundaries |
+| Reference | [`reference/`](./reference/packages.md) | Packages, configuration, errors |
+| Release status | [`releases/`](./releases/alpha-status.md) | Alpha status, versioning and dist-tags |
+
+Generated API documentation is produced by `pnpm docs` into `docs/api/`.
 
 ---
 
-**End of specification.** Implementation may proceed feature-by-feature in roadmap order, each satisfying its section above, following the workflow in `CURSOR_RULES.md` (implement → lint → test → fix → approval).
+**End of specification.** Each feature must satisfy its section above before implementation,
+following the workflow in `CURSOR_RULES.md` (implement → lint → test → fix → approval).

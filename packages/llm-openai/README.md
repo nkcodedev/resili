@@ -8,8 +8,11 @@ You create the official `openai` client. Resili never stores API keys and never 
 
 ## Installation
 
+Install Resili packages from the `alpha` dist-tag — `latest` still points at an early `0.1.0-alpha.1`
+build. The current release is `0.1.0-alpha.4`; see [versioning](../../docs/releases/versioning.md).
+
 ```bash
-pnpm add @resili/core @resili/llm @resili/llm-openai openai
+pnpm add @resili/core@alpha @resili/llm@alpha @resili/llm-openai@alpha openai
 ```
 
 Node.js 20 or newer is required for Resili. The official `openai` SDK **v7** declares `node >= 22`. Use SDK v4–v6 on Node 20, or Node 22+ with v7.
@@ -149,6 +152,19 @@ Do not hard-code vendor prices here. Example USD amounts in this README are **il
 - Single user message from `LlmRequest.input`
 - No tool calls, vision, or JSON-schema mapping
 - Missing OpenAI `usage` becomes zero counts (the `LlmUsage` contract requires numbers; tokens are not estimated)
+
+The Responses API is **deferred**, not implemented. The full limitation list is in
+[alpha status](../../docs/releases/alpha-status.md).
+
+## Documentation
+
+- [OpenAI provider guide](../../docs/providers/openai.md) — mapping, streaming, errors, limitations
+- [LLM overview](../../docs/llm/overview.md) · [Streaming](../../docs/llm/streaming.md) ·
+  [Retries](../../docs/llm/retries.md)
+- [Budget Guard](../../docs/llm/budget-guard.md) · [Pricing](../../docs/llm/pricing.md) ·
+  [Errors](../../docs/llm/errors.md)
+- [Documentation home](../../docs/README.md) · [`@resili/llm` README](../llm/README.md)
+- Runnable examples: [`examples/llm-openai`](../../examples/llm-openai)
 
 ## License
 

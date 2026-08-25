@@ -29,7 +29,7 @@ This document defines the **complete public API** of `@resili/core` and the cont
 14. [Naming Guidelines](#14-naming-guidelines)
 15. [Examples](#15-examples)
 16. [FAQ](#16-faq)
-17. [API Review](#17-api-review)
+17. [API Review](#17-api-review-self-critique)
 
 ---
 

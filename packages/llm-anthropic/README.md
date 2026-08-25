@@ -8,8 +8,11 @@ You create the official `@anthropic-ai/sdk` client. Resili never stores API keys
 
 ## Installation
 
+Install Resili packages from the `alpha` dist-tag — `latest` still points at an early `0.1.0-alpha.1`
+build. The current release is `0.1.0-alpha.4`; see [versioning](../../docs/releases/versioning.md).
+
 ```bash
-pnpm add @resili/core @resili/llm @resili/llm-anthropic @anthropic-ai/sdk
+pnpm add @resili/core@alpha @resili/llm@alpha @resili/llm-anthropic@alpha @anthropic-ai/sdk
 ```
 
 Node.js 20 or newer is required. The official Anthropic TypeScript SDK documents **Node.js 20 LTS or later**.
@@ -155,6 +158,19 @@ Cache and thinking token counts, when present, are copied to `usage.dimensions` 
 - `maxTokens` must be set by the caller (no silent default)
 - Text blocks only; other content blocks are ignored
 - Missing Anthropic `usage` becomes zero counts
+
+The full limitation list is in [alpha status](../../docs/releases/alpha-status.md).
+
+## Documentation
+
+- [Anthropic provider guide](../../docs/providers/anthropic.md) — mapping, streaming, usage merging,
+  errors
+- [LLM overview](../../docs/llm/overview.md) · [Streaming](../../docs/llm/streaming.md) ·
+  [Retries](../../docs/llm/retries.md)
+- [Budget Guard](../../docs/llm/budget-guard.md) · [Pricing](../../docs/llm/pricing.md) ·
+  [Errors](../../docs/llm/errors.md)
+- [Documentation home](../../docs/README.md) · [`@resili/llm` README](../llm/README.md)
+- Runnable examples: [`examples/llm-anthropic`](../../examples/llm-anthropic)
 
 ## License
 

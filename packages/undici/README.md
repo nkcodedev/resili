@@ -13,19 +13,25 @@ For the full framework overview, see the [repository README](../../README.md).
 
 ## Installation
 
+Install from the `alpha` dist-tag — `latest` still points at an early `0.1.0-alpha.1` build.
+
 ```bash
-pnpm add @resili/core @resili/undici
+pnpm add @resili/core@alpha @resili/undici@alpha
 ```
 
 ```bash
-npm install @resili/core @resili/undici
+npm install @resili/core@alpha @resili/undici@alpha
 ```
 
 ```bash
-yarn add @resili/core @resili/undici
+yarn add @resili/core@alpha @resili/undici@alpha
 ```
 
-Node.js 20 or newer is required.
+Node.js 20 or newer is required. The current release is `0.2.0-alpha.3`; see
+[versioning](../../docs/releases/versioning.md).
+
+`undici` itself is **not** a dependency or peer dependency of this package. You inject
+a `request` implementation, so you keep control of the version and its configuration.
 
 ## Quick Start
 
@@ -197,19 +203,29 @@ Fallback handlers may return an `UndiciResponse` or a promise for one.
 - No MockAgent or ProxyAgent helpers.
 - No WebSocket support.
 - No streaming helpers.
-- No HTTP status classification.
+- No HTTP status classification. A `statusCode` of 503 is a returned value unless
+  you opt in with `retry.retryOn`.
 - No response body handling beyond returning the injected implementation result.
+  A body must be fully consumed or discarded before a retry, or the connection leaks.
 - No OpenTelemetry or metrics exporters.
+- `options.signal` is replaced with Resili's context signal. Timeout-driven
+  cancellation works, but a caller signal you pass in `options` has no effect and
+  there is no per-call option for one.
+- Retry behavior inside the injected implementation is **not** disabled. A
+  `RetryAgent` will retry inside each Resili attempt, multiplying total requests.
 
 The adapter is intentionally thin. Use `@resili/core` policies or custom policies
 for behavior beyond request wrapping.
 
 ## Documentation
 
-- [Repository README](../../README.md)
+- [Documentation home](../../docs/README.md)
+- [undici adapter guide](../../docs/http/undici.md) — options, status codes, bodies, examples
+- [HTTP adapters overview](../../docs/http/overview.md) — what all three adapters share
+- [Cancellation](../../docs/core/cancellation.md) · [All policies](../../docs/core/policies.md)
 - [`@resili/core` README](../core/README.md)
-- [Architecture](../../docs/ARCHITECTURE.md)
-- [API specification](../../docs/API_SPECIFICATION.md)
+- Specifications: [Architecture](../../docs/ARCHITECTURE.md),
+  [API specification](../../docs/API_SPECIFICATION.md)
 
 ## Maintainer
 

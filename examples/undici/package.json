@@ -1,0 +1,9 @@
+{
+  "name": "@resili/example-undici",
+  "private": true,
+  "type": "module",
+  "description": "Local-only @resili/undici example. Not published and not run in CI.",
+  "engines": {
+    "node": ">=20"
+  }
+}
