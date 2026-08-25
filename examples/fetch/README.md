@@ -29,9 +29,13 @@ retryOn(outcome) {
 }
 ```
 
-It also notes what you cannot do: the adapter replaces `init.signal` with the Resili context signal
-and exposes no per-call options, so caller-initiated cancellation is not available through it. Wrap
-the call with `@resili/core` directly if you need that.
+It also shows caller cancellation through the existing fetch shape:
+
+```js
+const controller = new AbortController();
+const pending = resilientFetch(url, { signal: controller.signal });
+controller.abort();
+```
 
 ## Documentation
 

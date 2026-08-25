@@ -148,9 +148,10 @@ Per attempt, the adapter shallow-copies your config and sets `signal` to `ctx.si
 axiosImplementation({ ...config, signal: ctx.signal });
 ```
 
-A `signal` you place on the config is **replaced, not merged**; your config object is not mutated.
-Note also that Resili uses `signal`, the modern axios cancellation mechanism — legacy `CancelToken` is
-not supported.
+The adapter reads `config.signal` and passes it to `client.execute`. Each attempt
+shallow-copies your config and sets `signal` to composed `ctx.signal`. Your config
+object is not mutated. AbortSignal is the only supported cancellation mechanism —
+legacy `CancelToken` is not supported.
 
 ## Errors
 
@@ -185,7 +186,7 @@ try {
 | Transforms            | Yes                                | **Not implemented**                                      |
 | `axios.create()`      | Yes                                | **Not implemented** — inject a created instance          |
 | `CancelToken`         | Supported (deprecated)             | **Not supported**; `signal` only                         |
-| `config.signal`       | Honored                            | **Replaced** by the context signal                       |
+| `config.signal`       | Honored                            | Composed into Resili; transport gets `ctx.signal`        |
 | Status handling       | `validateStatus` throws on non-2xx | Inherited from your implementation, not re-interpreted   |
 | Its own retry plugins | e.g. `axios-retry`                 | **Not disabled** — see below                             |
 | Return value          | `AxiosResponse`                    | The same `AxiosResponse`, unwrapped                      |
@@ -234,7 +235,7 @@ const { data } = await api.get<{ id: string }[]>("/users");
 ## Limitations
 
 - No interceptors, transforms, cancel tokens, or `axios.create()`.
-- `config.signal` is overwritten.
+- Pass caller cancellation as `config.signal`; axios receives composed `ctx.signal`.
 - Structural types only; not the real axios type definitions.
 - Single-use request bodies are unsafe to retry — the same reference is reused per attempt.
 - The injected implementation's own retry behavior is not disabled.

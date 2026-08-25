@@ -121,18 +121,26 @@ const getJson = createClient(
 
 ## AbortSignal propagation
 
-Per attempt, the adapter shallow-copies your `RequestInit` and sets `signal` to `ctx.signal`:
+The adapter reads `init.signal` and passes it to `client.execute`. Each attempt
+shallow-copies your `RequestInit` and sets `signal` to composed `ctx.signal`:
 
 ```ts
 fetchImplementation(input, { ...init, signal: ctx.signal });
 ```
 
-Two consequences:
+Timeouts abort that composed signal, so `fetch` closes the socket. A caller
+`AbortSignal` on `init` aborts the same logical request. Your original `RequestInit`
+is not mutated.
 
-1. **Timeouts work automatically.** A per-attempt timeout aborts the context signal, which is the
-   signal `fetch` is holding, so the socket closes promptly.
-2. **A signal you pass in `init` is replaced, not merged.** `resilientFetch(url, { signal })` has no
-   effect. Your original `RequestInit` is not mutated — it just is not used for the signal.
+```ts
+const controller = new AbortController();
+
+const request = resilientFetch(url, {
+  signal: controller.signal,
+});
+
+controller.abort();
+```
 
 Everything else in `RequestInit` — method, headers, body, credentials, cache, redirect — is preserved.
 
@@ -165,16 +173,16 @@ For the adapter, supply `retryOn` instead. See
 
 ## Differences from calling `fetch` directly
 
-| Behavior        | `fetch`             | `createFetch(...)`                              |
-| --------------- | ------------------- | ----------------------------------------------- |
-| Return value    | `Response`          | The same `Response`, unwrapped                  |
-| Status handling | Resolves on 4xx/5xx | Same — no automatic classification              |
-| `init.signal`   | Honored             | **Replaced** by the context signal              |
-| Timeouts        | Manual              | `timeout.perAttemptMs`, per attempt             |
-| Retries         | Manual              | `retry`, opt-in for statuses                    |
-| Body on retry   | n/a                 | Same reference reused — single-use bodies break |
-| Response body   | Yours to read       | Untouched and unconsumed                        |
-| Events/metrics  | None                | Typed [events](../observability/events.md)      |
+| Behavior        | `fetch`             | `createFetch(...)`                                |
+| --------------- | ------------------- | ------------------------------------------------- |
+| Return value    | `Response`          | The same `Response`, unwrapped                    |
+| Status handling | Resolves on 4xx/5xx | Same — no automatic classification                |
+| `init.signal`   | Honored             | Composed into Resili; transport gets `ctx.signal` |
+| Timeouts        | Manual              | `timeout.perAttemptMs`, per attempt               |
+| Retries         | Manual              | `retry`, opt-in for statuses                      |
+| Body on retry   | n/a                 | Same reference reused — single-use bodies break   |
+| Response body   | Yours to read       | Untouched and unconsumed                          |
+| Events/metrics  | None                | Typed [events](../observability/events.md)        |
 
 ## Example: a hardened API client
 
@@ -215,6 +223,6 @@ export async function getUser(id: string) {
 
 - No automatic status classification.
 - No response body transformation, parsing, or cloning.
-- `init.signal` is overwritten.
+- Caller `init.signal` is composed into Resili execution; fetch receives `ctx.signal`.
 - Single-use request bodies are unsafe to retry.
 - No base URL, default headers, or interceptor concept — compose those yourself around the adapter.

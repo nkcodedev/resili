@@ -1,4 +1,10 @@
-import { createClient, type Client, type Context, type ResiliConfig } from "@resili/core";
+import {
+  AbortError,
+  createClient,
+  type Client,
+  type Context,
+  type ResiliConfig,
+} from "@resili/core";
 
 /**
  * Minimal structural Axios request config supported by this adapter.
@@ -97,8 +103,13 @@ export function createAxios(options: CreateAxiosOptions): ResilientAxios {
   const request = <T = unknown, D = unknown>(
     config: AxiosRequestConfig<D>,
   ): Promise<AxiosResponse<T, D>> =>
-    client.execute<AxiosResponse<T, D>>((ctx: Context) =>
-      axiosImplementation<T, D>({ ...config, signal: ctx.signal }),
+    client.execute<AxiosResponse<T, D>>(
+      (ctx: Context) => {
+        throwIfAborted(ctx.signal);
+
+        return axiosImplementation<T, D>({ ...config, signal: ctx.signal });
+      },
+      config.signal === undefined ? undefined : { signal: config.signal },
     );
   const axios = ((config: AxiosRequestConfig): Promise<AxiosResponse> =>
     request(config)) as ResilientAxios;
@@ -125,4 +136,14 @@ function createCoreConfig(options: CreateAxiosOptions): ResiliConfig<AxiosRespon
 
 function dataPatch<D>(data: D | undefined): { readonly data?: D } {
   return data === undefined ? {} : { data };
+}
+
+function throwIfAborted(signal: AbortSignal): void {
+  if (!signal.aborted) {
+    return;
+  }
+
+  const reason: unknown = signal.reason;
+
+  throw reason instanceof Error ? reason : new AbortError({ reason });
 }

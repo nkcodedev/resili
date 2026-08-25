@@ -468,8 +468,8 @@ CI: `api:check` for core already; add llm + adapters in Milestone 6.
 - [ ] `stats()` / `health()` public type matches behavior
 - [ ] `RESILI_VERSION` is the real core version
 - [ ] `ResiliConfig` / `Builder` can inject `MetricsRecorder` (or freeze notes say plugin-only)
-- [ ] HTTP cancellation shape approved: compose existing `signal`; no extra bag
-- [ ] HTTP cancellation implemented and tested on fetch, axios, undici
+- [x] HTTP cancellation shape approved: compose existing `signal`; no extra bag
+- [x] HTTP cancellation implemented and tested on fetch, axios, undici
 - [ ] HTTP lifecycle (`on` / `destroy`) additive or explicitly out of freeze
 - [ ] LLM `generate` / `stream` / `result()` / commit-point contract approved
 - [ ] `LlmProvider` vs `LlmStreamEvent` vs `LlmProviderStreamFrame` documented

@@ -114,9 +114,35 @@ const response = await request({
 });
 ```
 
-The adapter shallow-copies request options and sets `options.signal` to the
-Resili context signal for the active execution. Resili's signal overrides a
-caller-provided `signal`.
+The adapter reads `options.signal` and passes it to `client.execute`. Core composes
+it with timeout and other policy signals. Each attempt shallow-copies options and
+sets `signal` to the composed `ctx.signal`.
+
+## Cancellation Example
+
+```ts
+import { createUndici } from "@resili/undici";
+
+const send = createUndici({
+  request: (options) => request(`${options.origin}${options.path}`, options),
+  timeout: { perAttemptMs: 2_000 },
+});
+
+const controller = new AbortController();
+
+const pending = send({
+  origin: "https://api.example.com",
+  path: "/users",
+  method: "GET",
+  signal: controller.signal,
+});
+
+controller.abort();
+```
+
+The caller signal enters Resili's execution context. The injected request function
+receives the composed context signal. AbortSignal is the only supported
+cancellation mechanism.
 
 ## Retry Example
 
@@ -208,9 +234,8 @@ Fallback handlers may return an `UndiciResponse` or a promise for one.
 - No response body handling beyond returning the injected implementation result.
   A body must be fully consumed or discarded before a retry, or the connection leaks.
 - No OpenTelemetry or metrics exporters.
-- `options.signal` is replaced with Resili's context signal. Timeout-driven
-  cancellation works, but a caller signal you pass in `options` has no effect and
-  there is no per-call option for one.
+- Pass caller cancellation as `options.signal`. The copy sent to the injected
+  request function receives the composed Resili `ctx.signal`.
 - Retry behavior inside the injected implementation is **not** disabled. A
   `RetryAgent` will retry inside each Resili attempt, multiplying total requests.
 

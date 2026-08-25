@@ -106,35 +106,30 @@ fallback: {
 
 ## HTTP adapters
 
-All three adapters propagate cancellation the same way: they shallow-copy your request arguments and
-set the signal field to `ctx.signal`.
+All three adapters propagate cancellation the same way: they read the caller
+`AbortSignal` from the existing call shape, pass it to `client.execute({ signal })`,
+shallow-copy request arguments, and set the signal field to composed `ctx.signal`.
 
-| Adapter          | Field set        |
-| ---------------- | ---------------- |
-| `@resili/fetch`  | `init.signal`    |
-| `@resili/axios`  | `config.signal`  |
-| `@resili/undici` | `options.signal` |
-
-**A signal you put on the request arguments is replaced, not merged.** Passing
-`init.signal` to `resilientFetch` has no effect — the adapter overwrites it with the context signal.
-Supply caller cancellation through the Resili context instead:
+| Adapter          | Caller field     | Transport field  |
+| ---------------- | ---------------- | ---------------- |
+| `@resili/fetch`  | `init.signal`    | `init.signal`    |
+| `@resili/axios`  | `config.signal`  | `config.signal`  |
+| `@resili/undici` | `options.signal` | `options.signal` |
 
 ```ts
-// ❌ Overwritten by the adapter
-await resilientFetch(url, { signal: controller.signal });
+const controller = new AbortController();
+
+const request = resilientFetch(url, {
+  signal: controller.signal,
+});
+
+controller.abort();
 ```
 
-The adapters also call `client.execute(operation)` with no `ContextInit`, so there is no other seam
-for a caller signal. **Caller-initiated cancellation is not supported through the HTTP adapters in
-this alpha** — only timeout-driven cancellation is. To abort from the caller, wrap the HTTP call with
-`@resili/core` directly and pass the signal to `execute`:
+The caller object is not mutated. The HTTP implementation receives the composed
+context signal, not the original caller signal. Abort is not retryable.
 
-```ts
-// ✅ ctx.signal is aborted by the caller, the timeout, or both
-await client.execute((ctx) => fetch(url, { signal: ctx.signal }), { signal: controller.signal });
-```
-
-See [HTTP adapters overview](../http/overview.md#cancellation-and-the-signal-you-cannot-pass).
+See [HTTP adapters overview](../http/overview.md#cancellation-and-caller-abortsignal).
 
 ## LLM providers
 
@@ -235,7 +230,7 @@ const isCancellation = (error: unknown) =>
 ## Limitations
 
 - Cancellation is cooperative. Work that ignores the signal is abandoned, not killed.
-- Retry does not interrupt an in-progress backoff sleep.
+- Retry does not interrupt an in-progress backoff sleep. After the delay, an aborted call does not
+  start another HTTP attempt.
 - The bulkhead queue does not respond to cancellation; bound it with `queueTimeoutMs`.
-- HTTP adapters replace a request-level signal rather than composing it.
 - Interrupted streams may not carry authoritative provider usage.

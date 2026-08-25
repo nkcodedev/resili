@@ -120,9 +120,33 @@ const resilientFetch = createFetch({
 const response = await resilientFetch("https://api.example.com/health");
 ```
 
-The adapter shallow-copies `RequestInit` and sets `init.signal` to the Resili
-context signal for each execution. Resili's signal overrides a caller-provided
-`init.signal`.
+The adapter reads `init.signal` and passes it to `client.execute` as
+`ContextInit.signal`. Core composes that with timeout and other policy signals.
+Each attempt shallow-copies `RequestInit` and sets `signal` to the composed
+`ctx.signal` — not the original caller signal.
+
+## Cancellation Example
+
+```ts
+import { createFetch } from "@resili/fetch";
+
+const resilientFetch = createFetch({
+  timeout: { perAttemptMs: 2_000 },
+  retry: { maxAttempts: 3, jitter: "none" },
+});
+
+const controller = new AbortController();
+
+const request = resilientFetch("https://api.example.com/users", {
+  signal: controller.signal,
+});
+
+controller.abort();
+```
+
+The caller signal enters Resili's execution context and is composed with timeout
+and other policy cancellation. Fetch receives the resulting context signal.
+AbortSignal is the only supported cancellation mechanism.
 
 ## Fallback Example
 
@@ -191,10 +215,8 @@ runtime environments.
 - The adapter does not transform response bodies.
 - The adapter does not retry based on `Response.status` by itself.
 - The adapter does not add headers. It shallow-copies `RequestInit` rather than
-  mutating yours, but **`init.signal` in that copy is replaced** with Resili's
-  context signal. Timeout-driven cancellation therefore works, but a caller signal
-  you pass in `init` has no effect and there is no per-call option for one. Wrap
-  the call with `@resili/core` directly if you need caller cancellation.
+  mutating yours. Pass caller cancellation as `init.signal`; the copy sent to
+  fetch receives the composed Resili `ctx.signal`.
 - A one-shot request body (a stream) cannot be replayed on retry.
 - The adapter does not disable retry behavior inside an injected implementation.
 - The adapter does not provide OpenTelemetry or metrics exporters.
