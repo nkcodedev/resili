@@ -1,0 +1,75 @@
+{
+  "name": "@resili/llm-gemini",
+  "version": "0.1.0-alpha.1",
+  "description": "Google Gemini generateContent adapter for the Resili LLM resilience foundation.",
+  "type": "module",
+  "license": "MIT",
+  "sideEffects": false,
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": false
+  },
+  "scripts": {
+    "build": "tsup",
+    "clean": "rm -rf dist coverage temp",
+    "dev": "tsup --watch",
+    "typecheck": "tsc -b --pretty false"
+  },
+  "dependencies": {
+    "@resili/core": "workspace:*",
+    "@resili/llm": "workspace:*"
+  },
+  "peerDependencies": {
+    "@google/genai": ">=1.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@google/genai": {
+      "optional": true
+    }
+  },
+  "devDependencies": {},
+  "author": {
+    "name": "Nitin Kaushal",
+    "email": "nkcodedev.chd@gmail.com",
+    "url": "https://github.com/nkcodedev"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nkcodedev/resili.git"
+  },
+  "bugs": {
+    "url": "https://github.com/nkcodedev/resili/issues"
+  },
+  "homepage": "https://resili.nkcode.dev/",
+  "keywords": [
+    "resili",
+    "llm",
+    "gemini",
+    "google",
+    "nodejs",
+    "typescript",
+    "resilience",
+    "generate-content",
+    "fault-tolerance"
+  ]
+}
