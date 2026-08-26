@@ -2,17 +2,17 @@
 
 > Anthropic Messages adapter for the Resili LLM foundation.
 
-**Public alpha.** This package is a provider adapter for [`@resili/llm`](../llm/README.md). It is **not** an Anthropic SDK replacement and not an agent framework.
+**Public beta.** This package is a provider adapter for [`@resili/llm`](../llm/README.md). It is **not** an Anthropic SDK replacement and not an agent framework.
 
 You create the official `@anthropic-ai/sdk` client. Resili never stores API keys and never contacts a Resili service.
 
 ## Installation
 
-Install Resili packages from the `alpha` dist-tag — `latest` still points at an early `0.1.0-alpha.1`
-build. The current release is `0.1.0-alpha.4`; see [versioning](../../docs/releases/versioning.md).
+Install Resili packages from the `beta` dist-tag — `latest` still points at an early `0.1.0-alpha.1`
+build. The current release is `0.1.0-beta.1`; see [versioning](../../docs/releases/versioning.md).
 
 ```bash
-pnpm add @resili/core@alpha @resili/llm@alpha @resili/llm-anthropic@alpha @anthropic-ai/sdk
+pnpm add @resili/core@beta @resili/llm@beta @resili/llm-anthropic@beta @anthropic-ai/sdk
 ```
 
 Node.js 20 or newer is required. The official Anthropic TypeScript SDK documents **Node.js 20 LTS or later**.
@@ -151,7 +151,7 @@ Cache and thinking token counts, when present, are copied to `usage.dimensions` 
 - Normalized error messages are classification text only.
 - API keys remain owned by the application.
 
-## Alpha limitations
+## Beta limitations
 
 - Messages API only (no tools, vision, embeddings, batches, or beta APIs). Unary `generate()` and pull-through `stream()` are supported.
 - Single user message from `LlmRequest.input`

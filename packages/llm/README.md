@@ -10,22 +10,22 @@ Official adapters wrap **user-owned** vendor clients and return the contracts de
 
 ## Installation
 
-Install from the `alpha` dist-tag — `latest` still points at an early `0.1.0-alpha.1` build.
+Install from the `beta` dist-tag — `latest` still points at an early `0.1.0-alpha.1` build.
 
 ```bash
-pnpm add @resili/core@alpha @resili/llm@alpha
+pnpm add @resili/core@beta @resili/llm@beta
 ```
 
 ```bash
-npm install @resili/core@alpha @resili/llm@alpha
+npm install @resili/core@beta @resili/llm@beta
 ```
 
 ```bash
-yarn add @resili/core@alpha @resili/llm@alpha
+yarn add @resili/core@beta @resili/llm@beta
 ```
 
 Node.js 20 or newer is required. `@resili/llm` depends only on `@resili/core` at runtime. The current
-release is `0.1.0-alpha.4`; see [versioning](../../docs/releases/versioning.md).
+release is `0.1.0-beta.1`; see [versioning](../../docs/releases/versioning.md).
 
 ## What this package is responsible for
 

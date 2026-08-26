@@ -1,6 +1,6 @@
 # Quick start
 
-Every example below is complete and runnable against the current alpha packages.
+Every example below is complete and runnable against the current beta packages.
 
 ## Wrap any async function
 

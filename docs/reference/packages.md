@@ -1,19 +1,19 @@
 # Package reference
 
-Eight packages, two version lines, all currently on the npm `alpha` dist-tag.
+Eight packages, two version lines, prepared for the npm `beta` dist-tag.
 
 ## Matrix
 
-| Package                 | Purpose                                                         | Version         | Dependencies                  | Optional peers               | Node   | Status |
-| ----------------------- | --------------------------------------------------------------- | --------------- | ----------------------------- | ---------------------------- | ------ | ------ |
-| `@resili/core`          | Runtime: context, pipeline, 9 policies, events, metrics, errors | `0.2.0-alpha.3` | **none**                      | —                            | `>=20` | Alpha  |
-| `@resili/fetch`         | fetch-compatible adapter                                        | `0.2.0-alpha.3` | `@resili/core`                | —                            | `>=20` | Alpha  |
-| `@resili/axios`         | axios-compatible adapter (injected implementation)              | `0.2.0-alpha.3` | `@resili/core`                | —                            | `>=20` | Alpha  |
-| `@resili/undici`        | undici-compatible adapter (injected implementation)             | `0.2.0-alpha.3` | `@resili/core`                | —                            | `>=20` | Alpha  |
-| `@resili/llm`           | LLM foundation: contracts, usage, pricing, budget, telemetry    | `0.1.0-alpha.4` | `@resili/core`                | —                            | `>=20` | Alpha  |
-| `@resili/llm-openai`    | OpenAI Chat Completions adapter                                 | `0.1.0-alpha.4` | `@resili/core`, `@resili/llm` | `openai >=4.0.0`             | `>=20` | Alpha  |
-| `@resili/llm-anthropic` | Anthropic Messages adapter                                      | `0.1.0-alpha.4` | `@resili/core`, `@resili/llm` | `@anthropic-ai/sdk >=0.20.0` | `>=20` | Alpha  |
-| `@resili/llm-gemini`    | Google Gemini adapter (`@google/genai`)                         | `0.1.0-alpha.3` | `@resili/core`, `@resili/llm` | `@google/genai >=1.0.0`      | `>=20` | Alpha  |
+| Package                 | Purpose                                                         | Version        | Dependencies                  | Optional peers               | Node   | Status |
+| ----------------------- | --------------------------------------------------------------- | -------------- | ----------------------------- | ---------------------------- | ------ | ------ |
+| `@resili/core`          | Runtime: context, pipeline, 9 policies, events, metrics, errors | `0.2.0-beta.1` | **none**                      | —                            | `>=20` | Beta   |
+| `@resili/fetch`         | fetch-compatible adapter                                        | `0.2.0-beta.1` | `@resili/core`                | —                            | `>=20` | Beta   |
+| `@resili/axios`         | axios-compatible adapter (injected implementation)              | `0.2.0-beta.1` | `@resili/core`                | —                            | `>=20` | Beta   |
+| `@resili/undici`        | undici-compatible adapter (injected implementation)             | `0.2.0-beta.1` | `@resili/core`                | —                            | `>=20` | Beta   |
+| `@resili/llm`           | LLM foundation: contracts, usage, pricing, budget, telemetry    | `0.1.0-beta.1` | `@resili/core`                | —                            | `>=20` | Beta   |
+| `@resili/llm-openai`    | OpenAI Chat Completions adapter                                 | `0.1.0-beta.1` | `@resili/core`, `@resili/llm` | `openai >=4.0.0`             | `>=20` | Beta   |
+| `@resili/llm-anthropic` | Anthropic Messages adapter                                      | `0.1.0-beta.1` | `@resili/core`, `@resili/llm` | `@anthropic-ai/sdk >=0.20.0` | `>=20` | Beta   |
+| `@resili/llm-gemini`    | Google Gemini adapter (`@google/genai`)                         | `0.1.0-beta.1` | `@resili/core`, `@resili/llm` | `@google/genai >=1.0.0`      | `>=20` | Beta   |
 
 Every package ships ESM and CommonJS builds with TypeScript declarations for both.
 
@@ -25,30 +25,26 @@ they describe those APIs structurally and take an injected implementation. See
 
 ```bash
 # Core only
-npm install @resili/core@alpha
+npm install @resili/core@beta
 
 # Core + an HTTP adapter
-npm install @resili/core@alpha @resili/fetch@alpha
+npm install @resili/core@beta @resili/fetch@beta
 
 # LLM with OpenAI
-npm install @resili/core@alpha @resili/llm@alpha @resili/llm-openai@alpha openai
+npm install @resili/core@beta @resili/llm@beta @resili/llm-openai@beta openai
 ```
 
-The `@alpha` tag is required — `latest` still points at older builds. See
+The `@beta` tag is required — `latest` still points at older builds. See
 [Versioning](../releases/versioning.md).
 
 ## Version lines
 
-| Line        | Packages                                       | Current         |
-| ----------- | ---------------------------------------------- | --------------- |
-| Core + HTTP | `@resili/core`, `-fetch`, `-axios`, `-undici`  | `0.2.0-alpha.3` |
-| LLM         | `@resili/llm`, `-llm-openai`, `-llm-anthropic` | `0.1.0-alpha.4` |
-|             | `@resili/llm-gemini`                           | `0.1.0-alpha.3` |
+| Line        | Packages                                                      | Current        |
+| ----------- | ------------------------------------------------------------- | -------------- |
+| Core + HTTP | `@resili/core`, `-fetch`, `-axios`, `-undici`                 | `0.2.0-beta.1` |
+| LLM         | `@resili/llm`, `-llm-openai`, `-llm-anthropic`, `-llm-gemini` | `0.1.0-beta.1` |
 
-The lines version independently. `@resili/llm-gemini` sitting one patch behind its siblings is
-expected: the alpha.4 corrective release republished the packages whose packed dependency range needed
-to resolve to `@resili/llm@0.1.0-alpha.4`, and Gemini's own increment landed at `alpha.3`. It is the
-current release for that package.
+The lines version independently. Gemini is aligned with the LLM family at Beta.1.
 
 A healthy install has one copy of each:
 

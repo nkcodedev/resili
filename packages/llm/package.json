@@ -1,6 +1,6 @@
 {
   "name": "@resili/llm",
-  "version": "0.1.0-alpha.4",
+  "version": "0.1.0-beta.1",
   "description": "Provider-neutral LLM resilience, usage accounting, cost control, and observability for Resili.",
   "type": "module",
   "license": "MIT",

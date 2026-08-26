@@ -10,20 +10,23 @@ Resili is published as independently versioned packages. Install only what you u
 
 ## Current release channel
 
-The alpha line is published under the npm `alpha` dist-tag. The `latest` tag still points at older
-`0.1.0-alpha.1`-era builds, so install with an explicit `@alpha` (or an exact version) to get the
-current release. See [Versioning and dist-tags](../releases/versioning.md).
+The recommended prerelease channel is the npm `beta` dist-tag. The `latest` tag still points at older
+`0.1.0-alpha.1`-era builds, so install with an explicit `@beta` (or an exact version). Plain
+`npm install @resili/core` does **not** install Beta. See
+[Versioning and dist-tags](../releases/versioning.md) and [Beta status](../releases/beta-status.md).
 
 ```bash
-npm install @resili/core@alpha
+npm install @resili/core@beta
 ```
+
+Historical alpha builds remain available under `@alpha` for comparison installs.
 
 ## Core
 
 `@resili/core` has **zero runtime dependencies** and is the only required package.
 
 ```bash
-npm install @resili/core@alpha
+npm install @resili/core@beta
 ```
 
 ## HTTP adapters
@@ -33,9 +36,9 @@ library — `@resili/axios` and `@resili/undici` take an injected implementation
 extra to install unless your own code imports `axios` or `undici` directly.
 
 ```bash
-npm install @resili/core@alpha @resili/fetch@alpha
-npm install @resili/core@alpha @resili/axios@alpha
-npm install @resili/core@alpha @resili/undici@alpha
+npm install @resili/core@beta @resili/fetch@beta
+npm install @resili/core@beta @resili/axios@beta
+npm install @resili/core@beta @resili/undici@beta
 ```
 
 See [HTTP adapters overview](../http/overview.md).
@@ -46,7 +49,7 @@ See [HTTP adapters overview](../http/overview.md).
 SDK that **you** construct and own.
 
 ```bash
-npm install @resili/core@alpha @resili/llm@alpha
+npm install @resili/core@beta @resili/llm@beta
 ```
 
 Then add the adapter for your provider plus that provider's SDK. The SDK is an **optional peer
@@ -54,13 +57,13 @@ dependency**, so your package manager will not install it for you.
 
 ```bash
 # OpenAI
-npm install @resili/llm-openai@alpha openai
+npm install @resili/llm-openai@beta openai
 
 # Anthropic
-npm install @resili/llm-anthropic@alpha @anthropic-ai/sdk
+npm install @resili/llm-anthropic@beta @anthropic-ai/sdk
 
 # Google Gemini
-npm install @resili/llm-gemini@alpha @google/genai
+npm install @resili/llm-gemini@beta @google/genai
 ```
 
 | Adapter                 | Optional peer       | Range      |

@@ -2,18 +2,18 @@
 
 > Google Gemini `generateContent` adapter for the Resili LLM foundation.
 
-**Public alpha.** This package is a provider adapter for [`@resili/llm`](../llm/README.md). It is **not** a Gemini SDK replacement and not an agent framework.
+**Public beta.** This package is a provider adapter for [`@resili/llm`](../llm/README.md). It is **not** a Gemini SDK replacement and not an agent framework.
 
 You create the official `@google/genai` client. Resili never stores API keys and never contacts a Resili service.
 
 ## Installation
 
-Install Resili packages from the `alpha` dist-tag — `latest` still points at an early `0.1.0-alpha.1`
-build. The current release of this package is `0.1.0-alpha.3`, which is one patch behind its LLM
-siblings by design; see [versioning](../../docs/releases/versioning.md).
+Install Resili packages from the `beta` dist-tag — `latest` still points at an early `0.1.0-alpha.1`
+build. The current release is `0.1.0-beta.1` (aligned with the LLM family); see
+[versioning](../../docs/releases/versioning.md).
 
 ```bash
-pnpm add @resili/core@alpha @resili/llm@alpha @resili/llm-gemini@alpha @google/genai
+pnpm add @resili/core@beta @resili/llm@beta @resili/llm-gemini@beta @google/genai
 ```
 
 This adapter targets **`@google/genai`**, not the legacy `@google/generative-ai` SDK. The two have
@@ -155,7 +155,7 @@ Abort / 499 is rethrown so Resili owns cancellation. `cause` is a sanitized snap
 - Normalized error messages are classification text only.
 - API keys remain owned by the application.
 
-## Alpha limitations
+## Beta limitations
 
 - `models.generateContent` and `generateContentStream` (no tools, multimodal input, embeddings, files, grounding, Vertex-specific setup, or Live API)
 - Single user text from `LlmRequest.input` (`contents` string)

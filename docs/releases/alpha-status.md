@@ -1,9 +1,12 @@
 # Alpha status
 
-**Stage: Alpha.** Eight packages published to the npm `alpha` dist-tag, with the full test suite,
-type-checking, API-report verification, and public-registry consumer verification green.
+**Historical stage: Alpha.** The current recommended prerelease channel is **Beta** — see
+[Beta status](./beta-status.md). This page remains the product-limitations record from the alpha era
+and is still accurate for what is and is not implemented.
 
-| Line        | Packages                                       | Current         |
+Eight packages were published to the npm `alpha` dist-tag. Final alpha versions:
+
+| Line        | Packages                                       | Final alpha     |
 | ----------- | ---------------------------------------------- | --------------- |
 | Core + HTTP | `@resili/core`, `-fetch`, `-axios`, `-undici`  | `0.2.0-alpha.3` |
 | LLM         | `@resili/llm`, `-llm-openai`, `-llm-anthropic` | `0.1.0-alpha.4` |

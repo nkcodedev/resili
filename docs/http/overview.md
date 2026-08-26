@@ -12,11 +12,11 @@ adapter          (@resili/fetch | @resili/axios | @resili/undici)
 HTTP client      globalThis.fetch | your axios | your undici
 ```
 
-| Package                       | Wraps                          | Version         |
-| ----------------------------- | ------------------------------ | --------------- |
-| [`@resili/fetch`](fetch.md)   | A fetch-compatible function    | `0.2.0-alpha.3` |
-| [`@resili/axios`](axios.md)   | An axios-compatible function   | `0.2.0-alpha.3` |
-| [`@resili/undici`](undici.md) | An undici-compatible `request` | `0.2.0-alpha.3` |
+| Package                       | Wraps                          | Version        |
+| ----------------------------- | ------------------------------ | -------------- |
+| [`@resili/fetch`](fetch.md)   | A fetch-compatible function    | `0.2.0-beta.1` |
+| [`@resili/axios`](axios.md)   | An axios-compatible function   | `0.2.0-beta.1` |
+| [`@resili/undici`](undici.md) | An undici-compatible `request` | `0.2.0-beta.1` |
 
 ## What they have in common
 
