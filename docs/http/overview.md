@@ -102,6 +102,16 @@ controller.abort();
 Abort remains non-retryable. AbortSignal is the only supported cancellation
 mechanism. See [Cancellation](../core/cancellation.md).
 
+## Lifecycle: `on` and `destroy`
+
+Each adapter return value is still callable like the underlying client, and also
+exposes Core lifecycle hooks:
+
+- `on(type, handler)` — subscribe to Core events (`RequestStarted`, `RetryStarted`, …); returns the same unsubscribe function Core uses
+- `destroy()` — idempotent cleanup of the inner client
+
+Adapters do **not** expose the full Core `Client` (`call`, `execute`, `stats`, `health`).
+
 ## Request bodies and retries
 
 Adapters re-invoke the underlying client with the **same body reference** on each attempt. They do not

@@ -1,40 +1,42 @@
 # Resili Beta Readiness
 
-**Status:** Planning document. Not a commitment to a date.
+**Status:** Milestone 7 complete — **READY FOR BETA RELEASE PREP**. See [`BETA_RELEASE_PLAN.md`](./BETA_RELEASE_PLAN.md).
 
-**Audited against:** Milestone 6 (`chore/beta-packaging-ci`) on top of `main` after Milestone 5.
+**Audited against:** `main` @ `4d25ac9ce948fc89b562490f99d50b56b9a2ec88` (Milestone 6 merged)
 
-**Test baseline at Milestone 5:** 635 tests / 42 files. Milestone 6 adds HTTP lifecycle tests; see the milestone report for the exact new count.
+**Test baseline (Milestone 7):** 641 tests / 42 files
 
-This document is the authoritative beta plan. Source and tests override older docs when they disagree. It does not implement, version, publish, or tag anything.
+This document is the authoritative beta readiness record. Source, tests, and CI override older unchecked boxes when they disagree. It does not bump versions, publish, or tag.
 
 ---
 
 ## Current Status
 
-Resili is a **public alpha** with two independently versioned lines, eight published packages, nine core policies, pull-through LLM streaming, and recently consolidated documentation.
+Resili is still a **public alpha** on npm until the first `--tag beta` publish. Freeze candidates and packaging gates are complete.
 
-| Line        | Packages                                       | Public version  | npm `alpha`     | npm `latest` (stale) |
-| ----------- | ---------------------------------------------- | --------------- | --------------- | -------------------- |
-| Core + HTTP | `@resili/core`, `-fetch`, `-axios`, `-undici`  | `0.2.0-alpha.3` | `0.2.0-alpha.3` | `0.1.0-alpha.1`      |
-| LLM         | `@resili/llm`, `-llm-openai`, `-llm-anthropic` | `0.1.0-alpha.4` | `0.1.0-alpha.4` | `0.1.0-alpha.1`      |
-|             | `@resili/llm-gemini`                           | `0.1.0-alpha.3` | `0.1.0-alpha.3` | `0.1.0-alpha.1`      |
+| Line        | Packages                                       | Workspace version | npm `alpha`     | npm `latest` (stale) |
+| ----------- | ---------------------------------------------- | ----------------- | --------------- | -------------------- |
+| Core + HTTP | `@resili/core`, `-fetch`, `-axios`, `-undici`  | `0.2.0-alpha.3`   | `0.2.0-alpha.3` | `0.1.0-alpha.1`      |
+| LLM         | `@resili/llm`, `-llm-openai`, `-llm-anthropic` | `0.1.0-alpha.4`   | `0.1.0-alpha.4` | `0.1.0-alpha.1`      |
+|             | `@resili/llm-gemini`                           | `0.1.0-alpha.3`   | `0.1.0-alpha.3` | `0.1.0-alpha.1`      |
 
 **What is already true**
 
 - Core wraps any async function. Zero runtime dependencies.
 - Retry, timeout, circuit breaker, rate limiter, bulkhead, cache, fallback, dedupe, and hedge are implemented and unit-tested.
-- HTTP adapters are thin, injected (except fetch’s global default), ESM+CJS, Node `>=20`.
+- HTTP adapters are thin, injected (except fetch’s global default), ESM+CJS, Node `>=20`, with caller `AbortSignal` cancellation and `on` / `destroy`.
 - LLM `generate()` and `stream()` exist for OpenAI, Anthropic, and Gemini. Provider SDK retries are disabled.
 - Streaming commit point is enforced as of `@resili/llm@0.1.0-alpha.4` (post-commit timeout does not retry).
-- Public-registry verification of the current LLM alpha passed.
-- Documentation covers install, policies, HTTP, LLM, providers, errors, budget, and observability.
+- API Extractor reports exist for all eight publishable packages; freeze records say YES for Core, HTTP, and LLM/providers.
+- `pnpm pack:check` proves packed metadata, artifact safety, one Core, one LLM, ESM+CJS, HTTP cancel, LLM generate/stream, post-commit timeout, and pre-commit retry.
+- CI Validate + Packed consumer run on Node 20 and Node 22; required gate job named `Validate`.
 
 **What is not yet true**
 
-- No `@beta` dist-tag has been published. This milestone does not publish, tag, or bump versions.
-- Dist-tag policy for the beta channel (P1-10) and Gemini version-line alignment (P1-11) remain release-cut work.
-- Node 24 is optional (P2) and is not a Beta gate.
+- No `@beta` dist-tag has been published.
+- Package versions have not been bumped to `*.beta.1`.
+- Install docs still teach `@alpha` until the release-prep branch updates them.
+- Gemini remains one alpha patch behind until the coordinated beta cut aligns it to `0.1.0-beta.1`.
 
 **Packaging (Milestone 6)**
 
@@ -43,7 +45,7 @@ Resili is a **public alpha** with two independently versioned lines, eight publi
 - CI runs Validate + Packed consumer on **Node 20 and Node 22**. `pnpm api:check` covers all eight packages.
 - Node 20 CI installs with `--config.engine-strict=false` because root `semantic-release@25` requires Node 22+. Published packages still declare `engines.node: ">=20"`; the packed-consumer job still runs on Node 20.
 
-**Verdict in one line:** freeze records exist for Core, HTTP, and LLM; remaining Beta work is release-cut (versions, dist-tags) plus residual P1 product items, not packaging surprises.
+**Verdict in one line:** no P0 blockers remain; first beta is a version-bump + `--tag beta` publish against [`BETA_RELEASE_PLAN.md`](./BETA_RELEASE_PLAN.md).
 
 ---
 
@@ -91,87 +93,67 @@ Packed publishes pin `workspace:*` to the version from the same release run. Mix
 
 Must be fixed or explicitly decided before a beta tag exists.
 
+**Milestone 7 status: no open P0 correctness or packaging blockers.**
+
+| ID   | Item                                     | Status                                                    |
+| ---- | ---------------------------------------- | --------------------------------------------------------- |
+| P0-1 | HTTP caller cancellation                 | **PASS** (Milestone 3 + packed smokes)                    |
+| P0-2 | Public API freeze for all eight packages | **PASS** (Milestones 4–6)                                 |
+| P0-3 | `timeout.deadlineMs` honesty             | **PASS** (rejects; Milestone 4)                           |
+| P0-4 | No known P0 semantic defects             | **PASS** (post-commit stream fix in alpha.4; gates green) |
+| P0-5 | Packed consumer + dependency-graph gate  | **PASS** (Milestone 6; `pnpm pack:check`)                 |
+
 ### P0-1. HTTP caller-initiated per-call cancellation
 
 **Classification: P0. Beta blocker: yes.**
 
-Source: `packages/fetch/src/index.ts`, `packages/axios/src/index.ts`, `packages/undici/src/index.ts`.
-
-**Status (Milestone 3):** Implemented on `fix/http-caller-cancellation`. Adapters pass the caller
-`signal` to `client.execute(operation, { signal })`. Transport still receives composed `ctx.signal`.
-
-**Historical bug:** All three adapters called `client.execute(operation)` **without** `ContextInit`. They overwrote `init.signal` / `config.signal` / `options.signal` with `ctx.signal`. Timeout-driven abort worked. A caller `AbortSignal` on the HTTP call did **not** abort the Resili execution.
-
-Native `fetch` honors `init.signal`. Shipping a fetch-shaped API that silently ignores it is a high-impact DX and correctness gap, not a missing extra feature.
-
-**Required behavior for beta (design, not implementation):**
-
-- A caller `AbortSignal` supplied on the adapter invocation must abort **that logical Resili request**.
-- Caller abort composes with timeout and other policy signals. The transport still receives the composed `ctx.signal`.
-- Abort remains **not a failure** and **not retryable** (same as core `AbortError` / `name === "AbortError"`).
-- Behavior is **identical** across fetch, axios, and undici.
-- Docs and examples match the implemented call shape.
-
-Do not leave “wrap with `createClient` yourself” as the only path for the primary HTTP packages.
+**Status (Milestone 3):** Implemented. Adapters pass the caller `signal` to `client.execute(operation, { signal })`. Transport still receives composed `ctx.signal`. Packed consumer smokes cover abort on fetch / axios / undici.
 
 ### P0-2. Public API freeze review completed
-
-**Classification: P0 (process). Beta blocker: yes.**
 
 **Status (Milestones 4–6):** Written freeze records and committed API Extractor reports exist for all eight publishable packages. See `BETA_API_REVIEW.md`, `BETA_HTTP_API_REVIEW.md`, and `BETA_LLM_API_REVIEW.md`. `pnpm api:check` fails on report drift.
 
 ### P0-3. `timeout.deadlineMs` decision executed
 
-**Status (Milestone 4):** Executed. `TimeoutOptions` no longer includes `deadlineMs`. Passing it throws `ConfigurationError`. `ContextInit.deadline` / `deadlineMs` remains the overall bound.
-
-`TimeoutOptions.deadlineMs` is public, validated (`>= perAttemptMs`), stored, and **never applied** by the timeout policy. Runtime timeout is `perAttemptMs` only. Root `ContextInit.deadline` / `deadlineMs` is a separate, working mechanism.
-
-A public option that validates and does nothing violates the project’s fail-loudly rule (`retry.jitter: "full"` already throws).
-
-**Required for beta:** pick one and ship it:
-
-| Option        | Meaning                                                   | Recommendation              |
-| ------------- | --------------------------------------------------------- | --------------------------- |
-| **Reject**    | Throw `ConfigurationError` like unimplemented jitter      | **Preferred**               |
-| **Remove**    | Drop from `TimeoutOptions`                                | Acceptable                  |
-| **Implement** | Enforce an overall request deadline in the timeout policy | Defer to 1.0 unless cheap   |
-| **Document**  | Leave the silent no-op                                    | **Not acceptable for beta** |
-
-Context-level `deadlineMs` on `execute()` can remain.
+**Status (Milestone 4):** Executed. Passing `timeout.deadlineMs` throws `ConfigurationError`. Use `ContextInit.deadline` / `deadlineMs` for an overall bound.
 
 ### P0-4. No known P0 semantic defects in shipping behavior
 
-Streaming post-commit timeout is fixed in `0.1.0-alpha.4`. Unary retry/timeout are covered. Beta cannot ship with a known equivalent of “retries after committed text.” Any new P0 found during the hardening pass blocks the tag.
+Streaming post-commit timeout is fixed in `0.1.0-alpha.4`. Packed consumer preserves the regression gate.
 
 ### P0-5. Repeatable packed-consumer + dependency-graph gate
 
-**Classification: P0 for release engineering, not for runtime design.**
-
-**Status (Milestone 6):** Automated. `pnpm pack:check` uses `pnpm pack` (not `npm pack`) so `workspace:*` is rewritten to the workspace package versions. It fails on `workspace:`, `file:`, and `link:` leaks, forbidden artifact paths (including `src/`, `tsbuild/`, nested tarballs, `.env`, `node_modules`, coverage), and on a fresh external install that does not resolve exactly one `@resili/core` and one `@resili/llm`. ESM and CJS smokes run from that install, including HTTP caller cancellation and the LLM post-commit timeout / pre-commit retry gates.
+**Status (Milestone 6):** Automated via `pnpm pack:check`.
 
 ---
 
-## P1 — Required Before Beta
+## P1 — Before / during Beta
 
-Should be completed unless a dated, written deferral exists.
+Milestone 7 classification:
 
-| ID    | Item                                                                 | Why                                                                                                                                                                                                                                    |
-| ----- | -------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| P1-1  | `RESILI_VERSION` reports the real `@resili/core` version             | Public export is `"0.0.0"`; tests assert the placeholder. Misleading for diagnostics.                                                                                                                                                  |
-| P1-2  | `stats()` / `health()` honesty                                       | Totals work. `circuit` / `bulkhead` / `rateLimiter` maps are **always empty**. `health()` is therefore almost always `"healthy"`. Narrow the type, populate the maps, or document as totals-only **and** stop implying circuit health. |
-| P1-3  | Export or hide forgotten core types                                  | `RetryBackoff`, `RetryJitter`, `RateLimiterStrategy`, etc. appear in public option types but are not entry exports.                                                                                                                    |
-| P1-4  | API Extractor (or equivalent) for `@resili/llm`                      | LLM is a separate version line with its own freeze surface.                                                                                                                                                                            |
-| P1-5  | HTTP adapter lifecycle surface                                       | **Done (Milestone 6).** `on` / `destroy` on fetch, axios, and undici. `stats()` / `health()` remain Core-only.                                                                                                                         |
-| P1-6  | Core interaction test matrix (see [Testing Matrix](#testing-matrix)) | Isolated policy tests are strong; cross-policy cancellation/retry cases are thin.                                                                                                                                                      |
-| P1-7  | LLM adversarial regression gate in CI                                | Commit-point, pre/post-commit timeout, Budget Guard reserve/settle, abort. Keep the alpha.4 tests green on every PR.                                                                                                                   |
-| P1-8  | Node 20 + 22 in CI                                                   | **Done (Milestone 6).** Validate + packed consumer on Node 20 and 22; required gate job named `Validate`. Node 20 install relaxes engine-strict for release tooling only. Node 24 remains P2.                                          |
-| P1-9  | ESM + CJS consumer smoke in CI                                       | **Done (Milestone 6).** Fresh packed consumer runs both module systems for all eight packages.                                                                                                                                         |
-| P1-10 | Dist-tag policy for the beta channel                                 | Publish beta with `--tag beta`. Do **not** move `latest`. Decide whether `alpha` stays or freezes. Document install as `@beta`.                                                                                                        |
-| P1-11 | Align `@resili/llm-gemini` version with the LLM line at beta cut     | `0.1.0-alpha.3` vs siblings `0.1.0-alpha.4` is explainable; beta should not repeat the skew.                                                                                                                                           |
-| P1-12 | `retry.jitter` / `retry.idempotentOnly` public-type honesty          | Types accept values that throw at build. Keep throwing **or** narrow the types before freeze. Do not silently implement.                                                                                                               |
-| P1-13 | Documentation beta audit                                             | Walk the [Documentation](#documentation) checklist as a stranger. Fix remaining holes.                                                                                                                                                 |
-| P1-14 | HTTP adapter consistency notes frozen                                | Status codes not classified; bodies not cloned; injected-client retries not disabled. Document as contract, not bugs, unless changed.                                                                                                  |
-| P1-15 | Error-code and classification freeze                                 | Core `ResiliErrorCode` + LLM `LlmErrorClassification` lists below become append-only for beta.                                                                                                                                         |
+| Class | Meaning                                                    |
+| ----- | ---------------------------------------------------------- |
+| **A** | Must complete before first beta **publish** (release prep) |
+| **B** | Should land in release-prep docs/notes; not a code blocker |
+| **C** | Safe to remain open during beta                            |
+
+| ID    | Item                                      | Class | Status                                                                                                                 |
+| ----- | ----------------------------------------- | ----- | ---------------------------------------------------------------------------------------------------------------------- |
+| P1-1  | `RESILI_VERSION` real package version     | —     | **Done** (Milestone 4)                                                                                                 |
+| P1-2  | `stats()` / `health()` honesty            | —     | **Done** (Milestone 4; totals-only)                                                                                    |
+| P1-3  | Forgotten core types exported             | —     | **Done** (Milestone 4)                                                                                                 |
+| P1-4  | API Extractor for LLM / providers         | —     | **Done** (Milestone 5)                                                                                                 |
+| P1-5  | HTTP adapter `on` / `destroy`             | —     | **Done** (Milestone 6)                                                                                                 |
+| P1-6  | Core interaction test matrix              | **C** | Partial coverage in `interactions.test.ts`; gaps (retry×rate limiter, retry×bulkhead dedicated cases) open during beta |
+| P1-7  | LLM adversarial regressions in CI         | —     | **Done** (unit tests + packed consumer gate)                                                                           |
+| P1-8  | Node 20 + 22 CI                           | —     | **Done** (Milestone 6)                                                                                                 |
+| P1-9  | ESM + CJS consumer smoke in CI            | —     | **Done** (Milestone 6)                                                                                                 |
+| P1-10 | Dist-tag policy for beta                  | **A** | **Decided** in `BETA_RELEASE_PLAN.md` (`--tag beta`; leave `latest`) — apply at publish                                |
+| P1-11 | Align Gemini with LLM line at cut         | **A** | **Decided** — bump to `0.1.0-beta.1` with siblings at cut                                                              |
+| P1-12 | `retry.jitter` / `idempotentOnly` honesty | —     | **Done** (Milestone 4)                                                                                                 |
+| P1-13 | Documentation stranger audit              | **B** | Milestone 7 audit: sufficient for beta; switch install docs to `@beta` at cut; HTTP `on`/`destroy` noted in overview   |
+| P1-14 | HTTP adapter consistency notes frozen     | **B** | Documented in HTTP overview / alpha-status; treat as contract                                                          |
+| P1-15 | Error-code and classification freeze      | **B** | Lists in this doc + freeze records are append-only for beta                                                            |
 
 ---
 
@@ -193,7 +175,7 @@ Safe to land during beta or shortly after. Not an excuse to ignore if cheap.
 | P2-10 | Hedge `maxAttempts > 2`                                                         |
 | P2-11 | First-party OpenTelemetry / Prometheus plugins                                  |
 | P2-12 | Markdown link check in CI                                                       |
-| P2-13 | API Extractor for HTTP adapter packages                                         |
+| P2-13 | API Extractor for HTTP adapter packages                                         | **Done** (Milestone 6) |
 | P2-14 | `createFetch` dummy `about:blank` operation used only to satisfy `createClient` |
 
 ---
@@ -321,49 +303,51 @@ Keep the commit-point invariant as a **release gate**, not as new scope.
 
 ## Testing Matrix
 
-Current: **598 tests / 38 files**. Do not accept a silent drop.
+Current baseline: **641 tests / 42 files** (`main` @ Milestone 7).
 
-Policy-level files are dense (hedge 41, cache 32, dedupe 36, stream 35). Cross-cutting files are not.
+Policy-level files remain dense. Cross-cutting coverage improved in Milestone 4+ via `packages/core/src/core/pipeline/interactions.test.ts` and LLM `stream.test.ts` / packed consumer smokes.
 
-| Gap                                                                                                       | Priority           | Notes                                              |
-| --------------------------------------------------------------------------------------------------------- | ------------------ | -------------------------------------------------- |
-| Policy interaction matrix (retry×timeout, retry×breaker, retry×rate limiter, retry×bulkhead, cache×retry) | **P1**             | Exists only as scattered cases                     |
-| Cancellation matrix (caller, timeout, retry delay, dedupe joiners, hedge losers, fallback)                | **P1**             | HTTP caller abort currently impossible             |
-| Dedupe + cancellation                                                                                     | **P1**             | Some coverage in dedupe tests; complete the matrix |
-| Hedge + cancellation / timeout                                                                            | **P1**             |                                                    |
-| Stream + retry + timeout (pre and post commit)                                                            | **P0/P1**          | Strong in `stream.test.ts`; must stay in CI        |
-| Budget Guard retry / cancel / failure                                                                     | **P1**             | `budget.test.ts` + stream cases                    |
-| Concurrent clients / concurrent streams                                                                   | **P1**             |                                                    |
-| Real SDK package-shape integration                                                                        | **P2**             | Structural mocks today; optional live jobs         |
-| Packed consumer                                                                                           | **P0**             | CI, not only release day                           |
-| ESM / CJS                                                                                                 | **P1**             |                                                    |
-| Node 20 / 22 / 24                                                                                         | **P1** / P2 for 24 | CI matrix                                          |
-| HTTP adapter caller abort (after P0-1)                                                                    | **P0**             | New tests required                                 |
-| `stats()` / `health()` contract tests                                                                     | **P1**             | Match whatever honesty decision is made            |
+| PAIR / SCENARIO                       | Covered? | Location                            | Beta blocker? |
+| ------------------------------------- | -------- | ----------------------------------- | ------------- |
+| Core retry + timeout                  | Yes      | `interactions.test.ts`              | No            |
+| Core retry + circuit breaker          | Yes      | `interactions.test.ts`              | No            |
+| Core retry + rate limiter             | Partial  | All-policies order smoke only       | No (C)        |
+| Core retry + bulkhead                 | Partial  | All-policies order smoke only       | No (C)        |
+| Core timeout + fallback               | Yes      | `interactions.test.ts`              | No            |
+| Core dedupe + timeout                 | Yes      | `interactions.test.ts`              | No            |
+| Core hedge + timeout                  | Yes      | `interactions.test.ts`              | No            |
+| Core cache + retry                    | Yes      | `interactions.test.ts`              | No            |
+| LLM retry + timeout (pre/post commit) | Yes      | `stream.test.ts` + pack smoke       | No            |
+| LLM cancellation                      | Yes      | `stream.test.ts`                    | No            |
+| LLM Budget Guard + retry/timeout      | Yes      | `stream.test.ts`                    | No            |
+| LLM stream commit guard               | Yes      | `stream.test.ts` + pack smoke       | No            |
+| LLM provider errors                   | Yes      | provider + stream tests             | No            |
+| LLM concurrent streams / next()       | Yes      | `stream.test.ts`                    | No            |
+| HTTP caller cancellation              | Yes      | `cancellation.test.ts` + pack smoke | No            |
+| HTTP timeout / retry                  | Yes      | adapter index tests                 | No            |
+| HTTP lifecycle `on` / `destroy`       | Yes      | adapter index tests                 | No            |
+
+Do not block beta on expanding every Core interaction pair. Keep LLM commit-point and packed gates mandatory.
 
 ---
 
 ## CI / Release Engineering
 
-Current `.github/workflows/ci.yml`: Node **22** only. Format, lint, core build, typecheck, test, full build, `@resili/core api:check`. Docs workflow generates TypeDoc on path filters.
+Current `.github/workflows/ci.yml`: Node **20** and **22** matrix for Validate and Packed consumer; required aggregator job named `Validate`. Docs workflow generates TypeDoc on path filters.
 
-| Check                                    | Today       | Beta requirement                       |
-| ---------------------------------------- | ----------- | -------------------------------------- |
-| Lint / format / typecheck / test / build | CI          | Keep                                   |
-| `@resili/core` API check                 | CI          | Keep                                   |
-| `@resili/llm` API check                  | Absent      | P1                                     |
-| Node 20                                  | Absent      | P1                                     |
-| Node 22                                  | CI          | Keep                                   |
-| Node 24                                  | Absent      | P1 or P2                               |
-| `pnpm pack` / tarball inspect            | Manual      | **P0**                                 |
-| `workspace:*` leakage                    | Manual      | **P0**                                 |
-| Duplicate `@resili/core` / `@resili/llm` | Manual      | **P0**                                 |
-| ESM consumer                             | Manual      | P1                                     |
-| CJS consumer                             | Manual      | P1                                     |
-| Artifact safety (no secrets, no `.env`)  | Informal    | P1 script                              |
-| Provenance / `latest` protection         | Policy only | Document; do not move `latest` at beta |
-
-Anything currently done only during a human release should have a CI job or a `pnpm` script that CI always runs.
+| Check                                    | Today                        | Beta requirement             |
+| ---------------------------------------- | ---------------------------- | ---------------------------- |
+| Lint / format / typecheck / test / build | CI                           | Keep                         |
+| API check (all 8 packages)               | CI (`pnpm api:check`)        | Keep                         |
+| Node 20                                  | CI                           | Keep                         |
+| Node 22                                  | CI                           | Keep                         |
+| Node 24                                  | Absent                       | P2                           |
+| `pnpm pack:check`                        | CI packed-consumer job       | Keep                         |
+| `workspace:*` leakage                    | pack gate                    | Keep                         |
+| Duplicate Core / LLM                     | pack gate                    | Keep                         |
+| ESM / CJS consumer                       | pack gate                    | Keep                         |
+| Artifact safety                          | pack gate                    | Keep                         |
+| Provenance / `latest` protection         | Policy (`BETA_RELEASE_PLAN`) | Do not move `latest` at beta |
 
 ---
 
@@ -442,29 +426,32 @@ Privacy guarantee (no prompts, completions, chunks, API keys, `Authorization` he
 
 ## Documentation
 
-A new developer can already, from `docs/` + package READMEs:
+Milestone 7 stranger audit (no source reading required for basic paths):
 
-- Install core / HTTP / LLM with `@alpha`
-- Configure retry + timeout
-- Use fetch, axios, undici (including “status is not a failure”)
-- Understand policy order
-- Handle core and LLM errors
-- Use `AbortSignal` on **core** and **LLM**
-- Use OpenAI / Anthropic / Gemini
-- `generate()` and `stream()` (including commit point)
-- Configure pricing and Budget Guard
-- Subscribe to events / record metrics
+| Task                              | Verdict                                                  |
+| --------------------------------- | -------------------------------------------------------- |
+| Install `@resili/core`            | **CLEAR** (`@alpha` today; `@beta` at cut)               |
+| Configure retry + timeout         | **CLEAR**                                                |
+| Use fetch / axios / undici        | **CLEAR**                                                |
+| Cancel HTTP calls                 | **CLEAR** (overview + cancellation)                      |
+| Understand policy order           | **CLEAR**                                                |
+| Handle errors                     | **CLEAR**                                                |
+| Use events / metrics              | **CLEAR**                                                |
+| Use OpenAI / Anthropic / Gemini   | **CLEAR**                                                |
+| `generate()` / `stream()`         | **CLEAR**                                                |
+| Stream retry rules / commit point | **CLEAR**                                                |
+| Pricing / Budget Guard            | **CLEAR**                                                |
+| Cancel LLM calls                  | **CLEAR**                                                |
+| Understand alpha / beta status    | **CLEAR** for alpha; beta plan in `BETA_RELEASE_PLAN.md` |
+| HTTP `on` / `destroy`             | **CLEAR** after overview note (was easy to miss)         |
 
-**Remaining documentation blockers (after P0/P1 land)**
+**Remaining documentation work at cut (not code blockers)**
 
-- [ ] HTTP adapter cancellation examples match the new behavior (P0-1).
-- [ ] `timeout.deadlineMs` docs match reject/remove/implement (P0-3).
-- [ ] `RESILI_VERSION` and `stats()`/`health()` described accurately (P1-1, P1-2).
-- [ ] Beta install commands (`@beta`) and dist-tag table (P1-10).
-- [ ] This file linked from `docs/README.md` and `docs/releases/` navigation.
-- [ ] Maintainer specs (`ARCHITECTURE.md`, `INTERNAL_DESIGN.md`) still call some shipped policies “future” in places — historical, not user-guide blockers, but confusing during API review.
+- [ ] Install / versioning pages teach `@beta` when beta is published
+- [ ] Dist-tag table includes `beta`
+- [ ] CHANGELOG Beta section published with the cut
 
-No documentation P0 remains **if** the code decisions above are reflected. Shipping beta docs that still say “pass your signal in `init`” while ignoring it would be a P0 doc bug.
+No documentation P0 remains.
 
 ---
 
@@ -576,27 +563,29 @@ Change these **now**, while still alpha. Do not implement in this planning task.
 - [x] HTTP cancellation implemented and tested (caller abort, timeout abort, composition, no retry)
 - [x] Public API review completed for all eight packages (keep / export / hide)
 - [x] Forgotten `@resili/core` API Extractor warnings resolved or explicitly accepted
-- [ ] `@resili/llm` public surface recorded (API Extractor or equivalent)
-- [x] `timeout.deadlineMs` decision shipped (reject or remove; not a silent no-op)
+- [x] `@resili/llm` public surface recorded (API Extractor)
+- [x] `timeout.deadlineMs` decision shipped (reject; not a silent no-op)
 - [x] `RESILI_VERSION` reports the real core version
-- [x] `stats()` / `health()` decision shipped (narrow, wire, or documented totals-only **and** types match)
+- [x] `stats()` / `health()` decision shipped (totals-only types)
 - [x] `retry.jitter` / `idempotentOnly` types match runtime
-- [ ] Core interaction test matrix passes (retry×timeout, retry×breaker, retry×admission, cache×retry)
-- [ ] Cancellation matrix passes (core + HTTP + LLM stream)
-- [ ] LLM adversarial matrix passes (pre/post-commit timeout, no duplicate generation, Budget Guard settle)
-- [ ] Node 20 and Node 22 CI jobs pass
-- [ ] Packed consumer gate passes (no `workspace:*`, single core, single llm)
-- [ ] ESM and CJS consumer smokes pass
-- [ ] Artifact safety check passes (no secrets, no `.env`, no unexpected files)
-- [ ] Documentation beta audit passes (install `@beta`, cancellation, deadline, stats, versions)
-- [ ] Dist-tag policy applied: publish `--tag beta`; `latest` unchanged
-- [ ] Gemini version aligned with the LLM line at cut
-- [ ] HTTP adapter lifecycle (`on` / `destroy`) exposed or explicitly out of scope in the freeze notes
-- [ ] Error codes and LLM classifications frozen (append-only)
-- [ ] Event names listed in this document frozen
-- [ ] No known P0 issues
-- [ ] Test count not silently below the current baseline without a written reason
-- [ ] Beta package dependency graph verified on a clean consumer install
+- [x] Core interaction coverage sufficient for beta (see Testing Matrix; residual pairs = C)
+- [x] Cancellation coverage sufficient (core + HTTP + LLM stream)
+- [x] LLM adversarial matrix passes (pre/post-commit timeout, no duplicate generation, Budget Guard settle)
+- [x] Node 20 and Node 22 CI jobs pass
+- [x] Packed consumer gate passes (no `workspace:*`, single core, single llm)
+- [x] ESM and CJS consumer smokes pass
+- [x] Artifact safety check passes
+- [x] Documentation stranger audit passes for shipping surface
+- [ ] Dist-tag policy **applied**: publish `--tag beta`; `latest` unchanged
+- [ ] Gemini version aligned with the LLM line at cut (`0.1.0-beta.1`)
+- [x] HTTP adapter lifecycle (`on` / `destroy`) exposed
+- [x] Error codes and LLM classifications treated as append-only
+- [x] Event names listed in this document frozen
+- [x] No known P0 issues
+- [x] Test count not silently below the current baseline without a written reason
+- [ ] Beta package dependency graph verified on a **public registry** consumer install
+
+Unchecked items are **release execution**, not correctness blockers. See [`BETA_RELEASE_PLAN.md`](./BETA_RELEASE_PLAN.md).
 
 ---
 
@@ -658,69 +647,46 @@ Shortest path from current `main` to a beta tag. Adjust only with a written scop
 
 ### Milestone 5 — LLM / Budget / error hardening
 
-- **Status:** Complete on `fix/llm-beta-api-lock` (not merged). API Extractor for four LLM packages; `tsbuild/` packaging; metrics typing honesty; freeze record `docs/releases/BETA_LLM_API_REVIEW.md`.
-- **Objective:** No new features. Lock adversarial stream + budget tests in CI; add llm API report; confirm classifications frozen.
-- **Areas:** `packages/llm`, provider tests already present, docs/llm.
-- **Exit:** P1-4, P1-7, P1-15.
-- **Type:** Coding / review
-- **Effort:** S–M
+- **Status:** Complete and merged (`fix(llm): harden public API for beta (#32)`).
+- **Exit:** P1-4, P1-7, P1-15 (append-only classifications).
 
-### Milestone 6 — CI / package consumer automation
+### Milestone 6 — HTTP freeze + packaging + CI
 
-- **Objective:** Node 20+22, pack, `workspace:*` leak, duplicate deps, ESM/CJS smokes, optional artifact scan.
-- **Areas:** `.github/workflows/ci.yml`, pack scripts.
-- **Exit:** P0-5, P1-8, P1-9.
-- **Type:** Coding (CI)
-- **Effort:** M
+- **Status:** Complete and merged (`chore(beta): add packaging and consumer release gates (#33)`).
+- **Exit:** P0-5, P1-5, P1-8, P1-9, HTTP API Extractor.
 
-### Milestone 7 — HTTP lifecycle + documentation beta audit
+### Milestone 7 — Final readiness review + version strategy
 
-- **Objective:** Adapter `on`/`destroy` (or freeze without them). Docs/examples for `@beta`, cancellation, stats, version.
-- **Areas:** HTTP packages, `docs/**`, `README.md`, `CHANGELOG.md`.
-- **Exit:** P1-5, P1-10, P1-13.
-- **Type:** Coding + docs
-- **Effort:** S–M
+- **Status:** Complete on this review (docs only; no version bump).
+- **Exit:** P0 re-audit PASS; version / dist-tag / Gemini / publish-order decisions in `BETA_RELEASE_PLAN.md`.
+- **Verdict:** **READY FOR BETA RELEASE PREP**.
 
-### Milestone 8 — Beta readiness verification + release prep
+### Milestone 8 — Beta release prep + publish
 
-- **Objective:** Tick every beta checkbox. Align Gemini version. Prepare `--tag beta` without moving `latest`. No publish in this milestone until a human says so.
-- **Areas:** versions, CHANGELOG, pack, clean consumer.
-- **Exit:** All beta exit criteria checked; recommendation to publish or not.
-- **Type:** Review + release prep
+- **Objective:** Bump to `0.2.0-beta.1` / `0.1.0-beta.1`, update `@beta` install docs, run the 27-item release gate, publish `--tag beta`, verify from the public registry.
+- **Do not** move `latest`. Do not publish until a human authorizes it.
+- **Type:** Release prep + execution
 - **Effort:** M
 
 ---
 
 ## Final Verdict
 
-**B. READY AFTER SMALL HARDENING PASS**
+**A. READY FOR BETA RELEASE PREP**
 
-The architecture does not block beta. Core policies, LLM streaming (including the alpha.4 commit fix), documentation, and the 598-test baseline are sufficient **capability**.
-
-Beta is still blocked by a **bounded** honesty and DX program:
-
-1. HTTP caller cancellation (real semantic gap on three published entry points).
-2. Public API freeze, including silent `deadlineMs`, empty `stats()` maps, and `RESILI_VERSION`.
-3. Repeatable pack/consumer/Node gates that today live only in release folklore.
-
-That is more than a docs tweak and less than a rewrite. Do not expand beta to Responses API, tools, distributed state, or dashboards.
-
-**Do not tag beta from current `main` as-is.**
+No open P0 correctness, API honesty, or packaging blockers. Remaining work is version bumps, `@beta` docs, publish with `--tag beta`, and public-registry verification — see [`BETA_RELEASE_PLAN.md`](./BETA_RELEASE_PLAN.md).
 
 ---
 
-## Audit trail (this document)
+## Audit trail (Milestone 7)
 
-| Item                   | Finding                                                                 |
-| ---------------------- | ----------------------------------------------------------------------- |
-| Branch                 | `main`                                                                  |
-| HEAD                   | `cf1f224d053cb1000541cfaa4727e7be3db3a5df`                              |
-| Working tree           | Clean at audit                                                          |
-| HTTP cancellation      | **P0** — `execute` without `ContextInit`; signal overwritten            |
-| `timeout.deadlineMs`   | Validated, unused — **P0 to reject or remove**                          |
-| `RESILI_VERSION`       | `"0.0.0"` — **P1 fix**                                                  |
-| `stats()` / `health()` | Totals live; policy maps always empty — **P1 honesty**                  |
-| Dist-tags              | `alpha` current; `latest` = `0.1.0-alpha.1` — keep `latest` off beta    |
-| LLM classifications    | 12 names including `budget`, `content_policy`, `context_limit_exceeded` |
-| CI Node                | 22 only                                                                 |
-| API Extractor          | Core only; forgotten-export warnings present                            |
+| Item                  | Finding                                                    |
+| --------------------- | ---------------------------------------------------------- |
+| Branch                | `main`                                                     |
+| HEAD                  | `4d25ac9ce948fc89b562490f99d50b56b9a2ec88`                 |
+| Working tree at audit | Clean before doc edits                                     |
+| Tests                 | 641 / 42                                                   |
+| P0 blockers           | None                                                       |
+| Version strategy      | Family lines: core/HTTP `0.2.0-beta.1`, LLM `0.1.0-beta.1` |
+| Dist-tags             | Publish `--tag beta`; leave `latest`                       |
+| Gemini                | Align to `0.1.0-beta.1` at cut                             |
