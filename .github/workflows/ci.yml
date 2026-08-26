@@ -34,8 +34,15 @@ jobs:
           node-version: ${{ matrix.node }}
           cache: pnpm
 
+      # Package engines remain >=20. Root release tooling (semantic-release@25)
+      # requires Node 22+, so Node 20 installs must relax engine-strict only.
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: |
+          if [ "${{ matrix.node }}" = "20" ]; then
+            pnpm install --frozen-lockfile --config.engine-strict=false
+          else
+            pnpm install --frozen-lockfile
+          fi
 
       - name: Format
         run: pnpm format
@@ -83,7 +90,24 @@ jobs:
           cache: pnpm
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: |
+          if [ "${{ matrix.node }}" = "20" ]; then
+            pnpm install --frozen-lockfile --config.engine-strict=false
+          else
+            pnpm install --frozen-lockfile
+          fi
 
       - name: Packed package and external consumer gate
         run: pnpm pack:check
+
+  # Branch protection still requires a check named exactly "Validate".
+  ci-gate:
+    name: Validate
+    needs: [validate, packed-consumer]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Require Node matrix jobs
+        run: |
+          test "${{ needs.validate.result }}" = "success"
+          test "${{ needs.packed-consumer.result }}" = "success"
