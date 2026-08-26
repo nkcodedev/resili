@@ -8,22 +8,72 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
-### Changed
+## [Beta.1] - 2026-08-26
 
-- `@resili/core` public contract honesty: `timeout.deadlineMs` is rejected; `RetryOptions.jitter` is `"none"` only; `idempotentOnly` is not a public field; `stats()` is totals-only; `health()` no longer claims circuit/bulkhead knowledge; `RESILI_VERSION` is generated from `package.json` (tsup/Vitest) so packed ESM and CJS match; `ResiliConfig.metrics` / `Builder.withMetrics` inject policy metrics. Core `tsc` emit is `tsbuild/` so it does not overwrite the tsup `dist` bundle.
-- `@resili/llm` `CreateLlmClientOptions` omits Core `metrics`; LLM `metrics` records `resili_llm_*` only. LLM and provider packages emit `tsc` to `tsbuild/` so typecheck cannot overwrite packed ESM.
-- HTTP adapters (`fetch`, `axios`, `undici`) emit `tsc` to `tsbuild/` the same way. `createFetch` / `createAxios` / `createUndici` expose Core `on` / `destroy` without leaking `Client`. `pnpm pack:check` packs with pnpm, forbids workspace/file/link leaks and unsafe tarball paths, and runs a fresh external ESM+CJS consumer (Node 20 and 22 in CI). `pnpm api:check` covers all eight publishable packages.
+First public Beta cut. Publish with `--tag beta`. The npm `latest` tag is **not** moved.
+
+### Versions
+
+| Family    | Packages                                                      | Version        |
+| --------- | ------------------------------------------------------------- | -------------- |
+| Core/HTTP | `@resili/core`, `-fetch`, `-axios`, `-undici`                 | `0.2.0-beta.1` |
+| LLM       | `@resili/llm`, `-llm-openai`, `-llm-anthropic`, `-llm-gemini` | `0.1.0-beta.1` |
+
+Gemini is intentionally aligned with the rest of the LLM family at `0.1.0-beta.1`.
+
+### Core
+
+- Public API honesty hardening for Beta freeze
+- `RESILI_VERSION` reports the real `@resili/core` package version (ESM and CJS)
+- `stats()` is totals-only; `health()` does not claim live circuit/bulkhead knowledge
+- `timeout.deadlineMs` rejected; use context `deadline` / `deadlineMs` for overall bounds
+- `RetryOptions.jitter` narrowed to `"none"`; `idempotentOnly` is not a public field
+- `ResiliConfig.metrics` / `Builder.withMetrics` inject policy metrics
+- `tsc` emit to `tsbuild/` so typecheck cannot overwrite the tsup `dist` bundle
+- Cross-policy interaction coverage for critical pairs (retry×timeout, breaker, cache, dedupe, hedge, fallback)
+
+### HTTP
+
+- Caller `AbortSignal` support on fetch / axios / undici (composed into Core execution)
+- Fetch / Axios / Undici public API freeze with API Extractor reports
+- Additive `on()` / `destroy()` lifecycle without exposing full `Client`
+- Packaging hardening: `tsbuild/` typecheck output, packed-consumer gates
+
+### LLM
+
+- `generate()`, pull-through `stream()`, and `result()`
+- Streaming commit semantics: post-commit timeout does not start another generation
+- Budget Guard, pricing, and usage accounting
+- OpenAI Chat Completions, Anthropic Messages, Gemini `@google/genai` adapters
+- Provider SDK retries disabled (`maxRetries: 0` / `attempts: 1`)
+
+### Release engineering
+
+- API Extractor coverage for all eight publishable packages
+- Node 20 and Node 22 CI (Validate + packed consumer)
+- `pnpm pack:check`: pack rewrite, workspace/file/link leak check, artifact safety, fresh ESM+CJS consumer
+- Exactly one resolved `@resili/core` and `@resili/llm` in the packed consumer
+
+### Install
+
+```bash
+npm install @resili/core@beta
+npm install @resili/llm@beta @resili/llm-openai@beta openai
+```
+
+### Known Beta limitations
+
+- Beta APIs may still receive bug fixes; this is not a stable `1.0` / `latest` guarantee
+- Budget Guard and policy state are process-local (no distributed implementation)
+- No TTFB or idle/chunk streaming timeouts
+- No tools / function calling, multimodal, embeddings, or OpenAI Responses API in this cut
+- HTTP status codes are not classified as failures by default
+- The npm `latest` dist-tag remains unchanged (still an early alpha)
 
 ### Documentation
 
-- Consolidated `docs/` into a topic-based structure (`getting-started/`, `core/`, `http/`, `llm/`, `providers/`, `observability/`, `architecture/`, `reference/`, `releases/`) with `docs/README.md` as the navigation home.
-- Retired the pre-implementation planning stubs `docs/01-project-overview.md` … `docs/10-release.md` and `docs/roadmap.md`, whose contents described an API and feature set that was never shipped. `docs/ARCHITECTURE.md` §16 now indexes the current structure.
-- Rewrote the root `README.md` around the current package inventory, per-line alpha versions, and quick starts for core, fetch, axios, undici, `generate()`, and `stream()`.
-- Documented every shipped core policy individually, including `dedupe` and `hedge`, which had no user-facing documentation.
-- Added dedicated pages for the policy pipeline, execution context, cancellation, LLM streaming and its commit point, Budget Guard, pricing, usage, the error model, events, metrics, and telemetry/privacy.
-- Corrected stale claims: `circuitBreaker.failureRateThreshold` is a percentage (`50`), not a fraction (`0.5`); the rate limiter implements both `reject` and `wait` modes, and `maxWaitMs` is required for one and rejected for the other; `@resili/core` config accepts `cache`, `dedupe`, and `hedge`; HTTP adapters replace the caller's request signal and expose no per-call options, so caller-initiated cancellation is not available through them; install commands need the `@alpha` dist-tag because `latest` still points at `0.1.0-alpha.1`.
-- Added `docs/releases/BETA_HTTP_API_REVIEW.md` (HTTP freeze candidate: YES for fetch, axios, and undici).
-- Milestone 7: `docs/releases/BETA_RELEASE_PLAN.md` records first-beta version strategy (family lines `0.2.0-beta.1` / `0.1.0-beta.1`), Gemini alignment, `--tag beta` without moving `latest`, publish order, and release/registry gates. No versions bumped in that milestone.
+- Beta status and release plan docs; install guides teach `@beta`
+- Prior alpha hardening notes moved into this Beta.1 entry from Unreleased
 
 ## [LLM streaming timeout fix] - 2026-08-25
 

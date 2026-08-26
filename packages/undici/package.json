@@ -1,6 +1,6 @@
 {
   "name": "@resili/undici",
-  "version": "0.2.0-alpha.3",
+  "version": "0.2.0-beta.1",
   "description": "Undici-compatible adapter for the Resili resilience toolkit.",
   "type": "module",
   "license": "MIT",

@@ -116,10 +116,10 @@ Publish in dependency order. HTTP adapters may run in parallel after Core. Provi
 Every publish uses:
 
 ```bash
-npm publish --access public --tag beta
+pnpm publish --access public --tag beta --no-git-checks
 ```
 
-Do **not** use the default tag. Do **not** move `latest`.
+Do **not** use the default tag. Do **not** move `latest`. Do **not** use `npm publish` for this cut.
 
 ---
 

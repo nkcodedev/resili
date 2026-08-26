@@ -2,17 +2,17 @@
 
 > OpenAI Chat Completions adapter for the Resili LLM foundation.
 
-**Public alpha.** This package is the first provider adapter for [`@resili/llm`](../llm/README.md). It is **not** an OpenAI SDK replacement and not an agent framework.
+**Public beta.** This package is the first provider adapter for [`@resili/llm`](../llm/README.md). It is **not** an OpenAI SDK replacement and not an agent framework.
 
 You create the official `openai` client. Resili never stores API keys and never contacts a Resili service.
 
 ## Installation
 
-Install Resili packages from the `alpha` dist-tag — `latest` still points at an early `0.1.0-alpha.1`
-build. The current release is `0.1.0-alpha.4`; see [versioning](../../docs/releases/versioning.md).
+Install Resili packages from the `beta` dist-tag — `latest` still points at an early `0.1.0-alpha.1`
+build. The current release is `0.1.0-beta.1`; see [versioning](../../docs/releases/versioning.md).
 
 ```bash
-pnpm add @resili/core@alpha @resili/llm@alpha @resili/llm-openai@alpha openai
+pnpm add @resili/core@beta @resili/llm@beta @resili/llm-openai@beta openai
 ```
 
 Node.js 20 or newer is required for Resili. The official `openai` SDK **v7** declares `node >= 22`. Use SDK v4–v6 on Node 20, or Node 22+ with v7.
@@ -146,7 +146,7 @@ Do not hard-code vendor prices here. Example USD amounts in this README are **il
 - Events and metrics come from `@resili/llm` and do not include prompts or completions.
 - Normalized error messages are classification text only.
 
-## Alpha limitations
+## Beta limitations
 
 - Chat Completions only (no Responses API, Assistants, embeddings, or images). Unary `generate()` and pull-through `stream()` are supported. Streaming reads `choices[0]` only.
 - Single user message from `LlmRequest.input`

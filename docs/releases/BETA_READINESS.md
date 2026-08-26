@@ -1,24 +1,23 @@
 # Resili Beta Readiness
 
-**Status:** Milestone 7 complete — **READY FOR BETA RELEASE PREP**. See [`BETA_RELEASE_PLAN.md`](./BETA_RELEASE_PLAN.md).
+**Status:** Milestone 8 — **BETA RELEASE PREP** on `release/beta.1`. See [`BETA_RELEASE_PLAN.md`](./BETA_RELEASE_PLAN.md) and [`beta-status.md`](./beta-status.md).
 
-**Audited against:** `main` @ `4d25ac9ce948fc89b562490f99d50b56b9a2ec88` (Milestone 6 merged)
+**Audited against:** `main` @ `6a04616711900f7ba9be47035ad8669e45070365` (Milestone 7 docs merged)
 
 **Test baseline (Milestone 7):** 641 tests / 42 files
 
-This document is the authoritative beta readiness record. Source, tests, and CI override older unchecked boxes when they disagree. It does not bump versions, publish, or tag.
+This document is the authoritative beta readiness record. Source, tests, and CI override older unchecked boxes when they disagree. It does not publish or tag.
 
 ---
 
 ## Current Status
 
-Resili is still a **public alpha** on npm until the first `--tag beta` publish. Freeze candidates and packaging gates are complete.
+Workspace versions are on the first Beta cut. npm still serves historical `alpha` / stale `latest` until `--tag beta` publish completes.
 
-| Line        | Packages                                       | Workspace version | npm `alpha`     | npm `latest` (stale) |
-| ----------- | ---------------------------------------------- | ----------------- | --------------- | -------------------- |
-| Core + HTTP | `@resili/core`, `-fetch`, `-axios`, `-undici`  | `0.2.0-alpha.3`   | `0.2.0-alpha.3` | `0.1.0-alpha.1`      |
-| LLM         | `@resili/llm`, `-llm-openai`, `-llm-anthropic` | `0.1.0-alpha.4`   | `0.1.0-alpha.4` | `0.1.0-alpha.1`      |
-|             | `@resili/llm-gemini`                           | `0.1.0-alpha.3`   | `0.1.0-alpha.3` | `0.1.0-alpha.1`      |
+| Line        | Packages                                                      | Workspace version | npm `alpha` (historical) | npm `latest` (stale) |
+| ----------- | ------------------------------------------------------------- | ----------------- | ------------------------ | -------------------- |
+| Core + HTTP | `@resili/core`, `-fetch`, `-axios`, `-undici`                 | `0.2.0-beta.1`    | `0.2.0-alpha.3`          | `0.1.0-alpha.1`      |
+| LLM         | `@resili/llm`, `-llm-openai`, `-llm-anthropic`, `-llm-gemini` | `0.1.0-beta.1`    | see versioning.md        | `0.1.0-alpha.1`      |
 
 **What is already true**
 
@@ -26,17 +25,17 @@ Resili is still a **public alpha** on npm until the first `--tag beta` publish. 
 - Retry, timeout, circuit breaker, rate limiter, bulkhead, cache, fallback, dedupe, and hedge are implemented and unit-tested.
 - HTTP adapters are thin, injected (except fetch’s global default), ESM+CJS, Node `>=20`, with caller `AbortSignal` cancellation and `on` / `destroy`.
 - LLM `generate()` and `stream()` exist for OpenAI, Anthropic, and Gemini. Provider SDK retries are disabled.
-- Streaming commit point is enforced as of `@resili/llm@0.1.0-alpha.4` (post-commit timeout does not retry).
+- Streaming commit point is enforced (post-commit timeout does not retry).
 - API Extractor reports exist for all eight publishable packages; freeze records say YES for Core, HTTP, and LLM/providers.
 - `pnpm pack:check` proves packed metadata, artifact safety, one Core, one LLM, ESM+CJS, HTTP cancel, LLM generate/stream, post-commit timeout, and pre-commit retry.
 - CI Validate + Packed consumer run on Node 20 and Node 22; required gate job named `Validate`.
+- Install docs teach `@beta`. Gemini is aligned at `0.1.0-beta.1`.
 
 **What is not yet true**
 
-- No `@beta` dist-tag has been published.
-- Package versions have not been bumped to `*.beta.1`.
-- Install docs still teach `@alpha` until the release-prep branch updates them.
-- Gemini remains one alpha patch behind until the coordinated beta cut aligns it to `0.1.0-beta.1`.
+- No `@beta` dist-tag has been published to the public registry.
+- Git tag `beta.1` / GitHub prerelease have not been created.
+- Standalone landing copy may still say Public Alpha until a post-publish website update.
 
 **Packaging (Milestone 6)**
 
@@ -45,7 +44,7 @@ Resili is still a **public alpha** on npm until the first `--tag beta` publish. 
 - CI runs Validate + Packed consumer on **Node 20 and Node 22**. `pnpm api:check` covers all eight packages.
 - Node 20 CI installs with `--config.engine-strict=false` because root `semantic-release@25` requires Node 22+. Published packages still declare `engines.node: ">=20"`; the packed-consumer job still runs on Node 20.
 
-**Verdict in one line:** no P0 blockers remain; first beta is a version-bump + `--tag beta` publish against [`BETA_RELEASE_PLAN.md`](./BETA_RELEASE_PLAN.md).
+**Verdict in one line:** no P0 blockers remain; publish with `--tag beta` per [`BETA_RELEASE_PLAN.md`](./BETA_RELEASE_PLAN.md) after commit.
 
 ---
 
@@ -74,16 +73,16 @@ Stable **v1.0** is a later bar: real external usage, proven API stability throug
 
 All eight packages: `type: module`, dual `exports` (`import` / `require` / `types`), `engines.node: ">=20"`, `files: ["dist", "README.md", "LICENSE"]`, `publishConfig.access: public`.
 
-| Package                 | Version         | Purpose                                                                | Runtime deps                   | Optional peers                | ESM/CJS | Alpha status                         |
-| ----------------------- | --------------- | ---------------------------------------------------------------------- | ------------------------------ | ----------------------------- | ------- | ------------------------------------ |
-| `@resili/core`          | `0.2.0-alpha.3` | Context, pipeline, 9 policies, events, metrics, errors                 | none                           | —                             | Yes     | Current core/HTTP line               |
-| `@resili/fetch`         | `0.2.0-alpha.3` | fetch-compatible wrapper                                               | `@resili/core` (`workspace:*`) | —                             | Yes     | Current                              |
-| `@resili/axios`         | `0.2.0-alpha.3` | axios-compatible wrapper; injected implementation                      | `@resili/core` (`workspace:*`) | none (structural; not a peer) | Yes     | Current                              |
-| `@resili/undici`        | `0.2.0-alpha.3` | undici-compatible `request` wrapper; injected implementation           | `@resili/core` (`workspace:*`) | none (structural; not a peer) | Yes     | Current                              |
-| `@resili/llm`           | `0.1.0-alpha.4` | Provider-neutral LLM client, usage, pricing, Budget Guard, telemetry   | `@resili/core` (`workspace:*`) | —                             | Yes     | Current LLM line                     |
-| `@resili/llm-openai`    | `0.1.0-alpha.4` | Chat Completions unary + stream; `maxRetries: 0`                       | `@resili/core`, `@resili/llm`  | `openai >=4.0.0`              | Yes     | Current                              |
-| `@resili/llm-anthropic` | `0.1.0-alpha.4` | Messages unary + stream; `maxRetries: 0`                               | `@resili/core`, `@resili/llm`  | `@anthropic-ai/sdk >=0.20.0`  | Yes     | Current                              |
-| `@resili/llm-gemini`    | `0.1.0-alpha.3` | `@google/genai` generateContent / generateContentStream; `attempts: 1` | `@resili/core`, `@resili/llm`  | `@google/genai >=1.0.0`       | Yes     | Current for Gemini; one patch behind |
+| Package                 | Version        | Purpose                                                                | Runtime deps                   | Optional peers                | ESM/CJS | Status                |
+| ----------------------- | -------------- | ---------------------------------------------------------------------- | ------------------------------ | ----------------------------- | ------- | --------------------- |
+| `@resili/core`          | `0.2.0-beta.1` | Context, pipeline, 9 policies, events, metrics, errors                 | none                           | —                             | Yes     | Beta.1 Core/HTTP line |
+| `@resili/fetch`         | `0.2.0-beta.1` | fetch-compatible wrapper                                               | `@resili/core` (`workspace:*`) | —                             | Yes     | Beta.1                |
+| `@resili/axios`         | `0.2.0-beta.1` | axios-compatible wrapper; injected implementation                      | `@resili/core` (`workspace:*`) | none (structural; not a peer) | Yes     | Beta.1                |
+| `@resili/undici`        | `0.2.0-beta.1` | undici-compatible `request` wrapper; injected implementation           | `@resili/core` (`workspace:*`) | none (structural; not a peer) | Yes     | Beta.1                |
+| `@resili/llm`           | `0.1.0-beta.1` | Provider-neutral LLM client, usage, pricing, Budget Guard, telemetry   | `@resili/core` (`workspace:*`) | —                             | Yes     | Beta.1 LLM line       |
+| `@resili/llm-openai`    | `0.1.0-beta.1` | Chat Completions unary + stream; `maxRetries: 0`                       | `@resili/core`, `@resili/llm`  | `openai >=4.0.0`              | Yes     | Beta.1                |
+| `@resili/llm-anthropic` | `0.1.0-beta.1` | Messages unary + stream; `maxRetries: 0`                               | `@resili/core`, `@resili/llm`  | `@anthropic-ai/sdk >=0.20.0`  | Yes     | Beta.1                |
+| `@resili/llm-gemini`    | `0.1.0-beta.1` | `@google/genai` generateContent / generateContentStream; `attempts: 1` | `@resili/core`, `@resili/llm`  | `@google/genai >=1.0.0`       | Yes     | Beta.1 (aligned)      |
 
 Packed publishes pin `workspace:*` to the version from the same release run. Mixing packages across runs in one line is unsupported.
 

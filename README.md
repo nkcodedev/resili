@@ -2,7 +2,7 @@
 
 > A TypeScript-first resilience toolkit for Node.js applications, HTTP clients, and LLM providers.
 
-[![version](https://img.shields.io/badge/alpha-0.2.0--alpha.3-blue.svg)](docs/releases/versioning.md)
+[![version](https://img.shields.io/badge/beta-0.2.0--beta.1-blue.svg)](docs/releases/versioning.md)
 [![license](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![typescript](https://img.shields.io/badge/types-TypeScript-blue.svg)](#)
 [![node](https://img.shields.io/badge/node-%3E%3D20-brightgreen.svg)](packages/core/package.json)
@@ -42,54 +42,53 @@ const response = await users.call("42");
 
 ## Status
 
-Alpha. Published on the npm `alpha` dist-tag, with the full test suite, type-checking, API-report
-verification, and public-registry consumer verification green.
+Beta. Prepared for the npm `beta` dist-tag, with the full test suite, type-checking, API-report
+verification, and packed-consumer gates green.
 
 Suitable for evaluation, integration testing, and early adoption where you can pin exact versions.
-Not yet claiming API stability or semver guarantees. See
-[Alpha status](docs/releases/alpha-status.md).
+APIs are expected to be substantially stable; this is not yet a semver-stable `latest` / `1.0`
+guarantee. See [Beta status](docs/releases/beta-status.md).
 
 ## Packages
 
 ### Core
 
-| Package                         | Purpose                                                                                | Alpha version   | Status |
-| ------------------------------- | -------------------------------------------------------------------------------------- | --------------- | ------ |
-| [`@resili/core`](packages/core) | Runtime: context, pipeline, nine policies, events, metrics, errors. Zero dependencies. | `0.2.0-alpha.3` | Alpha  |
+| Package                         | Purpose                                                                                | Beta version   | Status |
+| ------------------------------- | -------------------------------------------------------------------------------------- | -------------- | ------ |
+| [`@resili/core`](packages/core) | Runtime: context, pipeline, nine policies, events, metrics, errors. Zero dependencies. | `0.2.0-beta.1` | Beta   |
 
 ### HTTP
 
-| Package                             | Purpose                                             | Alpha version   | Status |
-| ----------------------------------- | --------------------------------------------------- | --------------- | ------ |
-| [`@resili/fetch`](packages/fetch)   | fetch-compatible adapter                            | `0.2.0-alpha.3` | Alpha  |
-| [`@resili/axios`](packages/axios)   | axios-compatible adapter (injected implementation)  | `0.2.0-alpha.3` | Alpha  |
-| [`@resili/undici`](packages/undici) | undici-compatible adapter (injected implementation) | `0.2.0-alpha.3` | Alpha  |
+| Package                             | Purpose                                             | Beta version   | Status |
+| ----------------------------------- | --------------------------------------------------- | -------------- | ------ |
+| [`@resili/fetch`](packages/fetch)   | fetch-compatible adapter                            | `0.2.0-beta.1` | Beta   |
+| [`@resili/axios`](packages/axios)   | axios-compatible adapter (injected implementation)  | `0.2.0-beta.1` | Beta   |
+| [`@resili/undici`](packages/undici) | undici-compatible adapter (injected implementation) | `0.2.0-beta.1` | Beta   |
 
 ### LLM
 
-| Package                                           | Purpose                                                          | Alpha version   | Status |
-| ------------------------------------------------- | ---------------------------------------------------------------- | --------------- | ------ |
-| [`@resili/llm`](packages/llm)                     | Provider-neutral client, usage, pricing, Budget Guard, telemetry | `0.1.0-alpha.4` | Alpha  |
-| [`@resili/llm-openai`](packages/llm-openai)       | OpenAI Chat Completions — unary + streaming                      | `0.1.0-alpha.4` | Alpha  |
-| [`@resili/llm-anthropic`](packages/llm-anthropic) | Anthropic Messages — unary + streaming                           | `0.1.0-alpha.4` | Alpha  |
-| [`@resili/llm-gemini`](packages/llm-gemini)       | Google Gemini (`@google/genai`) — unary + streaming              | `0.1.0-alpha.3` | Alpha  |
+| Package                                           | Purpose                                                          | Beta version   | Status |
+| ------------------------------------------------- | ---------------------------------------------------------------- | -------------- | ------ |
+| [`@resili/llm`](packages/llm)                     | Provider-neutral client, usage, pricing, Budget Guard, telemetry | `0.1.0-beta.1` | Beta   |
+| [`@resili/llm-openai`](packages/llm-openai)       | OpenAI Chat Completions — unary + streaming                      | `0.1.0-beta.1` | Beta   |
+| [`@resili/llm-anthropic`](packages/llm-anthropic) | Anthropic Messages — unary + streaming                           | `0.1.0-beta.1` | Beta   |
+| [`@resili/llm-gemini`](packages/llm-gemini)       | Google Gemini (`@google/genai`) — unary + streaming              | `0.1.0-beta.1` | Beta   |
 
-The two version lines move independently. `@resili/llm-gemini` at `alpha.3` is its current release —
-see [Versioning](docs/releases/versioning.md).
+The two version lines move independently. See [Versioning](docs/releases/versioning.md).
 
 ## Installation
 
-Install with the `@alpha` tag. `latest` still points at `0.1.0-alpha.1`, an early build that predates
-streaming and several policies.
+Install with the `@beta` tag. `latest` still points at `0.1.0-alpha.1`, an early build that predates
+streaming and several policies. Plain `npm install @resili/core` does **not** get Beta.
 
 ```bash
-npm install @resili/core@alpha
+npm install @resili/core@beta
 
 # with an HTTP adapter
-npm install @resili/core@alpha @resili/fetch@alpha
+npm install @resili/core@beta @resili/fetch@beta
 
 # with LLM support
-npm install @resili/core@alpha @resili/llm@alpha @resili/llm-openai@alpha openai
+npm install @resili/core@beta @resili/llm@beta @resili/llm-openai@beta openai
 ```
 
 Node 20 or newer. Every package ships ESM and CommonJS builds with TypeScript declarations.
@@ -280,7 +279,7 @@ budget. → [Policy ordering](docs/core/policy-ordering.md)
 | [Observability](docs/observability/events.md)           | Events, metrics, telemetry and privacy                 |
 | [Architecture](docs/architecture/overview.md)           | Pipeline internals, classification, package boundaries |
 | [Reference](docs/reference/packages.md)                 | Packages, configuration, errors                        |
-| [Release status](docs/releases/alpha-status.md)         | What is implemented, known limitations, versioning     |
+| [Beta status](docs/releases/beta-status.md)             | Current Beta stage, versions, limitations              |
 
 Runnable examples live in [`examples/`](examples). Generated API documentation is in `docs/api/`
 (`pnpm docs`).

@@ -11,22 +11,22 @@ For the full project overview, see the [repository README](../../README.md).
 
 ## Installation
 
-Install from the `alpha` dist-tag — `latest` still points at an early `0.1.0-alpha.1` build.
+Install from the `beta` dist-tag — `latest` still points at an early `0.1.0-alpha.1` build.
 
 ```bash
-pnpm add @resili/core@alpha
+pnpm add @resili/core@beta
 ```
 
 ```bash
-npm install @resili/core@alpha
+npm install @resili/core@beta
 ```
 
 ```bash
-yarn add @resili/core@alpha
+yarn add @resili/core@beta
 ```
 
 Resili targets Node.js 20 or newer and ships ESM, CommonJS, and TypeScript declarations. The current
-release is `0.2.0-alpha.3`; see [versioning](../../docs/releases/versioning.md).
+release is `0.2.0-beta.1`; see [versioning](../../docs/releases/versioning.md).
 
 ## Quick Start
 

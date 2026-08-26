@@ -2,14 +2,14 @@
 
 A TypeScript-first resilience toolkit for Node.js applications, HTTP clients, and LLM providers.
 
-All packages are currently published on the npm `alpha` dist-tag. Install with `@alpha` — `latest`
+All packages are prepared for the npm `beta` dist-tag. Install with `@beta` — `latest`
 still points at an early build. See [Versioning](./releases/versioning.md).
 
-| Line        | Packages                                        | Current         |
-| ----------- | ----------------------------------------------- | --------------- |
-| Core + HTTP | `@resili/core`, `-fetch`, `-axios`, `-undici`     | `0.2.0-alpha.3` |
-| LLM         | `@resili/llm`, `-llm-openai`, `-llm-anthropic`    | `0.1.0-alpha.4` |
-|             | `@resili/llm-gemini`                             | `0.1.0-alpha.3` |
+| Line        | Packages                                        | Current        |
+| ----------- | ----------------------------------------------- | -------------- |
+| Core + HTTP | `@resili/core`, `-fetch`, `-axios`, `-undici`     | `0.2.0-beta.1` |
+| LLM         | `@resili/llm`, `-llm-openai`, `-llm-anthropic`    | `0.1.0-beta.1` |
+|             | `@resili/llm-gemini`                             | `0.1.0-beta.1` |
 
 ## Start here
 
@@ -106,7 +106,8 @@ Deeper specifications: [ARCHITECTURE.md](./ARCHITECTURE.md),
 
 ## Release status
 
-- [Alpha status](./releases/alpha-status.md) — what is implemented, what the known limitations are
+- [Alpha status](./releases/alpha-status.md) — historical alpha stage and product limitations
+- [Beta status](./releases/beta-status.md)
 - [Beta readiness](./releases/BETA_READINESS.md)
 - [Beta release plan](./releases/BETA_RELEASE_PLAN.md)
 - [Core API freeze review](./releases/BETA_API_REVIEW.md)
