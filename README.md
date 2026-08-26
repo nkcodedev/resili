@@ -78,17 +78,18 @@ The two version lines move independently. See [Versioning](docs/releases/version
 
 ## Installation
 
-Install with the `@beta` tag. `latest` still points at `0.1.0-alpha.1`, an early build that predates
-streaming and several policies. Plain `npm install @resili/core` does **not** get Beta.
+**Public Beta.** Beta 1 is the current public release. Plain installs resolve to Beta 1 (`latest` and
+`beta` currently both point at it). Historical `alpha` builds remain available under `@alpha`. This
+is not a stable `1.0` guarantee.
 
 ```bash
-npm install @resili/core@beta
+npm install @resili/core
 
 # with an HTTP adapter
-npm install @resili/core@beta @resili/fetch@beta
+npm install @resili/core @resili/fetch
 
 # with LLM support
-npm install @resili/core@beta @resili/llm@beta @resili/llm-openai@beta openai
+npm install @resili/core @resili/llm @resili/llm-openai openai
 ```
 
 Node 20 or newer. Every package ships ESM and CommonJS builds with TypeScript declarations.

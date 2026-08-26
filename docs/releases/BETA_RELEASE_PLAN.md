@@ -1,6 +1,8 @@
 # Resili Beta Release Plan
 
-**Status:** Milestone 7 decisions. Not a publish runbook execution log.
+**Status:** Historical plan. **Beta 1 is published.** `latest` and `beta` both resolve to Beta 1.
+See [`beta-status.md`](./beta-status.md) and [`versioning.md`](./versioning.md) for current install
+guidance. Sections below retain the pre-publish decisions for audit trail.
 
 **Audited against:** `main` @ `4d25ac9ce948fc89b562490f99d50b56b9a2ec88`
 

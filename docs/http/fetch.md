@@ -6,12 +6,12 @@ A fetch-compatible function backed by a Resili pipeline.
 Application → createFetch(...) → @resili/core → fetch implementation
 ```
 
-Current version: **`0.2.0-alpha.3`**. Depends only on `@resili/core`.
+Current version: **`0.2.0-beta.1`**. Depends only on `@resili/core`.
 
 ## Installation
 
 ```bash
-npm install @resili/core@alpha @resili/fetch@alpha
+npm install @resili/core @resili/fetch
 ```
 
 No peer dependency: the adapter defaults to `globalThis.fetch`, available natively on Node.js 20+.

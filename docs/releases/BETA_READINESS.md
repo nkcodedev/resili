@@ -1,23 +1,25 @@
 # Resili Beta Readiness
 
-**Status:** Milestone 8 — **BETA RELEASE PREP** on `release/beta.1`. See [`BETA_RELEASE_PLAN.md`](./BETA_RELEASE_PLAN.md) and [`beta-status.md`](./beta-status.md).
+**Status:** Beta 1 **published**. See [`beta-status.md`](./beta-status.md) and [`versioning.md`](./versioning.md).
 
-**Audited against:** `main` @ `6a04616711900f7ba9be47035ad8669e45070365` (Milestone 7 docs merged)
+**Audited against (prep):** `main` @ `6a04616711900f7ba9be47035ad8669e45070365` (Milestone 7 docs merged)
 
 **Test baseline (Milestone 7):** 641 tests / 42 files
 
-This document is the authoritative beta readiness record. Source, tests, and CI override older unchecked boxes when they disagree. It does not publish or tag.
+This document is the authoritative beta readiness record from the pre-publish hardening program.
+Source, tests, and CI override older unchecked boxes when they disagree.
 
 ---
 
 ## Current Status
 
-Workspace versions are on the first Beta cut. npm still serves historical `alpha` / stale `latest` until `--tag beta` publish completes.
+Beta 1 is live on the public npm registry. `latest` and `beta` both resolve to Beta 1. Historical
+`alpha` tags remain frozen on the final alpha line.
 
-| Line        | Packages                                                      | Workspace version | npm `alpha` (historical) | npm `latest` (stale) |
-| ----------- | ------------------------------------------------------------- | ----------------- | ------------------------ | -------------------- |
-| Core + HTTP | `@resili/core`, `-fetch`, `-axios`, `-undici`                 | `0.2.0-beta.1`    | `0.2.0-alpha.3`          | `0.1.0-alpha.1`      |
-| LLM         | `@resili/llm`, `-llm-openai`, `-llm-anthropic`, `-llm-gemini` | `0.1.0-beta.1`    | see versioning.md        | `0.1.0-alpha.1`      |
+| Line        | Packages                                                      | Published      | npm `alpha` (historical) |
+| ----------- | ------------------------------------------------------------- | -------------- | ------------------------ |
+| Core + HTTP | `@resili/core`, `-fetch`, `-axios`, `-undici`                 | `0.2.0-beta.1` | `0.2.0-alpha.3`          |
+| LLM         | `@resili/llm`, `-llm-openai`, `-llm-anthropic`, `-llm-gemini` | `0.1.0-beta.1` | see versioning.md        |
 
 **What is already true**
 
@@ -29,13 +31,13 @@ Workspace versions are on the first Beta cut. npm still serves historical `alpha
 - API Extractor reports exist for all eight publishable packages; freeze records say YES for Core, HTTP, and LLM/providers.
 - `pnpm pack:check` proves packed metadata, artifact safety, one Core, one LLM, ESM+CJS, HTTP cancel, LLM generate/stream, post-commit timeout, and pre-commit retry.
 - CI Validate + Packed consumer run on Node 20 and Node 22; required gate job named `Validate`.
-- Install docs teach `@beta`. Gemini is aligned at `0.1.0-beta.1`.
+- Gemini is aligned at `0.1.0-beta.1`.
+- Public registry verification for Beta 1 passed.
 
-**What is not yet true**
+**Follow-ups (non-blocking)**
 
-- No `@beta` dist-tag has been published to the public registry.
-- Git tag `beta.1` / GitHub prerelease have not been created.
-- Standalone landing copy may still say Public Alpha until a post-publish website update.
+- Standalone landing copy may still say Public Alpha until a website update.
+- Package README relative-link / install-wording polish for npm rendering.
 
 **Packaging (Milestone 6)**
 
@@ -44,7 +46,7 @@ Workspace versions are on the first Beta cut. npm still serves historical `alpha
 - CI runs Validate + Packed consumer on **Node 20 and Node 22**. `pnpm api:check` covers all eight packages.
 - Node 20 CI installs with `--config.engine-strict=false` because root `semantic-release@25` requires Node 22+. Published packages still declare `engines.node: ">=20"`; the packed-consumer job still runs on Node 20.
 
-**Verdict in one line:** no P0 blockers remain; publish with `--tag beta` per [`BETA_RELEASE_PLAN.md`](./BETA_RELEASE_PLAN.md) after commit.
+**Verdict in one line:** Beta 1 is published; install with plain `npm install @resili/core` (see [`versioning.md`](./versioning.md)).
 
 ---
 

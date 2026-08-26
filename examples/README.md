@@ -34,7 +34,7 @@ node example.mjs
 You can also install from npm instead of the local build:
 
 ```bash
-pnpm add @resili/core@alpha
+pnpm add @resili/core
 ```
 
 ## Credentials

@@ -1,18 +1,18 @@
 # Beta status
 
-**Stage: Beta.** Eight packages prepared for the npm `beta` dist-tag.
+**Stage: Beta.** Eight packages are published publicly. Beta 1 is the current release.
 
 | Line        | Packages                                                      | Version        |
 | ----------- | ------------------------------------------------------------- | -------------- |
 | Core + HTTP | `@resili/core`, `-fetch`, `-axios`, `-undici`                 | `0.2.0-beta.1` |
 | LLM         | `@resili/llm`, `-llm-openai`, `-llm-anthropic`, `-llm-gemini` | `0.1.0-beta.1` |
 
-Install with an explicit `@beta` tag. The `latest` tag remains on older alpha builds on purpose.
-See [Versioning](./versioning.md) and [Beta release plan](./BETA_RELEASE_PLAN.md).
+`latest` and `beta` currently both resolve to Beta 1. Historical `alpha` builds remain available.
+See [Versioning](./versioning.md).
 
 ```bash
-npm install @resili/core@beta
-npm install @resili/llm@beta @resili/llm-openai@beta openai
+npm install @resili/core
+npm install @resili/llm @resili/llm-openai openai
 ```
 
 ## What Beta means
@@ -25,7 +25,7 @@ npm install @resili/llm@beta @resili/llm-openai@beta openai
 
 ## What Beta does not mean
 
-- A stable `1.0` / semver-stable `latest` guarantee
+- A stable `1.0` guarantee
 - That every future feature is implemented
 - Distributed policy or Budget Guard state
 - Complete provider feature parity (tools, multimodal, embeddings, Responses API)

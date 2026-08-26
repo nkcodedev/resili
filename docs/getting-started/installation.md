@@ -10,23 +10,21 @@ Resili is published as independently versioned packages. Install only what you u
 
 ## Current release channel
 
-The recommended prerelease channel is the npm `beta` dist-tag. The `latest` tag still points at older
-`0.1.0-alpha.1`-era builds, so install with an explicit `@beta` (or an exact version). Plain
-`npm install @resili/core` does **not** install Beta. See
+**Public Beta.** Beta 1 is the current public release. Plain installs resolve to Beta 1 (`latest`
+and `beta` currently both point at it). Historical alpha builds remain available under `@alpha`.
+This is not a stable `1.0` guarantee — pin exact versions when you need reproducibility. See
 [Versioning and dist-tags](../releases/versioning.md) and [Beta status](../releases/beta-status.md).
 
 ```bash
-npm install @resili/core@beta
+npm install @resili/core
 ```
-
-Historical alpha builds remain available under `@alpha` for comparison installs.
 
 ## Core
 
 `@resili/core` has **zero runtime dependencies** and is the only required package.
 
 ```bash
-npm install @resili/core@beta
+npm install @resili/core
 ```
 
 ## HTTP adapters
@@ -36,9 +34,9 @@ library — `@resili/axios` and `@resili/undici` take an injected implementation
 extra to install unless your own code imports `axios` or `undici` directly.
 
 ```bash
-npm install @resili/core@beta @resili/fetch@beta
-npm install @resili/core@beta @resili/axios@beta
-npm install @resili/core@beta @resili/undici@beta
+npm install @resili/core @resili/fetch
+npm install @resili/core @resili/axios
+npm install @resili/core @resili/undici
 ```
 
 See [HTTP adapters overview](../http/overview.md).
@@ -49,7 +47,7 @@ See [HTTP adapters overview](../http/overview.md).
 SDK that **you** construct and own.
 
 ```bash
-npm install @resili/core@beta @resili/llm@beta
+npm install @resili/core @resili/llm
 ```
 
 Then add the adapter for your provider plus that provider's SDK. The SDK is an **optional peer
@@ -57,13 +55,13 @@ dependency**, so your package manager will not install it for you.
 
 ```bash
 # OpenAI
-npm install @resili/llm-openai@beta openai
+npm install @resili/llm-openai openai
 
 # Anthropic
-npm install @resili/llm-anthropic@beta @anthropic-ai/sdk
+npm install @resili/llm-anthropic @anthropic-ai/sdk
 
 # Google Gemini
-npm install @resili/llm-gemini@beta @google/genai
+npm install @resili/llm-gemini @google/genai
 ```
 
 | Adapter                 | Optional peer       | Range      |

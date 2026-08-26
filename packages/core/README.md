@@ -7,26 +7,28 @@
 context propagation, typed events, classification, metrics contracts, state contracts,
 and framework errors.
 
-For the full project overview, see the [repository README](../../README.md).
+For the full project overview, see the [repository README](https://github.com/nkcodedev/resili#readme).
 
 ## Installation
 
-Install from the `beta` dist-tag — `latest` still points at an early `0.1.0-alpha.1` build.
+**Public Beta.** Beta 1 is the current public release. Plain installs resolve to Beta 1 (`latest` and
+`beta` currently both point at it). Historical `alpha` builds remain available under `@alpha`. This
+is not a stable `1.0` guarantee.
 
 ```bash
-pnpm add @resili/core@beta
+pnpm add @resili/core
 ```
 
 ```bash
-npm install @resili/core@beta
+npm install @resili/core
 ```
 
 ```bash
-yarn add @resili/core@beta
+yarn add @resili/core
 ```
 
 Resili targets Node.js 20 or newer and ships ESM, CommonJS, and TypeScript declarations. The current
-release is `0.2.0-beta.1`; see [versioning](../../docs/releases/versioning.md).
+release is `0.2.0-beta.1`; see [versioning](https://github.com/nkcodedev/resili/blob/main/docs/releases/versioning.md).
 
 ## Quick Start
 
@@ -132,7 +134,7 @@ Supported config fields are:
 | `policies`       | Register custom policy factories.             |
 
 Unsupported config fields throw `ConfigurationError` when the client is built, not at request time.
-See the [configuration reference](../../docs/reference/configuration.md) for every option and default.
+See the [configuration reference](https://github.com/nkcodedev/resili/blob/main/docs/reference/configuration.md) for every option and default.
 
 ## Built-in Policies
 
@@ -356,19 +358,19 @@ Core modules are deliberately small:
 - No OpenTelemetry or Prometheus exporters are included in core.
 - HTTP status classification is not performed by adapter packages.
 
-The full list is in [alpha status](../../docs/releases/alpha-status.md).
+The full list is in [alpha status](https://github.com/nkcodedev/resili/blob/main/docs/releases/alpha-status.md).
 
 ## Documentation
 
-- [Documentation home](../../docs/README.md)
-- [Core overview](../../docs/core/overview.md) — client entry points and configuration
-- [All policies](../../docs/core/policies.md) — one page per policy
-- [Policy ordering](../../docs/core/policy-ordering.md) — the default pipeline and why order matters
-- [Execution context](../../docs/core/execution-context.md) · [Cancellation](../../docs/core/cancellation.md)
-- [Configuration reference](../../docs/reference/configuration.md) · [Error reference](../../docs/reference/errors.md)
-- [Events](../../docs/observability/events.md) · [Metrics](../../docs/observability/metrics.md)
-- Specifications: [Architecture](../../docs/ARCHITECTURE.md),
-  [API specification](../../docs/API_SPECIFICATION.md), [Internal design](../../docs/INTERNAL_DESIGN.md)
+- [Documentation home](https://github.com/nkcodedev/resili/blob/main/docs/README.md)
+- [Core overview](https://github.com/nkcodedev/resili/blob/main/docs/core/overview.md) — client entry points and configuration
+- [All policies](https://github.com/nkcodedev/resili/blob/main/docs/core/policies.md) — one page per policy
+- [Policy ordering](https://github.com/nkcodedev/resili/blob/main/docs/core/policy-ordering.md) — the default pipeline and why order matters
+- [Execution context](https://github.com/nkcodedev/resili/blob/main/docs/core/execution-context.md) · [Cancellation](https://github.com/nkcodedev/resili/blob/main/docs/core/cancellation.md)
+- [Configuration reference](https://github.com/nkcodedev/resili/blob/main/docs/reference/configuration.md) · [Error reference](https://github.com/nkcodedev/resili/blob/main/docs/reference/errors.md)
+- [Events](https://github.com/nkcodedev/resili/blob/main/docs/observability/events.md) · [Metrics](https://github.com/nkcodedev/resili/blob/main/docs/observability/metrics.md)
+- Specifications: [Architecture](https://github.com/nkcodedev/resili/blob/main/docs/ARCHITECTURE.md),
+  [API specification](https://github.com/nkcodedev/resili/blob/main/docs/API_SPECIFICATION.md), [Internal design](https://github.com/nkcodedev/resili/blob/main/docs/INTERNAL_DESIGN.md)
 
 ## Maintainer
 

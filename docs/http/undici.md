@@ -6,12 +6,12 @@ An undici-shaped `request` function backed by a Resili pipeline.
 Application → createUndici(...) → @resili/core → your undici request
 ```
 
-Current version: **`0.2.0-alpha.3`**. Depends only on `@resili/core`.
+Current version: **`0.2.0-beta.1`**. Depends only on `@resili/core`.
 
 ## Installation
 
 ```bash
-npm install @resili/core@alpha @resili/undici@alpha
+npm install @resili/core @resili/undici
 ```
 
 The package does **not** import `undici` and does not declare it as a peer dependency. It describes the

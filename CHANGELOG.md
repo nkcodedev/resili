@@ -10,7 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Beta.1] - 2026-08-26
 
-First public Beta cut. Publish with `--tag beta`. The npm `latest` tag is **not** moved.
+First public Beta cut. Published with `--tag beta`; `latest` now also resolves to Beta 1.
 
 ### Versions
 
@@ -56,23 +56,26 @@ Gemini is intentionally aligned with the rest of the LLM family at `0.1.0-beta.1
 
 ### Install
 
+Published with `--tag beta`. After publish, `latest` was also pointed at Beta 1, so plain installs
+resolve to this cut:
+
 ```bash
-npm install @resili/core@beta
-npm install @resili/llm@beta @resili/llm-openai@beta openai
+npm install @resili/core
+npm install @resili/llm @resili/llm-openai openai
 ```
 
 ### Known Beta limitations
 
-- Beta APIs may still receive bug fixes; this is not a stable `1.0` / `latest` guarantee
+- Beta APIs may still receive bug fixes; this is not a stable `1.0` guarantee
 - Budget Guard and policy state are process-local (no distributed implementation)
 - No TTFB or idle/chunk streaming timeouts
 - No tools / function calling, multimodal, embeddings, or OpenAI Responses API in this cut
 - HTTP status codes are not classified as failures by default
-- The npm `latest` dist-tag remains unchanged (still an early alpha)
+- `latest` and `beta` both resolve to Beta 1; historical `alpha` remains available under `@alpha`
 
 ### Documentation
 
-- Beta status and release plan docs; install guides teach `@beta`
+- Beta status and release plan docs; install guides teach plain `npm install` for Beta 1
 - Prior alpha hardening notes moved into this Beta.1 entry from Unreleased
 
 ## [LLM streaming timeout fix] - 2026-08-25

@@ -2,17 +2,18 @@
 
 > OpenAI Chat Completions adapter for the Resili LLM foundation.
 
-**Public beta.** This package is the first provider adapter for [`@resili/llm`](../llm/README.md). It is **not** an OpenAI SDK replacement and not an agent framework.
+**Public beta.** This package is the first provider adapter for [`@resili/llm`](https://github.com/nkcodedev/resili/blob/main/packages/llm/README.md). It is **not** an OpenAI SDK replacement and not an agent framework.
 
 You create the official `openai` client. Resili never stores API keys and never contacts a Resili service.
 
 ## Installation
 
-Install Resili packages from the `beta` dist-tag — `latest` still points at an early `0.1.0-alpha.1`
-build. The current release is `0.1.0-beta.1`; see [versioning](../../docs/releases/versioning.md).
+**Public Beta.** Beta 1 is the current public release. Plain installs resolve to Beta 1 (`latest` and
+`beta` currently both point at it). Historical `alpha` builds remain available under `@alpha`. This
+is not a stable `1.0` guarantee. The current release is `0.1.0-beta.1`; see [versioning](https://github.com/nkcodedev/resili/blob/main/docs/releases/versioning.md).
 
 ```bash
-pnpm add @resili/core@beta @resili/llm@beta @resili/llm-openai@beta openai
+pnpm add @resili/core @resili/llm @resili/llm-openai openai
 ```
 
 Node.js 20 or newer is required for Resili. The official `openai` SDK **v7** declares `node >= 22`. Use SDK v4–v6 on Node 20, or Node 22+ with v7.
@@ -154,17 +155,17 @@ Do not hard-code vendor prices here. Example USD amounts in this README are **il
 - Missing OpenAI `usage` becomes zero counts (the `LlmUsage` contract requires numbers; tokens are not estimated)
 
 The Responses API is **deferred**, not implemented. The full limitation list is in
-[alpha status](../../docs/releases/alpha-status.md).
+[alpha status](https://github.com/nkcodedev/resili/blob/main/docs/releases/alpha-status.md).
 
 ## Documentation
 
-- [OpenAI provider guide](../../docs/providers/openai.md) — mapping, streaming, errors, limitations
-- [LLM overview](../../docs/llm/overview.md) · [Streaming](../../docs/llm/streaming.md) ·
-  [Retries](../../docs/llm/retries.md)
-- [Budget Guard](../../docs/llm/budget-guard.md) · [Pricing](../../docs/llm/pricing.md) ·
-  [Errors](../../docs/llm/errors.md)
-- [Documentation home](../../docs/README.md) · [`@resili/llm` README](../llm/README.md)
-- Runnable examples: [`examples/llm-openai`](../../examples/llm-openai)
+- [OpenAI provider guide](https://github.com/nkcodedev/resili/blob/main/docs/providers/openai.md) — mapping, streaming, errors, limitations
+- [LLM overview](https://github.com/nkcodedev/resili/blob/main/docs/llm/overview.md) · [Streaming](https://github.com/nkcodedev/resili/blob/main/docs/llm/streaming.md) ·
+  [Retries](https://github.com/nkcodedev/resili/blob/main/docs/llm/retries.md)
+- [Budget Guard](https://github.com/nkcodedev/resili/blob/main/docs/llm/budget-guard.md) · [Pricing](https://github.com/nkcodedev/resili/blob/main/docs/llm/pricing.md) ·
+  [Errors](https://github.com/nkcodedev/resili/blob/main/docs/llm/errors.md)
+- [Documentation home](https://github.com/nkcodedev/resili/blob/main/docs/README.md) · [`@resili/llm` README](https://github.com/nkcodedev/resili/blob/main/packages/llm/README.md)
+- Runnable examples: [`examples/llm-openai`](https://github.com/nkcodedev/resili/tree/main/examples/llm-openai)
 
 ## License
 
