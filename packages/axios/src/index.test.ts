@@ -165,6 +165,39 @@ describe("createAxios", () => {
 
     await expect(axios.get("/users")).rejects.toBe(failure);
   });
+
+  it("subscribes to Core events and unsubscribes", async () => {
+    const axiosImplementation = createAxiosImplementation(() => Promise.resolve(RESPONSE));
+    const axios = createAxios({ axios: axiosImplementation });
+    const seen: string[] = [];
+    const unsubscribe = axios.on("RequestStarted", () => {
+      seen.push("start");
+    });
+
+    await axios.get("/users");
+    expect(seen).toEqual(["start"]);
+
+    unsubscribe();
+    await axios.get("/users");
+    expect(seen).toEqual(["start"]);
+  });
+
+  it("destroy is idempotent and does not change caller cancellation", async () => {
+    const axiosImplementation = createAxiosImplementation(() => Promise.resolve(RESPONSE));
+    const axios = createAxios({ axios: axiosImplementation });
+
+    await axios.destroy();
+    await axios.destroy();
+
+    const cancelled = createAxios({ axios: axiosImplementation });
+    const controller = new AbortController();
+    controller.abort();
+    await expect(cancelled.get("/users", { signal: controller.signal })).rejects.toMatchObject({
+      name: "AbortError",
+    });
+    expect(axiosImplementation).toHaveBeenCalledTimes(0);
+    await cancelled.destroy();
+  });
 });
 
 function createAxiosImplementation(

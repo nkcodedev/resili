@@ -2,11 +2,9 @@
 
 **Status:** Planning document. Not a commitment to a date.
 
-**Audited against:** `main` @ `cf1f224d053cb1000541cfaa4727e7be3db3a5df`
+**Audited against:** Milestone 6 (`chore/beta-packaging-ci`) on top of `main` after Milestone 5.
 
-**Working tree at audit:** clean
-
-**Test baseline used:** 598 tests / 38 files (last validated on this line)
+**Test baseline at Milestone 5:** 635 tests / 42 files. Milestone 6 adds HTTP lifecycle tests; see the milestone report for the exact new count.
 
 This document is the authoritative beta plan. Source and tests override older docs when they disagree. It does not implement, version, publish, or tag anything.
 
@@ -34,13 +32,18 @@ Resili is a **public alpha** with two independently versioned lines, eight publi
 
 **What is not yet true**
 
-- Public APIs have not been through an explicit freeze review.
-- HTTP adapters do expose caller-initiated per-call cancellation through the existing `signal` field.
-- Core honesty items from Milestone 4 are on `main`. LLM/provider freeze is Milestone 5 (`fix/llm-beta-api-lock`). Pack CI for HTTP remains Milestone 6.
-- CI runs Node 22 only. Packed-consumer, ESM/CJS, and Node 20/24 gates are manual or absent.
-- HTTP adapters have no API Extractor report. LLM/provider reports are added in Milestone 5.
+- No `@beta` dist-tag has been published. This milestone does not publish, tag, or bump versions.
+- Dist-tag policy for the beta channel (P1-10) and Gemini version-line alignment (P1-11) remain release-cut work.
+- Node 24 is optional (P2) and is not a Beta gate.
 
-**Verdict in one line:** the product is capable enough to beta; the contract is not frozen enough to beta.
+**Packaging (Milestone 6)**
+
+- `tsup` owns `dist/` for all eight publishable packages. `tsc`/typecheck emit to `tsbuild/` so typecheck cannot overwrite packed bundles.
+- `pnpm pack:check` (`scripts/check-packed-packages.mjs`) packs with **pnpm** (rewrites `workspace:*`), inspects tarballs, then installs them in a fresh directory under the OS temp dir (not the workspace) and runs ESM + CJS smokes.
+- CI runs Validate + Packed consumer on **Node 20 and Node 22**. `pnpm api:check` covers all eight packages.
+- Node 20 CI installs with `--config.engine-strict=false` because root `semantic-release@25` requires Node 22+. Published packages still declare `engines.node: ">=20"`; the packed-consumer job still runs on Node 20.
+
+**Verdict in one line:** freeze records exist for Core, HTTP, and LLM; remaining Beta work is release-cut (versions, dist-tags) plus residual P1 product items, not packaging surprises.
 
 ---
 
@@ -115,9 +118,7 @@ Do not leave “wrap with `createClient` yourself” as the only path for the pr
 
 **Classification: P0 (process). Beta blocker: yes.**
 
-There is an API Extractor report for `@resili/core` only. Milestone 4 exported the previously forgotten Core types and unified `KeyResolver`. `@resili/llm` and the HTTP adapters have no equivalent freeze artifact.
-
-Beta requires a written review of every public export on all eight packages, a decision per export (keep / export properly / hide), and then treating the remainder as mostly stable.
+**Status (Milestones 4–6):** Written freeze records and committed API Extractor reports exist for all eight publishable packages. See `BETA_API_REVIEW.md`, `BETA_HTTP_API_REVIEW.md`, and `BETA_LLM_API_REVIEW.md`. `pnpm api:check` fails on report drift.
 
 ### P0-3. `timeout.deadlineMs` decision executed
 
@@ -146,13 +147,7 @@ Streaming post-commit timeout is fixed in `0.1.0-alpha.4`. Unary retry/timeout a
 
 **Classification: P0 for release engineering, not for runtime design.**
 
-Today this is a manual release ritual. Beta installs will be real. CI (or a script CI always runs) must prove:
-
-- packed tarballs have **no** `workspace:*`
-- a fresh consumer sees **one** `@resili/core` and **one** `@resili/llm`
-- ESM `import` and CJS `require()` both resolve
-
-Without this, a beta publish can recreate the alpha.4 dependency-range incident.
+**Status (Milestone 6):** Automated. `pnpm pack:check` uses `pnpm pack` (not `npm pack`) so `workspace:*` is rewritten to the workspace package versions. It fails on `workspace:`, `file:`, and `link:` leaks, forbidden artifact paths (including `src/`, `tsbuild/`, nested tarballs, `.env`, `node_modules`, coverage), and on a fresh external install that does not resolve exactly one `@resili/core` and one `@resili/llm`. ESM and CJS smokes run from that install, including HTTP caller cancellation and the LLM post-commit timeout / pre-commit retry gates.
 
 ---
 
@@ -166,11 +161,11 @@ Should be completed unless a dated, written deferral exists.
 | P1-2  | `stats()` / `health()` honesty                                       | Totals work. `circuit` / `bulkhead` / `rateLimiter` maps are **always empty**. `health()` is therefore almost always `"healthy"`. Narrow the type, populate the maps, or document as totals-only **and** stop implying circuit health. |
 | P1-3  | Export or hide forgotten core types                                  | `RetryBackoff`, `RetryJitter`, `RateLimiterStrategy`, etc. appear in public option types but are not entry exports.                                                                                                                    |
 | P1-4  | API Extractor (or equivalent) for `@resili/llm`                      | LLM is a separate version line with its own freeze surface.                                                                                                                                                                            |
-| P1-5  | HTTP adapter lifecycle surface                                       | Adapters wrap a `Client` but return only the call function. No `on`, no `destroy`. Event subscriptions and plugin disposal are unreachable.                                                                                            |
+| P1-5  | HTTP adapter lifecycle surface                                       | **Done (Milestone 6).** `on` / `destroy` on fetch, axios, and undici. `stats()` / `health()` remain Core-only.                                                                                                                         |
 | P1-6  | Core interaction test matrix (see [Testing Matrix](#testing-matrix)) | Isolated policy tests are strong; cross-policy cancellation/retry cases are thin.                                                                                                                                                      |
 | P1-7  | LLM adversarial regression gate in CI                                | Commit-point, pre/post-commit timeout, Budget Guard reserve/settle, abort. Keep the alpha.4 tests green on every PR.                                                                                                                   |
-| P1-8  | Node 20 + 22 in CI                                                   | `engines` says `>=20`; CI is Node 22 only. Node 24 is P1 if still in LTS at release, else P2.                                                                                                                                          |
-| P1-9  | ESM + CJS consumer smoke in CI                                       | Dual `exports` are declared; not proven per package in automation.                                                                                                                                                                     |
+| P1-8  | Node 20 + 22 in CI                                                   | **Done (Milestone 6).** Validate + packed consumer on Node 20 and 22; required gate job named `Validate`. Node 20 install relaxes engine-strict for release tooling only. Node 24 remains P2.                                          |
+| P1-9  | ESM + CJS consumer smoke in CI                                       | **Done (Milestone 6).** Fresh packed consumer runs both module systems for all eight packages.                                                                                                                                         |
 | P1-10 | Dist-tag policy for the beta channel                                 | Publish beta with `--tag beta`. Do **not** move `latest`. Decide whether `alpha` stays or freezes. Document install as `@beta`.                                                                                                        |
 | P1-11 | Align `@resili/llm-gemini` version with the LLM line at beta cut     | `0.1.0-alpha.3` vs siblings `0.1.0-alpha.4` is explainable; beta should not repeat the skew.                                                                                                                                           |
 | P1-12 | `retry.jitter` / `retry.idempotentOnly` public-type honesty          | Types accept values that throw at build. Keep throwing **or** narrow the types before freeze. Do not silently implement.                                                                                                               |

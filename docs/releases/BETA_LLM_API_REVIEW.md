@@ -4,7 +4,7 @@
 
 **Scope:** `@resili/llm`, `@resili/llm-openai`, `@resili/llm-anthropic`, `@resili/llm-gemini`.
 
-This is **not** a freeze of HTTP adapters or a declaration that the whole Resili project is Beta-ready.
+This is **not** a freeze of HTTP adapters (see [`BETA_HTTP_API_REVIEW.md`](./BETA_HTTP_API_REVIEW.md)) or a declaration that the whole Resili project is Beta-ready.
 
 Runtime, tests, and packed artifacts override this document when they disagree.
 

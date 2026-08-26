@@ -11,7 +11,7 @@
   },
   "docModel": {
     "enabled": true,
-    "apiJsonFilePath": "<projectFolder>/temp/llm-gemini.api.json"
+    "apiJsonFilePath": "<projectFolder>/temp/undici.api.json"
   },
   "dtsRollup": {
     "enabled": true,

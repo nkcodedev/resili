@@ -11,9 +11,13 @@ permissions:
 
 jobs:
   validate:
-    name: Validate
+    name: Validate (Node ${{ matrix.node }})
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ["20", "22"]
 
     steps:
       - name: Checkout
@@ -27,11 +31,18 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          node-version: ${{ matrix.node }}
           cache: pnpm
 
+      # Package engines remain >=20. Root release tooling (semantic-release@25)
+      # requires Node 22+, so Node 20 installs must relax engine-strict only.
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: |
+          if [ "${{ matrix.node }}" = "20" ]; then
+            pnpm install --frozen-lockfile --config.engine-strict=false
+          else
+            pnpm install --frozen-lockfile
+          fi
 
       - name: Format
         run: pnpm format
@@ -52,4 +63,51 @@ jobs:
         run: pnpm -r build
 
       - name: API Extractor
-        run: pnpm --filter @resili/core api:check
+        run: pnpm api:check
+
+  packed-consumer:
+    name: Packed consumer (Node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ["20", "22"]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.0.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: pnpm
+
+      - name: Install dependencies
+        run: |
+          if [ "${{ matrix.node }}" = "20" ]; then
+            pnpm install --frozen-lockfile --config.engine-strict=false
+          else
+            pnpm install --frozen-lockfile
+          fi
+
+      - name: Packed package and external consumer gate
+        run: pnpm pack:check
+
+  # Branch protection still requires a check named exactly "Validate".
+  ci-gate:
+    name: Validate
+    needs: [validate, packed-consumer]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Require Node matrix jobs
+        run: |
+          test "${{ needs.validate.result }}" = "success"
+          test "${{ needs.packed-consumer.result }}" = "success"

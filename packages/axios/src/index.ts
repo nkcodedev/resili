@@ -3,7 +3,10 @@ import {
   createClient,
   type Client,
   type Context,
+  type EventHandler,
   type ResiliConfig,
+  type ResiliEventType,
+  type Unsubscribe,
 } from "@resili/core";
 
 /**
@@ -63,6 +66,8 @@ export interface CreateAxiosOptions extends ResiliConfig<AxiosResponse> {
  */
 export interface ResilientAxios {
   <T = unknown, D = unknown>(config: AxiosRequestConfig<D>): Promise<AxiosResponse<T, D>>;
+  on<TEvent extends ResiliEventType>(type: TEvent, handler: EventHandler<TEvent>): Unsubscribe;
+  destroy(): Promise<void>;
   request<T = unknown, D = unknown>(config: AxiosRequestConfig<D>): Promise<AxiosResponse<T, D>>;
   get<T = unknown, D = unknown>(
     url: string,
@@ -122,6 +127,8 @@ export function createAxios(options: CreateAxiosOptions): ResilientAxios {
   axios.put = (url, data, config) => request({ ...config, ...dataPatch(data), method: "put", url });
   axios.patch = (url, data, config) =>
     request({ ...config, ...dataPatch(data), method: "patch", url });
+  axios.on = client.on.bind(client);
+  axios.destroy = () => client.destroy();
 
   return Object.freeze(axios);
 }

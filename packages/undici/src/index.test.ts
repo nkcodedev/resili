@@ -133,6 +133,41 @@ describe("createUndici", () => {
       resilientRequest({ origin: "https://api.example.com", path: "/users" }),
     ).rejects.toBe(failure);
   });
+
+  it("subscribes to Core events and unsubscribes", async () => {
+    const request = createUndiciImplementation(() => Promise.resolve(RESPONSE));
+    const resilientRequest = createUndici({ request });
+    const seen: string[] = [];
+    const unsubscribe = resilientRequest.on("RequestStarted", () => {
+      seen.push("start");
+    });
+
+    await resilientRequest({ origin: "https://api.example.com", path: "/users" });
+    expect(seen).toEqual(["start"]);
+
+    unsubscribe();
+    await resilientRequest({ origin: "https://api.example.com", path: "/users" });
+    expect(seen).toEqual(["start"]);
+  });
+
+  it("destroy is idempotent and does not change caller cancellation", async () => {
+    const request = createUndiciImplementation(() => Promise.resolve(RESPONSE));
+    const resilientRequest = createUndici({ request });
+
+    await resilientRequest.destroy();
+    await resilientRequest.destroy();
+
+    const cancelled = createUndici({ request });
+    const controller = new AbortController();
+    controller.abort();
+    await expect(
+      cancelled({ origin: "https://api.example.com", path: "/users", signal: controller.signal }),
+    ).rejects.toMatchObject({
+      name: "AbortError",
+    });
+    expect(request).toHaveBeenCalledTimes(0);
+    await cancelled.destroy();
+  });
 });
 
 function createUndiciImplementation(

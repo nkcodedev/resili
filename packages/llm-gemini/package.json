@@ -35,7 +35,7 @@
     "dev": "tsup --watch",
     "typecheck": "tsc -b --pretty false",
     "api:extract": "api-extractor run --local",
-    "api:check": "api-extractor run --local --verbose"
+    "api:check": "api-extractor run --verbose"
   },
   "dependencies": {
     "@resili/core": "workspace:*",

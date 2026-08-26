@@ -22,6 +22,15 @@ export default tseslint.config(
     ...js.configs.recommended,
   },
   {
+    files: ["scripts/**/*.{js,cjs,mjs}"],
+    languageOptions: {
+      globals: {
+        process: "readonly",
+        AbortController: "readonly",
+      },
+    },
+  },
+  {
     files: ["**/*.ts"],
     extends: [
       js.configs.recommended,

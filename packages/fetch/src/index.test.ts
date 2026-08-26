@@ -102,6 +102,41 @@ describe("createFetch", () => {
 
     await expect(resilientFetch("https://example.com/users")).rejects.toBe(failure);
   });
+
+  it("subscribes to Core events and unsubscribes", async () => {
+    const fetch = createFetchImplementation(() => Promise.resolve(RESPONSE));
+    const resilientFetch = createFetch({ fetch });
+    const seen: string[] = [];
+    const unsubscribe = resilientFetch.on("RequestStarted", () => {
+      seen.push("start");
+    });
+
+    await resilientFetch("https://example.com/users");
+    expect(seen).toEqual(["start"]);
+
+    unsubscribe();
+    await resilientFetch("https://example.com/users");
+    expect(seen).toEqual(["start"]);
+  });
+
+  it("destroy is idempotent and does not change caller cancellation", async () => {
+    const fetch = createFetchImplementation(() => Promise.resolve(RESPONSE));
+    const resilientFetch = createFetch({ fetch });
+
+    await resilientFetch.destroy();
+    await resilientFetch.destroy();
+
+    const cancelled = createFetch({ fetch });
+    const controller = new AbortController();
+    controller.abort();
+    await expect(
+      cancelled("https://example.com/users", { signal: controller.signal }),
+    ).rejects.toMatchObject({
+      name: "AbortError",
+    });
+    expect(fetch).toHaveBeenCalledTimes(0);
+    await cancelled.destroy();
+  });
 });
 
 function createFetchImplementation(

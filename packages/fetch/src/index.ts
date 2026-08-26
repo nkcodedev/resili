@@ -3,7 +3,10 @@ import {
   createClient,
   type Client,
   type Context,
+  type EventHandler,
   type ResiliConfig,
+  type ResiliEventType,
+  type Unsubscribe,
 } from "@resili/core";
 
 /**
@@ -29,11 +32,18 @@ export interface CreateFetchOptions extends ResiliConfig<Response> {
 }
 
 /**
- * Fetch-compatible resilient function.
+ * Fetch-compatible resilient function with Core lifecycle hooks.
+ *
+ * Call it like `fetch`. `on` and `destroy` are additive; they do not change
+ * cancellation or the composed `ctx.signal` passed to the transport.
  *
  * @public
  */
-export type ResilientFetch = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
+export interface ResilientFetch {
+  (input: RequestInfo | URL, init?: RequestInit): Promise<Response>;
+  on<T extends ResiliEventType>(type: T, handler: EventHandler<T>): Unsubscribe;
+  destroy(): Promise<void>;
+}
 
 /**
  * Creates a resilient wrapper around native fetch.
@@ -53,7 +63,7 @@ export function createFetch(options: CreateFetchOptions = {}): ResilientFetch {
     createCoreConfig(options),
   );
 
-  return (input: RequestInfo | URL, init?: RequestInit): Promise<Response> =>
+  const resilientFetch = ((input: RequestInfo | URL, init?: RequestInit): Promise<Response> =>
     client.execute<Response>(
       (ctx: Context) => {
         throwIfAborted(ctx.signal);
@@ -61,7 +71,12 @@ export function createFetch(options: CreateFetchOptions = {}): ResilientFetch {
         return fetchImplementation(input, { ...init, signal: ctx.signal });
       },
       init?.signal == null ? undefined : { signal: init.signal },
-    );
+    )) as ResilientFetch;
+
+  resilientFetch.on = client.on.bind(client);
+  resilientFetch.destroy = () => client.destroy();
+
+  return Object.freeze(resilientFetch);
 }
 
 function throwIfAborted(signal: AbortSignal): void {
