@@ -108,6 +108,7 @@ Deeper specifications: [ARCHITECTURE.md](./ARCHITECTURE.md),
 
 - [Alpha status](./releases/alpha-status.md) — what is implemented, what the known limitations are
 - [Beta readiness](./releases/BETA_READINESS.md)
+- [Beta release plan](./releases/BETA_RELEASE_PLAN.md)
 - [Core API freeze review](./releases/BETA_API_REVIEW.md)
 - [LLM API freeze review](./releases/BETA_LLM_API_REVIEW.md)
 - [HTTP API freeze review](./releases/BETA_HTTP_API_REVIEW.md)

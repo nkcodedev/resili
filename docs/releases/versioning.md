@@ -140,3 +140,18 @@ Releases are cut from `main` after lint, typecheck, the full test suite, build, 
 consumer project before the work is considered done.
 
 `latest` is not moved. Git tags are created for release commits.
+
+## Planned Beta channel (not published yet)
+
+First beta cut decisions live in [`BETA_RELEASE_PLAN.md`](./BETA_RELEASE_PLAN.md). Summary:
+
+| Family    | Planned versions                                     | Install once published          |
+| --------- | ---------------------------------------------------- | ------------------------------- |
+| Core/HTTP | `0.2.0-beta.1`                                       | `npm install @resili/core@beta` |
+| LLM       | `0.1.0-beta.1` (all four adapters, including Gemini) | `npm install @resili/llm@beta`  |
+
+- Publish with `--tag beta`.
+- Leave `latest` unchanged until stable `1.x`.
+- Leave `alpha` at the final alpha builds for historical installs.
+
+Until that cut ships, continue using `@alpha` or exact alpha versions.
