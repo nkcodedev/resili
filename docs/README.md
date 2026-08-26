@@ -2,8 +2,9 @@
 
 A TypeScript-first resilience toolkit for Node.js applications, HTTP clients, and LLM providers.
 
-All packages are prepared for the npm `beta` dist-tag. Install with `@beta` — `latest`
-still points at an early build. See [Versioning](./releases/versioning.md).
+All packages are on public Beta. Beta 1 is the current release — plain `npm install` resolves to it
+(`latest` and `beta` currently both point at Beta 1). Historical `alpha` builds remain available.
+See [Versioning](./releases/versioning.md).
 
 | Line        | Packages                                        | Current        |
 | ----------- | ----------------------------------------------- | -------------- |

@@ -11,7 +11,7 @@ Current version: **`0.1.0-alpha.4`**. Provider name: `"anthropic"`.
 ## Installation
 
 ```bash
-npm install @resili/core@alpha @resili/llm@alpha @resili/llm-anthropic@alpha @anthropic-ai/sdk
+npm install @resili/core @resili/llm @resili/llm-anthropic @anthropic-ai/sdk
 ```
 
 `@anthropic-ai/sdk` is an **optional peer dependency** (`>=0.20.0`), so your package manager will not

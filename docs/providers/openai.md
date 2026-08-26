@@ -11,7 +11,7 @@ Current version: **`0.1.0-alpha.4`**. Provider name: `"openai"`.
 ## Installation
 
 ```bash
-npm install @resili/core@alpha @resili/llm@alpha @resili/llm-openai@alpha openai
+npm install @resili/core @resili/llm @resili/llm-openai openai
 ```
 
 `openai` is an **optional peer dependency** (`>=4.0.0`), so your package manager will not install it

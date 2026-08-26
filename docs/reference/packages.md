@@ -1,6 +1,6 @@
 # Package reference
 
-Eight packages, two version lines, prepared for the npm `beta` dist-tag.
+Eight packages, two version lines, on public Beta. Beta 1 is the current release.
 
 ## Matrix
 
@@ -25,16 +25,16 @@ they describe those APIs structurally and take an injected implementation. See
 
 ```bash
 # Core only
-npm install @resili/core@beta
+npm install @resili/core
 
 # Core + an HTTP adapter
-npm install @resili/core@beta @resili/fetch@beta
+npm install @resili/core @resili/fetch
 
 # LLM with OpenAI
-npm install @resili/core@beta @resili/llm@beta @resili/llm-openai@beta openai
+npm install @resili/core @resili/llm @resili/llm-openai openai
 ```
 
-The `@beta` tag is required — `latest` still points at older builds. See
+Plain installs resolve to Beta 1 (`latest` and `beta` currently both point at it). See
 [Versioning](../releases/versioning.md).
 
 ## Version lines

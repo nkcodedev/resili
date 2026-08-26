@@ -2,17 +2,18 @@
 
 > Anthropic Messages adapter for the Resili LLM foundation.
 
-**Public beta.** This package is a provider adapter for [`@resili/llm`](../llm/README.md). It is **not** an Anthropic SDK replacement and not an agent framework.
+**Public beta.** This package is a provider adapter for [`@resili/llm`](https://github.com/nkcodedev/resili/blob/main/packages/llm/README.md). It is **not** an Anthropic SDK replacement and not an agent framework.
 
 You create the official `@anthropic-ai/sdk` client. Resili never stores API keys and never contacts a Resili service.
 
 ## Installation
 
-Install Resili packages from the `beta` dist-tag — `latest` still points at an early `0.1.0-alpha.1`
-build. The current release is `0.1.0-beta.1`; see [versioning](../../docs/releases/versioning.md).
+**Public Beta.** Beta 1 is the current public release. Plain installs resolve to Beta 1 (`latest` and
+`beta` currently both point at it). Historical `alpha` builds remain available under `@alpha`. This
+is not a stable `1.0` guarantee. The current release is `0.1.0-beta.1`; see [versioning](https://github.com/nkcodedev/resili/blob/main/docs/releases/versioning.md).
 
 ```bash
-pnpm add @resili/core@beta @resili/llm@beta @resili/llm-anthropic@beta @anthropic-ai/sdk
+pnpm add @resili/core @resili/llm @resili/llm-anthropic @anthropic-ai/sdk
 ```
 
 Node.js 20 or newer is required. The official Anthropic TypeScript SDK documents **Node.js 20 LTS or later**.
@@ -159,18 +160,18 @@ Cache and thinking token counts, when present, are copied to `usage.dimensions` 
 - Text blocks only; other content blocks are ignored
 - Missing Anthropic `usage` becomes zero counts
 
-The full limitation list is in [alpha status](../../docs/releases/alpha-status.md).
+The full limitation list is in [alpha status](https://github.com/nkcodedev/resili/blob/main/docs/releases/alpha-status.md).
 
 ## Documentation
 
-- [Anthropic provider guide](../../docs/providers/anthropic.md) — mapping, streaming, usage merging,
+- [Anthropic provider guide](https://github.com/nkcodedev/resili/blob/main/docs/providers/anthropic.md) — mapping, streaming, usage merging,
   errors
-- [LLM overview](../../docs/llm/overview.md) · [Streaming](../../docs/llm/streaming.md) ·
-  [Retries](../../docs/llm/retries.md)
-- [Budget Guard](../../docs/llm/budget-guard.md) · [Pricing](../../docs/llm/pricing.md) ·
-  [Errors](../../docs/llm/errors.md)
-- [Documentation home](../../docs/README.md) · [`@resili/llm` README](../llm/README.md)
-- Runnable examples: [`examples/llm-anthropic`](../../examples/llm-anthropic)
+- [LLM overview](https://github.com/nkcodedev/resili/blob/main/docs/llm/overview.md) · [Streaming](https://github.com/nkcodedev/resili/blob/main/docs/llm/streaming.md) ·
+  [Retries](https://github.com/nkcodedev/resili/blob/main/docs/llm/retries.md)
+- [Budget Guard](https://github.com/nkcodedev/resili/blob/main/docs/llm/budget-guard.md) · [Pricing](https://github.com/nkcodedev/resili/blob/main/docs/llm/pricing.md) ·
+  [Errors](https://github.com/nkcodedev/resili/blob/main/docs/llm/errors.md)
+- [Documentation home](https://github.com/nkcodedev/resili/blob/main/docs/README.md) · [`@resili/llm` README](https://github.com/nkcodedev/resili/blob/main/packages/llm/README.md)
+- Runnable examples: [`examples/llm-anthropic`](https://github.com/nkcodedev/resili/tree/main/examples/llm-anthropic)
 
 ## License
 

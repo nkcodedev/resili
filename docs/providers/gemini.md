@@ -21,7 +21,7 @@ not work here. If you are migrating, replace `GoogleGenerativeAI` with `GoogleGe
 ## Installation
 
 ```bash
-npm install @resili/core@alpha @resili/llm@alpha @resili/llm-gemini@alpha @google/genai
+npm install @resili/core @resili/llm @resili/llm-gemini @google/genai
 ```
 
 `@google/genai` is an **optional peer dependency**, so your package manager will not install it for

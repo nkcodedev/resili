@@ -1,54 +1,44 @@
 # Versioning and dist-tags
 
-## Install from the `beta` tag
+## Install
+
+Beta 1 is the current public release. Plain installs resolve to Beta 1:
 
 ```bash
-npm install @resili/core@beta
-npm install @resili/llm@beta @resili/llm-openai@beta
+npm install @resili/core
+npm install @resili/llm @resili/llm-openai
 ```
 
-The `@beta` suffix is **required** for the current recommended prerelease. Installing without a tag
-gives you `latest`, which still points at `0.1.0-alpha.1`, an early build that predates streaming,
-several policies, and the current error model.
+`latest` and `beta` currently both point at Beta 1. Historical alpha builds remain available as
+`@alpha` / exact `*-alpha.*` versions. Beta is **not** a stable `1.0` guarantee — pin exact versions
+in production.
 
-Historical alpha builds remain available as `@alpha` / exact `*-alpha.*` versions.
+## Current dist-tags
 
-## Current dist-tags (after Beta.1 publish)
+| Package                 | `latest` / `beta` | `alpha` (historical) |
+| ----------------------- | ----------------- | -------------------- |
+| `@resili/core`          | `0.2.0-beta.1`    | `0.2.0-alpha.3`      |
+| `@resili/fetch`         | `0.2.0-beta.1`    | `0.2.0-alpha.3`      |
+| `@resili/axios`         | `0.2.0-beta.1`    | `0.2.0-alpha.3`      |
+| `@resili/undici`        | `0.2.0-beta.1`    | `0.2.0-alpha.3`      |
+| `@resili/llm`           | `0.1.0-beta.1`    | `0.1.0-alpha.4`      |
+| `@resili/llm-openai`    | `0.1.0-beta.1`    | `0.1.0-alpha.4`      |
+| `@resili/llm-anthropic` | `0.1.0-beta.1`    | `0.1.0-alpha.4`      |
+| `@resili/llm-gemini`    | `0.1.0-beta.1`    | `0.1.0-alpha.3`      |
 
-| Package                 | `beta` (current) | `alpha` (final) | `latest` (stale) |
-| ----------------------- | ---------------- | --------------- | ---------------- |
-| `@resili/core`          | `0.2.0-beta.1`   | `0.2.0-alpha.3` | `0.1.0-alpha.1`  |
-| `@resili/fetch`         | `0.2.0-beta.1`   | `0.2.0-alpha.3` | `0.1.0-alpha.1`  |
-| `@resili/axios`         | `0.2.0-beta.1`   | `0.2.0-alpha.3` | `0.1.0-alpha.1`  |
-| `@resili/undici`        | `0.2.0-beta.1`   | `0.2.0-alpha.3` | `0.1.0-alpha.1`  |
-| `@resili/llm`           | `0.1.0-beta.1`   | `0.1.0-alpha.4` | `0.1.0-alpha.1`  |
-| `@resili/llm-openai`    | `0.1.0-beta.1`   | `0.1.0-alpha.4` | `0.1.0-alpha.1`  |
-| `@resili/llm-anthropic` | `0.1.0-beta.1`   | `0.1.0-alpha.4` | `0.1.0-alpha.1`  |
-| `@resili/llm-gemini`    | `0.1.0-beta.1`   | `0.1.0-alpha.3` | `0.1.0-alpha.1`  |
-
-Until the Beta.1 npm publish completes, `beta` may be absent on the registry; workspace and packed
-tarballs already use the Beta.1 versions. Verify at any time:
+Verify at any time:
 
 ```bash
 npm view @resili/core dist-tags
 ```
 
-### Why `latest` is behind
+### Dist-tag notes
 
-`0.1.0-alpha.1` was published before the `alpha` tag convention was adopted, and npm assigned it
-`latest` automatically. Every release since has used an explicit prerelease tag (`alpha`, then
-`beta`), which does not move `latest`.
-
-Leaving `latest` where it is, is deliberate. Moving it would make `npm install @resili/core` — the
-command people type without thinking — resolve to a prerelease, implying a stability guarantee that
-Beta does not yet carry. `latest` will move when the first stable release is published.
-
-Practical consequences while this holds:
-
-- `npm install @resili/core` installs `0.1.0-alpha.1`. Always add `@beta` (or pin an exact version).
-- `npm outdated` compares against `latest` and will look wrong.
-- Renovate and Dependabot follow `latest` by default; configure them for the `beta` tag or pin exact
-  versions.
+- After Beta 1 publish, `latest` was moved to Beta 1 so `npm install @resili/core` installs the
+  current public release.
+- The `beta` tag also points at Beta 1 (same versions today).
+- The `alpha` tag remains frozen on the final alpha line for historical installs.
+- Stable `1.0` is a later bar; Beta may still receive justified bug fixes.
 
 If you are unsure what you actually installed:
 
@@ -128,5 +118,5 @@ Releases are cut from `main` after lint, typecheck, the full test suite, build, 
 eight packages, and `pnpm pack:check` all pass, then verified against the public registry in a clean
 consumer project before the work is considered done.
 
-`latest` is not moved for Beta. Coordinated Git tag: `beta.1`. See
-[`BETA_RELEASE_PLAN.md`](./BETA_RELEASE_PLAN.md).
+Coordinated Git tag for the first beta cut: `beta.1`. See [`BETA_RELEASE_PLAN.md`](./BETA_RELEASE_PLAN.md)
+(historical plan) and [`beta-status.md`](./beta-status.md).

@@ -9,26 +9,28 @@ structural request and response shape implemented by this package.
 This package does not depend on Undici directly. Provide an implementation that
 matches the exported `UndiciImplementation` type.
 
-For the full framework overview, see the [repository README](../../README.md).
+For the full framework overview, see the [repository README](https://github.com/nkcodedev/resili#readme).
 
 ## Installation
 
-Install from the `beta` dist-tag — `latest` still points at an early `0.1.0-alpha.1` build.
+**Public Beta.** Beta 1 is the current public release. Plain installs resolve to Beta 1 (`latest` and
+`beta` currently both point at it). Historical `alpha` builds remain available under `@alpha`. This
+is not a stable `1.0` guarantee.
 
 ```bash
-pnpm add @resili/core@beta @resili/undici@beta
+pnpm add @resili/core @resili/undici
 ```
 
 ```bash
-npm install @resili/core@beta @resili/undici@beta
+npm install @resili/core @resili/undici
 ```
 
 ```bash
-yarn add @resili/core@beta @resili/undici@beta
+yarn add @resili/core @resili/undici
 ```
 
 Node.js 20 or newer is required. The current release is `0.2.0-beta.1`; see
-[versioning](../../docs/releases/versioning.md).
+[versioning](https://github.com/nkcodedev/resili/blob/main/docs/releases/versioning.md).
 
 `undici` itself is **not** a dependency or peer dependency of this package. You inject
 a `request` implementation, so you keep control of the version and its configuration.
@@ -244,13 +246,13 @@ for behavior beyond request wrapping.
 
 ## Documentation
 
-- [Documentation home](../../docs/README.md)
-- [undici adapter guide](../../docs/http/undici.md) — options, status codes, bodies, examples
-- [HTTP adapters overview](../../docs/http/overview.md) — what all three adapters share
-- [Cancellation](../../docs/core/cancellation.md) · [All policies](../../docs/core/policies.md)
-- [`@resili/core` README](../core/README.md)
-- Specifications: [Architecture](../../docs/ARCHITECTURE.md),
-  [API specification](../../docs/API_SPECIFICATION.md)
+- [Documentation home](https://github.com/nkcodedev/resili/blob/main/docs/README.md)
+- [undici adapter guide](https://github.com/nkcodedev/resili/blob/main/docs/http/undici.md) — options, status codes, bodies, examples
+- [HTTP adapters overview](https://github.com/nkcodedev/resili/blob/main/docs/http/overview.md) — what all three adapters share
+- [Cancellation](https://github.com/nkcodedev/resili/blob/main/docs/core/cancellation.md) · [All policies](https://github.com/nkcodedev/resili/blob/main/docs/core/policies.md)
+- [`@resili/core` README](https://github.com/nkcodedev/resili/blob/main/packages/core/README.md)
+- Specifications: [Architecture](https://github.com/nkcodedev/resili/blob/main/docs/ARCHITECTURE.md),
+  [API specification](https://github.com/nkcodedev/resili/blob/main/docs/API_SPECIFICATION.md)
 
 ## Maintainer
 

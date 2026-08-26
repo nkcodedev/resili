@@ -6,12 +6,12 @@ An axios-shaped API backed by a Resili pipeline.
 Application → createAxios(...) → @resili/core → your axios implementation
 ```
 
-Current version: **`0.2.0-alpha.3`**. Depends only on `@resili/core`.
+Current version: **`0.2.0-beta.1`**. Depends only on `@resili/core`.
 
 ## Installation
 
 ```bash
-npm install @resili/core@alpha @resili/axios@alpha
+npm install @resili/core @resili/axios
 ```
 
 The package does **not** import `axios` and does not declare it as a peer dependency. It describes the

@@ -2,30 +2,32 @@
 
 > Provider-neutral LLM resilience, usage accounting, cost control, and observability for Resili.
 
-`@resili/llm` is the LLM foundation package for [Resili](../../README.md). It normalizes generation requests, classifies provider-neutral failures, accounts for token usage, calculates cost from **your** price table, and enforces an in-memory Budget Guard.
+`@resili/llm` is the LLM foundation package for [Resili](https://github.com/nkcodedev/resili#readme). It normalizes generation requests, classifies provider-neutral failures, accounts for token usage, calculates cost from **your** price table, and enforces an in-memory Budget Guard.
 
 It is **not** an AI SDK. It does not call OpenAI, Anthropic, Gemini, or any other vendor. It does not ship prompt templates, agents, RAG, embeddings, or moderation.
 
-Official adapters wrap **user-owned** vendor clients and return the contracts defined here: [`@resili/llm-openai`](../llm-openai/README.md), [`@resili/llm-anthropic`](../llm-anthropic/README.md), and [`@resili/llm-gemini`](../llm-gemini/README.md).
+Official adapters wrap **user-owned** vendor clients and return the contracts defined here: [`@resili/llm-openai`](https://github.com/nkcodedev/resili/blob/main/packages/llm-openai/README.md), [`@resili/llm-anthropic`](https://github.com/nkcodedev/resili/blob/main/packages/llm-anthropic/README.md), and [`@resili/llm-gemini`](https://github.com/nkcodedev/resili/blob/main/packages/llm-gemini/README.md).
 
 ## Installation
 
-Install from the `beta` dist-tag — `latest` still points at an early `0.1.0-alpha.1` build.
+**Public Beta.** Beta 1 is the current public release. Plain installs resolve to Beta 1 (`latest` and
+`beta` currently both point at it). Historical `alpha` builds remain available under `@alpha`. This
+is not a stable `1.0` guarantee.
 
 ```bash
-pnpm add @resili/core@beta @resili/llm@beta
+pnpm add @resili/core @resili/llm
 ```
 
 ```bash
-npm install @resili/core@beta @resili/llm@beta
+npm install @resili/core @resili/llm
 ```
 
 ```bash
-yarn add @resili/core@beta @resili/llm@beta
+yarn add @resili/core @resili/llm
 ```
 
 Node.js 20 or newer is required. `@resili/llm` depends only on `@resili/core` at runtime. The current
-release is `0.1.0-beta.1`; see [versioning](../../docs/releases/versioning.md).
+release is `0.1.0-beta.1`; see [versioning](https://github.com/nkcodedev/resili/blob/main/docs/releases/versioning.md).
 
 ## What this package is responsible for
 
@@ -231,7 +233,7 @@ Metrics use Resili's `MetricsRecorder`. The only label is `result` = `success` |
 
 ## Current alpha limitations
 
-- Official adapters: [`@resili/llm-openai`](../llm-openai/README.md) (Chat Completions, unary + streaming), [`@resili/llm-anthropic`](../llm-anthropic/README.md) (Messages, unary + streaming), and [`@resili/llm-gemini`](../llm-gemini/README.md) (`generateContent` / `generateContentStream` text-in/text-out). No Azure or Bedrock adapters yet
+- Official adapters: [`@resili/llm-openai`](https://github.com/nkcodedev/resili/blob/main/packages/llm-openai/README.md) (Chat Completions, unary + streaming), [`@resili/llm-anthropic`](https://github.com/nkcodedev/resili/blob/main/packages/llm-anthropic/README.md) (Messages, unary + streaming), and [`@resili/llm-gemini`](https://github.com/nkcodedev/resili/blob/main/packages/llm-gemini/README.md) (`generateContent` / `generateContentStream` text-in/text-out). No Azure or Bedrock adapters yet
 - Streaming `timeout.perAttemptMs` is full-attempt lifetime, not TTFB or idle-chunk timeout
 - Interrupted streams may not include provider-billed tokens in Resili usage/cost
 - Budget accounting is in-memory per client (or per injected `BudgetAccountant`); reservations are process-local, not distributed
@@ -242,21 +244,21 @@ Metrics use Resili's `MetricsRecorder`. The only label is `result` = `success` |
 - Core's public event map is closed; LLM events are a typed bus on this package
 - `{ after: "cache" }` and `{ before: "cache" }` are valid `@resili/core` relative order anchors. Budget Guard still uses `{ before: "retry" }` (resolved order `199.5`, between cache `150` and retry `200`).
 
-The full list is in [alpha status](../../docs/releases/alpha-status.md).
+The full list is in [alpha status](https://github.com/nkcodedev/resili/blob/main/docs/releases/alpha-status.md).
 
 ## Documentation
 
-- [Documentation home](../../docs/README.md)
-- [LLM overview](../../docs/llm/overview.md) — architecture and `createLlmClient()`
-- [generate()](../../docs/llm/generate.md) · [Streaming](../../docs/llm/streaming.md)
-- [Retries](../../docs/llm/retries.md) · [Timeouts](../../docs/llm/timeouts.md) ·
-  [Cancellation](../../docs/llm/cancellation.md)
-- [Budget Guard](../../docs/llm/budget-guard.md) · [Pricing](../../docs/llm/pricing.md) ·
-  [Usage](../../docs/llm/usage.md)
-- [Errors](../../docs/llm/errors.md) · [Events](../../docs/observability/events.md) ·
-  [Telemetry and privacy](../../docs/observability/telemetry.md)
-- Providers: [OpenAI](../../docs/providers/openai.md),
-  [Anthropic](../../docs/providers/anthropic.md), [Gemini](../../docs/providers/gemini.md)
+- [Documentation home](https://github.com/nkcodedev/resili/blob/main/docs/README.md)
+- [LLM overview](https://github.com/nkcodedev/resili/blob/main/docs/llm/overview.md) — architecture and `createLlmClient()`
+- [generate()](https://github.com/nkcodedev/resili/blob/main/docs/llm/generate.md) · [Streaming](https://github.com/nkcodedev/resili/blob/main/docs/llm/streaming.md)
+- [Retries](https://github.com/nkcodedev/resili/blob/main/docs/llm/retries.md) · [Timeouts](https://github.com/nkcodedev/resili/blob/main/docs/llm/timeouts.md) ·
+  [Cancellation](https://github.com/nkcodedev/resili/blob/main/docs/llm/cancellation.md)
+- [Budget Guard](https://github.com/nkcodedev/resili/blob/main/docs/llm/budget-guard.md) · [Pricing](https://github.com/nkcodedev/resili/blob/main/docs/llm/pricing.md) ·
+  [Usage](https://github.com/nkcodedev/resili/blob/main/docs/llm/usage.md)
+- [Errors](https://github.com/nkcodedev/resili/blob/main/docs/llm/errors.md) · [Events](https://github.com/nkcodedev/resili/blob/main/docs/observability/events.md) ·
+  [Telemetry and privacy](https://github.com/nkcodedev/resili/blob/main/docs/observability/telemetry.md)
+- Providers: [OpenAI](https://github.com/nkcodedev/resili/blob/main/docs/providers/openai.md),
+  [Anthropic](https://github.com/nkcodedev/resili/blob/main/docs/providers/anthropic.md), [Gemini](https://github.com/nkcodedev/resili/blob/main/docs/providers/gemini.md)
 
 ## License
 
