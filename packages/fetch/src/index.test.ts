@@ -137,6 +137,62 @@ describe("createFetch", () => {
     expect(fetch).toHaveBeenCalledTimes(0);
     await cancelled.destroy();
   });
+
+  it.each(["GET", "POST"] as const)(
+    "does not auto-retry resolved HTTP 503 for %s without retryOn",
+    async (method) => {
+      let attempts = 0;
+      const resilientFetch = createFetch({
+        fetch: () => {
+          attempts += 1;
+          return Promise.resolve(new Response("unavailable", { status: 503 }));
+        },
+        retry: {
+          maxAttempts: 3,
+          backoff: "fixed",
+          baseDelayMs: 0,
+          maxDelayMs: 0,
+          jitter: "none",
+        },
+      });
+
+      const response = await resilientFetch("https://example.com/orders", { method });
+      expect(response.status).toBe(503);
+      expect(attempts).toBe(1);
+      await resilientFetch.destroy();
+    },
+  );
+
+  it("retries resolved 503 when retryOn opts in", async () => {
+    let attempts = 0;
+    const resilientFetch = createFetch({
+      fetch: () => {
+        attempts += 1;
+        return Promise.resolve(new Response("unavailable", { status: 503 }));
+      },
+      retry: {
+        maxAttempts: 3,
+        backoff: "fixed",
+        baseDelayMs: 0,
+        maxDelayMs: 0,
+        jitter: "none",
+        retryOn(outcome: Outcome) {
+          if (outcome.status === "error") {
+            return true;
+          }
+          return outcome.value.status === 503;
+        },
+      },
+    });
+
+    await expect(
+      resilientFetch("https://example.com/orders", { method: "POST" }),
+    ).rejects.toMatchObject({
+      code: "ERR_RETRY_EXCEEDED",
+    });
+    expect(attempts).toBe(3);
+    await resilientFetch.destroy();
+  });
 });
 
 function createFetchImplementation(

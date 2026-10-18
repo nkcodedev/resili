@@ -231,8 +231,10 @@ Fallback handlers may return an `UndiciResponse` or a promise for one.
 - No MockAgent or ProxyAgent helpers.
 - No WebSocket support.
 - No streaming helpers.
-- No HTTP status classification. A `statusCode` of 503 is a returned value unless
-  you opt in with `retry.retryOn`.
+- No adapter-level HTTP status classification. A `statusCode` of 503 is a returned
+  value and is not auto-retried; opt in with `retry.retryOn`. The default
+  classifier reads `.status`, not undici `statusCode`, so breaker defaults also
+  ignore undici statuses unless you customize classification.
 - No response body handling beyond returning the injected implementation result.
   A body must be fully consumed or discarded before a retry, or the connection leaks.
 - No OpenTelemetry or metrics exporters.

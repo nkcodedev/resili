@@ -80,10 +80,13 @@ const resilientFetch = createFetch({
 Note the ordering consequence: `timeout` is per attempt, so with `maxAttempts: 3` the worst case is
 roughly three seconds plus backoff, not two. See [Policy ordering](../core/policy-ordering.md).
 
-## Status codes do not fail by default
+## Status codes: retry vs circuit breaker
 
-A `503` is a returned `Response`, so the operation _succeeded_ as far as Resili is concerned. It is
-not retried and does not feed the circuit breaker unless you say so.
+A `503` is a returned `Response`, so the Core outcome is **success**. Defaults:
+
+- **Retry** does **not** auto-retry by status. Opt in with `retryOn` (or a custom classifier).
+- **Circuit breaker** still treats selected `.status` values (`408`, `500`–`504`) as failures when
+  that policy is enabled. `429` is not a breaker failure.
 
 ```ts
 const RETRYABLE = new Set([408, 429, 500, 502, 503, 504]);
@@ -92,6 +95,7 @@ const resilientFetch = createFetch({
   retry: {
     maxAttempts: 3,
     jitter: "none",
+    // Opt in only when repeating the request is safe (GET-like / idempotent work).
     retryOn: (outcome) =>
       outcome.status === "error" ||
       (outcome.status === "success" && RETRYABLE.has(outcome.value.status)),
@@ -99,7 +103,9 @@ const resilientFetch = createFetch({
 });
 ```
 
-`retryOn` returning `true` for a successful outcome is supported precisely for this case.
+`retryOn` returning `true` for a successful outcome is supported precisely for this case. If every
+attempt stays retryable and `maxAttempts` is exhausted, Retry throws `RetryExceededError` rather
+than returning the last `Response`.
 
 If you would rather have statuses behave like errors everywhere — retry, circuit breaker, and
 fallback alike — throw from an operation instead of using the adapter:

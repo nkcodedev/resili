@@ -45,7 +45,9 @@ Summarized from [Alpha status](./alpha-status.md) (still accurate for product li
 
 - Streaming: no separate TTFB or idle/chunk timeout; `perAttemptMs` covers the whole attempt including consumer pull time
 - Core: policy state and Budget Guard are process-local; `retry.jitter` is `"none"` only; `timeout.deadlineMs` is rejected
-- HTTP: status codes are not failures by default; injected client retries are not disabled
+- HTTP: resolved responses are not auto-retried by status (opt in with `retryOn`); selected `.status`
+  values still count as circuit-breaker failures; undici uses `statusCode` (not seen by default);
+  injected client retries are not disabled
 - LLM: text-in / text-out only; no tools, multimodal, or embeddings in this cut
 
 ## Freeze records

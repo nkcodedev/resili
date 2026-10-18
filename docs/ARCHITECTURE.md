@@ -472,10 +472,10 @@ interface FailureClassifier {
 |---------|:---------------------:|:-------------:|-------|
 | `2xx` / `3xx` | No | No | Success. |
 | `400`, `404`, `422` (client errors) | **No** | **No** | Caller's fault, not a downstream fault — must **not** trip the breaker and retrying won't help. |
-| `408 Request Timeout` | Yes | Yes | Server-side timeout. |
+| `408 Request Timeout` | Yes | **No** (default) | Counts for breaker; status retries require `retryOn` / custom classifier. |
 | `409` Conflict | No | No | Semantic; retry is unsafe by default. |
-| `429 Too Many Requests` | **No** (configurable) | **Yes** | Backpressure, not a fault. Honor `Retry-After`. |
-| `500`, `502`, `503`, `504` | **Yes** | **Yes** | Downstream faults. |
+| `429 Too Many Requests` | **No** (configurable) | **No** (default) | Not a breaker fault; status retries require opt-in (`retryOn`). |
+| `500`, `502`, `503`, `504` | **Yes** | **No** (default) | Downstream faults for the breaker; status retries require opt-in. |
 | Network errors (`ECONNRESET`, `ECONNREFUSED`, `ENOTFOUND`, `EPIPE`) | **Yes** | **Yes — idempotent only** | Retry only when the operation is marked idempotent (see below). |
 | `TimeoutError` (ours) | **Yes** | **Yes** | Slow dependency. |
 | `AbortError` (caller/deadline) | **No** | **No** | Caller intent; terminal. |
@@ -486,12 +486,12 @@ interface FailureClassifier {
 ### Answers to the required questions
 
 - **404?** No — does not count, not retried.
-- **429?** Does **not** count toward the breaker by default (it is flow control, configurable), but **is** retryable honoring `Retry-After`.
-- **500?** Yes — counts and is retried.
+- **429?** Does **not** count toward the breaker by default (it is flow control, configurable). Default Retry does **not** auto-retry resolved `429` responses; opt in with `retryOn`.
+- **500?** Yes — counts as a breaker failure. Default Retry does **not** auto-retry the resolved response; opt in with `retryOn`.
 - **AbortError?** No — external cancellation/deadline is caller intent; terminal, never counts.
 - **TimeoutError?** Yes — counts (slow dependency) and is retryable.
 - **Network failures?** Yes — count; retried **only for idempotent operations** to avoid duplicate side effects.
-- **Custom predicates?** Yes — supply a custom `FailureClassifier`, or compose predicates via builder helpers. Idempotency is declared per operation (`metadata.idempotent` or builder option) and consumed by the default classifier.
+- **Custom predicates?** Yes — supply a custom `FailureClassifier`, or compose predicates via builder helpers. Idempotency is declared per operation (`metadata.idempotent` or builder option) and consumed by the default classifier for **network** errors.
 
 ---
 

@@ -207,8 +207,9 @@ Supported methods are `request`, `get`, `delete`, `post`, `put`, and `patch`.
 - No response transforms.
 - No `axios.create()`.
 - No cancel token support.
-- No HTTP status classification. A 4xx or 5xx response is a returned value unless
-  you opt in with `retry.retryOn`.
+- No adapter-level HTTP status classification. Resolved 4xx/5xx values are not
+  auto-retried; opt in with `retry.retryOn`. Circuit Breaker still uses Core
+  `.status` failure rules when that policy is enabled.
 - No response body handling beyond returning the injected implementation result.
 - No OpenTelemetry or metrics exporters.
 - Pass caller cancellation as `config.signal`. The copy sent to axios receives

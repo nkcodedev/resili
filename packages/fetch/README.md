@@ -224,8 +224,9 @@ runtime environments.
 - The adapter does not provide OpenTelemetry or metrics exporters.
 - The adapter is intentionally a thin wrapper over `@resili/core`.
 
-If you need status-code classification, provide a core classifier or `retry.retryOn`
-predicate that matches your application contract.
+Default Retry does **not** auto-retry by `Response.status`; use `retry.retryOn` or a custom
+classifier to opt in. Circuit Breaker (when enabled) still treats selected `.status` values as
+failures. Prefer status retries only for operations that are safe to replay.
 
 ## Documentation
 

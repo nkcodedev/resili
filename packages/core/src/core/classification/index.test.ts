@@ -12,29 +12,37 @@ import { composeClassifier, httpClassifier, type FailureVerdict, type Outcome } 
 
 describe("httpClassifier", () => {
   it.each([
-    [200, false, false],
-    [204, false, false],
-    [301, false, false],
-    [400, false, false],
-    [404, false, false],
-    [408, true, true],
-    [409, false, false],
-    [422, false, false],
-    [429, false, true],
-    [500, true, true],
-    [502, true, true],
-    [503, true, true],
-    [504, true, true],
+    [200, false],
+    [204, false],
+    [301, false],
+    [400, false],
+    [404, false],
+    [408, true],
+    [409, false],
+    [422, false],
+    [429, false],
+    [500, true],
+    [502, true],
+    [503, true],
+    [504, true],
   ] as const)(
-    "classifies HTTP status %s as failure=%s retryable=%s",
-    (status, expectedFailure, expectedRetryable) => {
+    "classifies HTTP status %s as failure=%s and never auto-retries successful responses",
+    (status, expectedFailure) => {
       const ctx = createTestContext();
       const outcome = success({ status });
 
       expect(httpClassifier.isFailure(outcome, ctx)).toBe(expectedFailure);
-      expect(httpClassifier.isRetryable(outcome, ctx)).toBe(expectedRetryable);
+      expect(httpClassifier.isRetryable(outcome, ctx)).toBe(false);
     },
   );
+
+  it("does not treat undici-style statusCode as a failure or retry signal", () => {
+    const ctx = createTestContext();
+    const outcome = success({ statusCode: 503 });
+
+    expect(httpClassifier.isFailure(outcome, ctx)).toBe(false);
+    expect(httpClassifier.isRetryable(outcome, ctx)).toBe(false);
+  });
 
   it("ignores success values without an HTTP status", () => {
     const ctx = createTestContext();
@@ -216,7 +224,7 @@ describe("composeClassifier", () => {
     const outcome = success({ status: 500 });
 
     expect(classifier.isFailure(outcome, ctx)).toBe(true);
-    expect(classifier.isRetryable(outcome, ctx)).toBe(true);
+    expect(classifier.isRetryable(outcome, ctx)).toBe(false);
     expect(classifier.retryAfter?.(outcome, ctx)).toBeUndefined();
   });
 
@@ -224,6 +232,7 @@ describe("composeClassifier", () => {
     const ctx = createTestContext();
     const classifier = composeClassifier(httpClassifier, {
       isFailure: () => false,
+      isRetryable: () => true,
       retryAfter: () => 42,
     });
     const outcome = success({ status: 500 });
