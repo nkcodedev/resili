@@ -42,18 +42,20 @@ your own backpressure would look like a downstream outage.
 
 For a returned value with an integer `status`:
 
-| Statuses                | `isFailure` | `isRetryable` |
-| ----------------------- | ----------- | ------------- |
-| 408, 500, 502, 503, 504 | Yes         | Yes           |
-| 429                     | No          | **Yes**       |
-| Other 4xx               | No          | No            |
-| 2xx / 3xx               | No          | No            |
+| Statuses                | `isFailure` | `isRetryable` (default)        |
+| ----------------------- | ----------- | ------------------------------ |
+| 408, 500, 502, 503, 504 | Yes         | **No** — opt in with `retryOn` |
+| 429                     | No          | **No** — opt in with `retryOn` |
+| Other 4xx               | No          | No                             |
+| 2xx / 3xx               | No          | No                             |
 
-429 is retryable but not a failure: rate limiting means the service is working and protecting itself.
+Resolved HTTP responses are never auto-retried by status. `429` is still not a breaker failure
+(rate limiting is flow control). Enable status retries explicitly with `retry.retryOn` or a custom
+classifier — and only when repeating the request is safe.
 
-**Note:** an outcome only gets classified if the operation _returned_ something with a `status`. HTTP
-adapters return raw response objects, so a 503 is a success as far as the pipeline is concerned unless
-you opt in with `retryOn`. See [HTTP adapters](../http/overview.md#status-codes-are-not-classified-by-default).
+**Note:** an outcome only gets HTTP status classification if the returned value has a numeric
+`.status` field. Fetch/Axios responses do; undici uses `statusCode`, which the default classifier
+does not read. See [HTTP adapters](../http/overview.md#status-codes-and-policies).
 
 ### Error outcomes
 

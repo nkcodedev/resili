@@ -108,10 +108,14 @@ const send = createUndici({
 });
 ```
 
-## Status codes do not fail by default
+## Status codes (`statusCode`)
 
-`undici.request` resolves for every status, including 5xx. Resili therefore sees success, and the
-response is neither retried nor recorded as a breaker failure unless you classify it:
+`undici.request` resolves for every status, including 5xx. Resili therefore sees a **successful**
+outcome. Defaults:
+
+- **Retry** does not auto-retry by status. Opt in with `retryOn`.
+- **Circuit breaker** default classifier reads `.status`, not undici’s **`statusCode`**, so undici
+  responses are not counted as breaker failures unless you supply a custom classifier / throw.
 
 ```ts
 const RETRYABLE = new Set([408, 429, 500, 502, 503, 504]);

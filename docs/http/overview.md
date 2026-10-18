@@ -42,29 +42,37 @@ control of the version, the instance, and its configuration.
 | An existing axios instance with your interceptors       | `@resili/axios`  |
 | `undici.request` directly, for lower-level control      | `@resili/undici` |
 
-## Status codes are not classified by default
+## Status codes and policies
 
-This is the most important thing to understand before using an adapter.
+Adapters return the transport response object. A `503` is still a **successful** Core outcome
+(the operation returned a value). Retry and Circuit Breaker use that outcome differently:
 
-Resili treats "the operation returned a value" as success. An HTTP adapter returns the response
-object, and a `503` is still a returned response — so **by default a 5xx is not retried and does not
-open the circuit breaker**.
+| Policy              | Default behavior for resolved responses                                                                           |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| **Retry**           | **Does not** auto-retry by HTTP status. Opt in with `retryOn` (or a custom classifier).                           |
+| **Circuit breaker** | Treats selected `.status` values (`408`, `500`, `502`, `503`, `504`) as failures. `429` is not a breaker failure. |
 
-The default `httpClassifier` knows how to interpret statuses, but the adapters do not throw or
-convert on status. To act on statuses, opt in with `retryOn`:
+Undici responses expose **`statusCode`**, not `.status`. The default classifier reads `.status`
+only, so undici status codes are invisible unless you opt in with `retryOn` / a custom classifier.
 
 ```ts
+const RETRYABLE = new Set([408, 429, 500, 502, 503, 504]);
+
 const resilientFetch = createFetch({
   retry: {
     maxAttempts: 3,
     jitter: "none",
+    // Explicit opt-in: only enable this for operations that are safe to repeat.
     retryOn: (outcome) =>
       outcome.status === "error" ||
-      (outcome.status === "success" &&
-        [408, 429, 500, 502, 503, 504].includes(outcome.value.status)),
+      (outcome.status === "success" && RETRYABLE.has(outcome.value.status)),
   },
 });
 ```
+
+Timeouts and some thrown transport errors can still cause retries. That may repeat
+non-idempotent work (for example `POST`). Prefer idempotency keys or server-side
+deduplication when duplicate side effects are unacceptable.
 
 Or throw from the operation, which converts a bad status into a failure that every policy understands:
 

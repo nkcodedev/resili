@@ -8,6 +8,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- **HTTP status retries require explicit opt-in:** `httpClassifier.isRetryable` no longer treats
+  resolved responses with HTTP `.status` (`408` / `429` / `5xx`) as automatically retryable.
+  Status-based retries remain available via `retry.retryOn` or a custom classifier.
+  `httpClassifier.isFailure` is unchanged, so Circuit Breaker still counts selected `.status`
+  values (`408`, `500`, `502`, `503`, `504`) as failures. Thrown timeout / abort / network
+  classification is unchanged. Undici’s `statusCode` field remains unrecognized by the default
+  classifier.
+
+  **Beta 1 → stable migration:** If you relied on `createFetch` / `createAxios` with `retry` but
+  without `retryOn` to repeat requests after a resolved `503`/`429`/etc., add an explicit
+  `retryOn` (or custom classifier). Prefer that only for operations that are safe to replay;
+  timeouts and other thrown retries can still repeat non-idempotent work.
+
 ### Fixed
 
 - **RESILI-INTEROP-001:** Caller cancellation through `@resili/llm-openai` no longer surfaces as

@@ -80,9 +80,12 @@ export interface FailureClassifier {
 /**
  * Default HTTP-oriented failure classifier.
  *
- * It treats `2xx`/`3xx` as success, `4xx` caller errors as terminal, `429` as
- * retryable backpressure, `5xx` and timeouts as downstream failures, and network
- * errors as retryable only for idempotent operations.
+ * Successful outcomes (including resolved HTTP responses) are **never**
+ * auto-retried by status. Opt into status retries with `retry.retryOn` or a
+ * custom classifier. Selected `.status` values still count as circuit-breaker
+ * failures via {@link FailureClassifier.isFailure}. Thrown timeouts and
+ * network errors keep their existing retry rules (network retries require
+ * `metadata.idempotent === true`).
  *
  * @public
  */
@@ -99,9 +102,9 @@ export const httpClassifier: FailureClassifier = Object.freeze({
 
   isRetryable(outcome: Outcome, ctx: Context): boolean {
     if (outcome.status === "success") {
-      const status = getStatus(outcome.value);
-
-      return status !== undefined && isRetryableHttpStatus(status);
+      // Resolved values are not auto-retried. Status-based retries require an
+      // explicit retryOn predicate or a custom FailureClassifier.
+      return false;
     }
 
     return isErrorRetryable(outcome.error, ctx);
@@ -154,17 +157,6 @@ export function composeClassifier(
 
 function isHttpFailureStatus(status: number): boolean {
   return status === 408 || status === 500 || status === 502 || status === 503 || status === 504;
-}
-
-function isRetryableHttpStatus(status: number): boolean {
-  return (
-    status === 408 ||
-    status === 429 ||
-    status === 500 ||
-    status === 502 ||
-    status === 503 ||
-    status === 504
-  );
 }
 
 function isErrorFailure(error: unknown, ctx: Context): boolean {

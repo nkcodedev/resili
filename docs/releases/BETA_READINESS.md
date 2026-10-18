@@ -226,24 +226,24 @@ Default pipeline (outer → inner): Fallback → Cache → Retry → Circuit bre
 
 Retry is **outside** timeout: each attempt gets a fresh `perAttemptMs`. That is the shipped semantic. Freeze it.
 
-| Component            | Status                        | Known risks                                                                                | Beta blocker?     | Test gaps                            |
-| -------------------- | ----------------------------- | ------------------------------------------------------------------------------------------ | ----------------- | ------------------------------------ |
-| Retry                | Implemented                   | Unimplemented jitter/idempotentOnly throw. `RetryExceededError` only when still retryable. | No                | Interaction with admission + breaker |
-| Timeout              | Per-attempt only              | `deadlineMs` no-op on the policy                                                           | **Yes (honesty)** | Overall deadline if implemented      |
-| Circuit breaker      | In-memory, % thresholds       | `failureRateThreshold` is percent not fraction                                             | No                | Retry × open × recovery              |
-| Bulkhead             | Concurrency + optional queue  | Default `maxQueue: 0`. Rejections retryable, not failures                                  | No                | Queue timeout × caller abort         |
-| Rate limiter         | Token bucket + sliding window | `maxWaitMs` required for `wait`, rejected for `reject`                                     | No                | Wait × timeout × retry               |
-| Fallback             | Outermost                     | No events. Catches `RetryExceededError` unless `fallbackOn` says no                        | No                | Abort vs fallback                    |
-| Hedge                | Exactly 2 attempts            | Multiplies inner load. Retry × hedge is a foot-gun                                         | No                | Hedge × abort × timeout              |
-| Dedupe               | In-flight only                | Shared abort when unused. Not a cache                                                      | No                | Joiner abort × owner abort           |
-| Cache                | FIFO, successes only          | Concurrent misses not coalesced                                                            | No                | Cache × retry (hit skips retry)      |
-| Policy ordering      | Deterministic + relative      | Custom-to-custom anchors unsupported                                                       | No                | Budget `{ before: "retry" }` stays   |
-| Execution context    | Immutable + fork              | Metadata **values** reused by reference across forks                                       | No                | Keep streaming commit tests          |
-| Metadata             | Shallow reuse                 | Mutating nested objects is visible across attempts **by design**                           | No                | Document; do not “fix”               |
-| Cancellation         | `AbortSignal` native          | HTTP adapters do not take caller signal                                                    | **Yes (HTTP)**    | Full cancellation matrix             |
-| Events               | Closed core map               | Handler errors swallowed. Fallback silent                                                  | No                | Payload privacy regression           |
-| Metrics              | Low-cardinality contract      | Only some policies record; `requestId` must never be a label                               | No                | Cardinality lint if added            |
-| Error classification | `httpClassifier` + pluggable  | HTTP **responses** with status are not errors unless `retryOn`                             | No                | Freeze 429-not-failure               |
+| Component            | Status                        | Known risks                                                                                                                        | Beta blocker?     | Test gaps                            |
+| -------------------- | ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- | ----------------- | ------------------------------------ |
+| Retry                | Implemented                   | Unimplemented jitter/idempotentOnly throw. `RetryExceededError` only when still retryable.                                         | No                | Interaction with admission + breaker |
+| Timeout              | Per-attempt only              | `deadlineMs` no-op on the policy                                                                                                   | **Yes (honesty)** | Overall deadline if implemented      |
+| Circuit breaker      | In-memory, % thresholds       | `failureRateThreshold` is percent not fraction                                                                                     | No                | Retry × open × recovery              |
+| Bulkhead             | Concurrency + optional queue  | Default `maxQueue: 0`. Rejections retryable, not failures                                                                          | No                | Queue timeout × caller abort         |
+| Rate limiter         | Token bucket + sliding window | `maxWaitMs` required for `wait`, rejected for `reject`                                                                             | No                | Wait × timeout × retry               |
+| Fallback             | Outermost                     | No events. Catches `RetryExceededError` unless `fallbackOn` says no                                                                | No                | Abort vs fallback                    |
+| Hedge                | Exactly 2 attempts            | Multiplies inner load. Retry × hedge is a foot-gun                                                                                 | No                | Hedge × abort × timeout              |
+| Dedupe               | In-flight only                | Shared abort when unused. Not a cache                                                                                              | No                | Joiner abort × owner abort           |
+| Cache                | FIFO, successes only          | Concurrent misses not coalesced                                                                                                    | No                | Cache × retry (hit skips retry)      |
+| Policy ordering      | Deterministic + relative      | Custom-to-custom anchors unsupported                                                                                               | No                | Budget `{ before: "retry" }` stays   |
+| Execution context    | Immutable + fork              | Metadata **values** reused by reference across forks                                                                               | No                | Keep streaming commit tests          |
+| Metadata             | Shallow reuse                 | Mutating nested objects is visible across attempts **by design**                                                                   | No                | Document; do not “fix”               |
+| Cancellation         | `AbortSignal` native          | HTTP adapters do not take caller signal                                                                                            | **Yes (HTTP)**    | Full cancellation matrix             |
+| Events               | Closed core map               | Handler errors swallowed. Fallback silent                                                                                          | No                | Payload privacy regression           |
+| Metrics              | Low-cardinality contract      | Only some policies record; `requestId` must never be a label                                                                       | No                | Cardinality lint if added            |
+| Error classification | `httpClassifier` + pluggable  | Resolved responses are not auto-retried by status; selected `.status` values still count as CB failures; `429` is not a CB failure | No                | Status retries require `retryOn`     |
 
 In-memory, process-local policy state is an accepted alpha/beta limitation, not a blocker.
 
@@ -251,16 +251,16 @@ In-memory, process-local policy state is an accepted alpha/beta limitation, not 
 
 ## HTTP Readiness
 
-| Topic                   | fetch                         | axios                      | undici                                      |
-| ----------------------- | ----------------------------- | -------------------------- | ------------------------------------------- |
-| Call shape              | `(input, init?) => Response`  | Callable + verb helpers    | `(origin, path, …) => { statusCode, body }` |
-| Injection               | Optional (`globalThis.fetch`) | Required                   | Required                                    |
-| Peer dependency         | none                          | none (structural)          | none (structural)                           |
-| Status classification   | None                          | None                       | None                                        |
-| Signal to transport     | Overwrites `init.signal`      | Overwrites `config.signal` | Overwrites `options.signal`                 |
-| Caller signal to Resili | Passed via `ContextInit`      | Passed via `ContextInit`   | Passed via `ContextInit`                    |
-| Client `on` / `destroy` | Hidden                        | Hidden                     | Hidden                                      |
-| Body replay             | Same reference                | Same reference             | Same reference; body must be drained        |
+| Topic                   | fetch                         | axios                        | undici                                      |
+| ----------------------- | ----------------------------- | ---------------------------- | ------------------------------------------- |
+| Call shape              | `(input, init?) => Response`  | Callable + verb helpers      | `(origin, path, …) => { statusCode, body }` |
+| Injection               | Optional (`globalThis.fetch`) | Required                     | Required                                    |
+| Peer dependency         | none                          | none (structural)            | none (structural)                           |
+| Status classification   | Retry: opt-in; CB: `.status`  | Retry: opt-in; CB: `.status` | Retry: opt-in; CB ignores `statusCode`      |
+| Signal to transport     | Overwrites `init.signal`      | Overwrites `config.signal`   | Overwrites `options.signal`                 |
+| Caller signal to Resili | Passed via `ContextInit`      | Passed via `ContextInit`     | Passed via `ContextInit`                    |
+| Client `on` / `destroy` | Hidden                        | Hidden                       | Hidden                                      |
+| Body replay             | Same reference                | Same reference               | Same reference; body must be drained        |
 
 **Inconsistencies to resolve or freeze before beta**
 

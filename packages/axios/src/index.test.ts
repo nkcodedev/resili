@@ -198,6 +198,72 @@ describe("createAxios", () => {
     expect(axiosImplementation).toHaveBeenCalledTimes(0);
     await cancelled.destroy();
   });
+
+  it.each(["get", "post"] as const)(
+    "does not auto-retry a resolved HTTP 503 for %s without retryOn",
+    async (method) => {
+      let attempts = 0;
+      const axios = createAxios({
+        axios: () => {
+          attempts += 1;
+          return Promise.resolve({
+            data: null,
+            status: 503,
+            statusText: "Service Unavailable",
+            headers: Object.freeze({}),
+            config: Object.freeze({}),
+          });
+        },
+        retry: {
+          maxAttempts: 3,
+          backoff: "fixed",
+          baseDelayMs: 0,
+          maxDelayMs: 0,
+          jitter: "none",
+        },
+      });
+
+      const response = await axios({ method, url: "/orders" });
+      expect(response.status).toBe(503);
+      expect(attempts).toBe(1);
+      await axios.destroy();
+    },
+  );
+
+  it("retries a resolved 503 when retryOn opts in", async () => {
+    let attempts = 0;
+    const axios = createAxios({
+      axios: () => {
+        attempts += 1;
+        return Promise.resolve({
+          data: null,
+          status: 503,
+          statusText: "Service Unavailable",
+          headers: Object.freeze({}),
+          config: Object.freeze({}),
+        });
+      },
+      retry: {
+        maxAttempts: 3,
+        backoff: "fixed",
+        baseDelayMs: 0,
+        maxDelayMs: 0,
+        jitter: "none",
+        retryOn(outcome: Outcome) {
+          if (outcome.status === "error") {
+            return true;
+          }
+          return outcome.value.status === 503;
+        },
+      },
+    });
+
+    await expect(axios.post("/orders", { id: 1 })).rejects.toMatchObject({
+      code: "ERR_RETRY_EXCEEDED",
+    });
+    expect(attempts).toBe(3);
+    await axios.destroy();
+  });
 });
 
 function createAxiosImplementation(

@@ -123,8 +123,9 @@ failure depends on the implementation **you** injected.
 - If you inject `axios.request` with default settings, a 500 rejects, and Resili's retry and circuit
   breaker see a failure — a generic `Error`, so it is a _failure but not retryable_ under the default
   classifier. Add `retryOn` to retry it.
-- If your instance sets `validateStatus: () => true`, a 500 resolves and Resili sees success. Classify
-  it yourself:
+- If your instance sets `validateStatus: () => true`, a 500 resolves and Resili sees **success**.
+  Default Retry does **not** auto-retry that resolved `.status`. Opt in with `retryOn`. Circuit
+  breaker (when enabled) still treats selected `.status` values (`408`, `500`–`504`) as failures.
 
 ```ts
 const RETRYABLE = new Set([408, 429, 500, 502, 503, 504]);
@@ -138,7 +139,8 @@ retry: {
 }
 ```
 
-The adapter itself never inspects a status.
+The adapter itself never inspects a status. Do not enable status retries for non-idempotent
+`POST`/`PATCH` unless the server can tolerate duplicates.
 
 ## AbortSignal propagation
 

@@ -55,7 +55,14 @@ at runtime. They are not part of the public TypeScript contract.
 5. When attempts or the delay budget are exhausted, retry throws `RetryExceededError`.
 
 `retryOn` can also request a retry for a _successful_ outcome — useful for treating a 503 response
-object as retryable without throwing.
+object as retryable without throwing. The default `httpClassifier` never auto-retries successful
+outcomes by HTTP status; status retries require this explicit `retryOn` (or a custom classifier).
+If every attempt remains retryable and `maxAttempts` is exhausted, Retry throws `RetryExceededError`
+with `lastError` describing that a successful outcome was marked retryable — it does **not** return
+the last response value.
+
+Status retries and timeout retries can repeat side effects. Use them only for operations that are
+safe to replay, or protect writes with server-side idempotency.
 
 ### Delay curve
 

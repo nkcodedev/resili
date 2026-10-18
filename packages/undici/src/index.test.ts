@@ -168,6 +168,74 @@ describe("createUndici", () => {
     expect(request).toHaveBeenCalledTimes(0);
     await cancelled.destroy();
   });
+
+  it.each(["GET", "POST"] as const)(
+    "does not auto-retry a resolved statusCode 503 for %s without retryOn",
+    async (method) => {
+      let attempts = 0;
+      const resilientRequest = createUndici({
+        request: () => {
+          attempts += 1;
+          return Promise.resolve({
+            statusCode: 503,
+            headers: Object.freeze({}),
+            body: "unavailable",
+          });
+        },
+        retry: {
+          maxAttempts: 3,
+          backoff: "fixed",
+          baseDelayMs: 0,
+          maxDelayMs: 0,
+          jitter: "none",
+        },
+      });
+
+      const response = await resilientRequest({
+        origin: "https://api.example.com",
+        path: "/orders",
+        method,
+      });
+      expect(response.statusCode).toBe(503);
+      expect(attempts).toBe(1);
+      await resilientRequest.destroy();
+    },
+  );
+
+  it("retries statusCode 503 when retryOn opts in", async () => {
+    let attempts = 0;
+    const resilientRequest = createUndici({
+      request: () => {
+        attempts += 1;
+        return Promise.resolve({
+          statusCode: 503,
+          headers: Object.freeze({}),
+          body: "unavailable",
+        });
+      },
+      retry: {
+        maxAttempts: 3,
+        backoff: "fixed",
+        baseDelayMs: 0,
+        maxDelayMs: 0,
+        jitter: "none",
+        retryOn(outcome: Outcome) {
+          if (outcome.status === "error") {
+            return true;
+          }
+          return outcome.value.statusCode === 503;
+        },
+      },
+    });
+
+    await expect(
+      resilientRequest({ origin: "https://api.example.com", path: "/orders", method: "POST" }),
+    ).rejects.toMatchObject({
+      code: "ERR_RETRY_EXCEEDED",
+    });
+    expect(attempts).toBe(3);
+    await resilientRequest.destroy();
+  });
 });
 
 function createUndiciImplementation(
