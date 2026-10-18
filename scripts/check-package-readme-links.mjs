@@ -32,6 +32,7 @@ const LINK_RE = /\[([^\]]*)\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g;
 const GH_REPO_PATH =
   /^https:\/\/github\.com\/nkcodedev\/resili\/(?:blob|tree)\/main\/(.+?)(?:#.*)?$/;
 const BAD_NPM_README = /npmjs\.com\/package\/README\.md/i;
+const BAD_UNAVAILABLE_SITE = /resili\.nkcode\.dev/i;
 
 /**
  * @param {string} text
@@ -60,6 +61,13 @@ function validateReadme(label, text) {
     findings.push({
       severity: "error",
       message: `${label}: contains forbidden npmjs.com/package/README.md URL`,
+    });
+  }
+
+  if (BAD_UNAVAILABLE_SITE.test(text)) {
+    findings.push({
+      severity: "error",
+      message: `${label}: contains unavailable site resili.nkcode.dev (use GitHub docs links)`,
     });
   }
 
