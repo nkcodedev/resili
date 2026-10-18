@@ -773,9 +773,30 @@ describe("LlmClient.stream", () => {
     const pending = iterator.next();
     controller.abort();
 
-    await expect(pending).rejects.toBeInstanceOf(Error);
+    await expect(pending).rejects.toMatchObject({ name: "AbortError", code: "ERR_ABORTED" });
     expect(attempts).toBe(1);
     expect(retryStarted).toBe(0);
+    await llm.destroy();
+  });
+
+  it("rejects stream when the caller signal is already aborted", async () => {
+    let attempts = 0;
+    const llm = createLlmClient({
+      provider: hangingAttemptProvider(() => {
+        attempts += 1;
+        return attempts;
+      }, 0),
+      model: "model-a",
+    });
+    const controller = new AbortController();
+    controller.abort();
+    const stream = llm.stream({ input: "Hello", signal: controller.signal });
+
+    await expect(stream[Symbol.asyncIterator]().next()).rejects.toMatchObject({
+      name: "AbortError",
+      code: "ERR_ABORTED",
+    });
+    expect(attempts).toBe(0);
     await llm.destroy();
   });
 

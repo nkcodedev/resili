@@ -280,7 +280,8 @@ async function generateOnce(input: GenerateOnceInput): Promise<LlmGenerateResult
     return Object.freeze({ response, usage, cost });
   } catch (error) {
     const durationMs = Date.now() - startedAt;
-    const llmError = toEventError(error, normalizedRequest);
+    const thrown = normalizeCallerCancellation(error);
+    const llmError = toEventError(thrown, normalizedRequest);
     const result = llmError.classification === "budget" ? "budget_rejected" : "failure";
 
     input.events.emit({
@@ -296,7 +297,7 @@ async function generateOnce(input: GenerateOnceInput): Promise<LlmGenerateResult
     });
     recordLlmMetrics(input.metrics, { result, durationMs });
 
-    throw error;
+    throw thrown;
   }
 }
 
@@ -408,5 +409,33 @@ function throwIfAborted(signal: AbortSignal | undefined): void {
   }
 
   const reason: unknown = signal.reason;
-  throw reason instanceof Error ? reason : new AbortError({ reason });
+
+  if (reason instanceof AbortError) {
+    throw reason;
+  }
+
+  throw new AbortError({
+    reason,
+    ...(reason instanceof Error ? { cause: reason } : {}),
+  });
+}
+
+/**
+ * Normalizes caller / native abort shapes to Core {@link AbortError}.
+ *
+ * Leaves timeouts, LlmError, and ordinary failures unchanged.
+ */
+function normalizeCallerCancellation(error: unknown): unknown {
+  if (error instanceof AbortError) {
+    return error;
+  }
+
+  if (error instanceof Error && error.name === "AbortError") {
+    return new AbortError({
+      reason: error,
+      cause: error,
+    });
+  }
+
+  return error;
 }

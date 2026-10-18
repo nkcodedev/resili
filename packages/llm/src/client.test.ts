@@ -291,25 +291,35 @@ describe("createLlmClient", () => {
 
   it("rejects generate() when the caller signal is already aborted", async () => {
     let attempts = 0;
+    let retryStarted = 0;
     const llm = createLlmClient({
       provider: exampleProvider(() => {
         attempts += 1;
         return successResponse();
       }),
       model: "model-a",
+      retry: { maxAttempts: 3, backoff: "fixed", jitter: "none", baseDelayMs: 0 },
+    });
+    llm.onCore("RetryStarted", () => {
+      retryStarted += 1;
     });
     const controller = new AbortController();
     controller.abort();
 
-    await expect(llm.generate({ input: "Hello", signal: controller.signal })).rejects.toSatisfy(
-      isCancellation,
+    await expect(llm.generate({ input: "Hello", signal: controller.signal })).rejects.toMatchObject(
+      {
+        name: "AbortError",
+        code: "ERR_ABORTED",
+      },
     );
     expect(attempts).toBe(0);
+    expect(retryStarted).toBe(0);
     await llm.destroy();
   });
 
   it("does not retry generate() after an in-flight caller abort", async () => {
     let attempts = 0;
+    let retryStarted = 0;
     const controller = new AbortController();
     const llm = createLlmClient({
       provider: defineProvider({
@@ -331,11 +341,21 @@ describe("createLlmClient", () => {
       model: "model-a",
       retry: { maxAttempts: 3, backoff: "fixed", jitter: "none", baseDelayMs: 0 },
     });
+    llm.onCore("RetryStarted", () => {
+      retryStarted += 1;
+    });
 
     const pending = llm.generate({ input: "Hello", signal: controller.signal });
     controller.abort();
-    await expect(pending).rejects.toSatisfy(isCancellation);
+    const error = await pending.then(
+      () => undefined,
+      (reason: unknown) => reason,
+    );
+    expect(error).toBeInstanceOf(AbortError);
+    expect(error).toMatchObject({ code: "ERR_ABORTED" });
+    expect(isLlmErrorRetryable(error)).toBe(false);
     expect(attempts).toBe(1);
+    expect(retryStarted).toBe(0);
     await llm.destroy();
   });
 
@@ -589,8 +609,4 @@ function createRecordingMetrics(): MetricsRecorder & {
       return [...keys].sort((left, right) => left.localeCompare(right));
     },
   };
-}
-
-function isCancellation(error: unknown): boolean {
-  return error instanceof AbortError || (error instanceof Error && error.name === "AbortError");
 }

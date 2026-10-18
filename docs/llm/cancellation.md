@@ -39,16 +39,20 @@ deadlines all arrive by the same route. The field differs per SDK:
 Because the signal reaches the SDK, cancellation closes the underlying HTTP connection rather than
 merely abandoning a promise — which is what actually stops token generation and further billing.
 
-## Abort errors are preserved, not classified
+## Abort errors normalize to Core `AbortError`
 
-Adapters recognize their SDK's cancellation errors and **rethrow them unchanged** instead of mapping
-them to an [`LlmError`](errors.md).
+Adapters recognize their SDK's cancellation errors and normalize them to Resili's Core
+[`AbortError`](../reference/errors.md) (`ERR_ABORTED`) instead of mapping them to an
+[`LlmError`](errors.md).
 
-| Adapter   | Recognized as cancellation                      |
-| --------- | ----------------------------------------------- |
-| OpenAI    | `AbortError`, `APIUserAbortError`               |
-| Anthropic | `AbortError`, `APIUserAbortError`               |
-| Gemini    | `AbortError`, `DOMException`, HTTP status `499` |
+| Adapter   | Recognized as cancellation                                                 |
+| --------- | -------------------------------------------------------------------------- |
+| OpenAI    | `AbortError`, `APIUserAbortError` (including openai@7 `.name === "Error"`) |
+| Anthropic | `AbortError`, `APIUserAbortError`                                          |
+| Gemini    | `AbortError`, `DOMException`, HTTP status `499`                            |
+
+Already-aborted caller signals are also normalized to `AbortError` / `ERR_ABORTED` before the
+provider is called.
 
 This matters for two reasons. A cancellation is never misclassified as a provider failure, so it does
 not count toward opening a [circuit breaker](../core/circuit-breaker.md) — a user closing a browser tab
@@ -62,7 +66,18 @@ import { AbortError } from "@resili/core";
 
 const isCancellation = (error: unknown) =>
   error instanceof AbortError || (error instanceof Error && error.name === "AbortError");
+
+// Prefer:
+error instanceof AbortError && error.code === "ERR_ABORTED";
 ```
+
+Public cancellation is **not** the same as timeout:
+
+| Intent              | Error                       | Code          |
+| ------------------- | --------------------------- | ------------- |
+| Caller cancellation | `AbortError`                | `ERR_ABORTED` |
+| Per-attempt timeout | `TimeoutError` (or wrapped) | `ERR_TIMEOUT` |
+| Provider/API fail   | `LlmError`                  | `ERR_LLM_*`   |
 
 ## Unary cancellation
 

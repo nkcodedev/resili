@@ -493,7 +493,7 @@ async function pump(input: PumpInput): Promise<LlmResponse> {
       }
     }
 
-    throw toThrown(input.ctx.signal.reason ?? new AbortError());
+    throw toThrown(normalizeAbortReason(input.ctx.signal.reason));
   } catch (error) {
     throw toThrown(afterCommit(error, input.isCommitted(), input.runtime.request));
   } finally {
@@ -525,7 +525,7 @@ function unwrapRetryExceeded(error: unknown): unknown {
 
 function afterCommit(error: unknown, committed: boolean, request: LlmRequest): unknown {
   if (!committed) {
-    return error;
+    return normalizeAbortReasonIfAbort(error);
   }
 
   if (error instanceof TimeoutError) {
@@ -537,8 +537,10 @@ function afterCommit(error: unknown, committed: boolean, request: LlmRequest): u
     });
   }
 
-  if (error instanceof AbortError) {
-    return error;
+  const abort = normalizeAbortReasonIfAbort(error);
+
+  if (abort instanceof AbortError) {
+    return abort;
   }
 
   if (isLlmError(error)) {
@@ -599,8 +601,38 @@ function throwIfAborted(signal: AbortSignal | undefined): void {
     return;
   }
 
-  const reason: unknown = signal.reason;
-  throw reason instanceof Error ? reason : new AbortError({ reason });
+  throw normalizeAbortReason(signal.reason);
+}
+
+/**
+ * Normalizes caller/native abort reasons to Core {@link AbortError}.
+ *
+ * Node's `AbortController.abort()` typically sets `signal.reason` to a
+ * `DOMException` with `name === "AbortError"`. That is cancellation intent, but
+ * it is not Resili's `AbortError` / `ERR_ABORTED`. Keep TimeoutError and other
+ * non-abort errors unchanged.
+ */
+function normalizeAbortReason(reason: unknown): AbortError {
+  if (reason instanceof AbortError) {
+    return reason;
+  }
+
+  return new AbortError({
+    reason,
+    ...(reason instanceof Error ? { cause: reason } : {}),
+  });
+}
+
+function normalizeAbortReasonIfAbort(error: unknown): unknown {
+  if (error instanceof AbortError) {
+    return error;
+  }
+
+  if (error instanceof Error && error.name === "AbortError") {
+    return normalizeAbortReason(error);
+  }
+
+  return error;
 }
 
 function normalizeFinalError(error: unknown, request: LlmRequest, committed: boolean): unknown {

@@ -1,3 +1,4 @@
+import { AbortError } from "@resili/core";
 import { LlmError, type LlmErrorClassification } from "@resili/llm";
 
 const SECRET_PATTERN = /sk-[a-zA-Z0-9_-]+|Bearer\s+\S+/gi;
@@ -20,13 +21,14 @@ export interface OpenAiErrorCause {
 /**
  * Maps an OpenAI SDK / HTTP failure to {@link LlmError}.
  *
- * Abort errors are rethrown unchanged so Resili timeout/cancel can own them.
+ * Caller / SDK cancellation is normalized to Core {@link AbortError} (`ERR_ABORTED`)
+ * so public cancel semantics stay distinct from provider failures and timeouts.
  *
  * @internal
  */
 export function mapOpenAiError(error: unknown, model: string): never {
   if (isAbortLike(error)) {
-    throw error;
+    throw toAbortError(error);
   }
 
   const status = getNumber(error, "status");
@@ -45,12 +47,53 @@ export function mapOpenAiError(error: unknown, model: string): never {
 }
 
 /**
+ * Detects caller / SDK cancellation shapes for OpenAI.
+ *
+ * openai@7.x `APIUserAbortError` instances report `.name === "Error"` while
+ * `constructor.name === "APIUserAbortError"`. Relying on `.name` alone misses
+ * live SDK aborts (RESILI-INTEROP-001). Detection uses:
+ * - `error.name` for native `AbortError` and forged/mock `APIUserAbortError`
+ * - `constructor.name === "APIUserAbortError"` for real openai@7 instances
+ *
+ * Ordinary `Error` values with `.name === "Error"` are **not** treated as cancel.
+ *
  * @internal
  */
 export function isAbortLike(error: unknown): boolean {
+  if (typeof error !== "object" || error === null) {
+    return false;
+  }
+
   const name = getErrorName(error);
 
-  return name === "AbortError" || name === "APIUserAbortError";
+  if (name === "AbortError" || name === "APIUserAbortError") {
+    return true;
+  }
+
+  return getConstructorName(error) === "APIUserAbortError";
+}
+
+function toAbortError(error: unknown): AbortError {
+  if (error instanceof AbortError) {
+    return error;
+  }
+
+  return new AbortError({
+    reason: error,
+    ...(error instanceof Error ? { cause: error } : {}),
+  });
+}
+
+function getConstructorName(error: object): string | undefined {
+  const constructor = (error as { readonly constructor?: unknown }).constructor;
+
+  if (typeof constructor !== "function") {
+    return undefined;
+  }
+
+  const name = constructor.name;
+
+  return typeof name === "string" && name.length > 0 ? name : undefined;
 }
 
 function classify(

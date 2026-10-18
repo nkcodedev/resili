@@ -8,6 +8,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- **RESILI-INTEROP-001:** Caller cancellation through `@resili/llm-openai` no longer surfaces as
+  `LlmError` / `ERR_LLM_UNKNOWN` when openai@7 throws `APIUserAbortError` with `.name === "Error"`.
+  Cancellation normalizes to Core `AbortError` / `ERR_ABORTED` for already-aborted and in-flight
+  `generate()` / `stream()` signals, remains non-retryable, and does not start another generation.
+  Timeout / `RetryExceededError` semantics are unchanged.
+
 ## [Beta.1] - 2026-08-26
 
 First public Beta cut. Published with `--tag beta`; `latest` now also resolves to Beta 1.
