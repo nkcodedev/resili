@@ -1,8 +1,10 @@
 # Beta status
 
-**Stage: Beta.** Eight packages are published publicly. Beta 1 is the current release.
+**Stage: Beta (published).** Eight packages are published publicly. Beta 1 is still the current
+**published** release on `latest` / `beta`. The in-repo cut is now [first stable RC1](./rc1-status.md)
+(`0.2.0-rc.1` / `0.1.0-rc.1`), which is not yet on the registry.
 
-| Line        | Packages                                                      | Version        |
+| Line        | Packages                                                      | Published      |
 | ----------- | ------------------------------------------------------------- | -------------- |
 | Core + HTTP | `@resili/core`, `-fetch`, `-axios`, `-undici`                 | `0.2.0-beta.1` |
 | LLM         | `@resili/llm`, `-llm-openai`, `-llm-anthropic`, `-llm-gemini` | `0.1.0-beta.1` |

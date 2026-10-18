@@ -1,6 +1,6 @@
 {
   "name": "@resili/axios",
-  "version": "0.2.0-beta.1",
+  "version": "0.2.0-rc.1",
   "description": "Axios-compatible adapter for the Resili resilience toolkit.",
   "type": "module",
   "license": "MIT",
@@ -48,7 +48,8 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/nkcodedev/resili.git"
+    "url": "git+https://github.com/nkcodedev/resili.git",
+    "directory": "packages/axios"
   },
   "bugs": {
     "url": "https://github.com/nkcodedev/resili/issues"

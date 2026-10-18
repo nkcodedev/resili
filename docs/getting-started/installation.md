@@ -10,13 +10,18 @@ Resili is published as independently versioned packages. Install only what you u
 
 ## Current release channel
 
-**Public Beta.** Beta 1 is the current public release. Plain installs resolve to Beta 1 (`latest`
-and `beta` currently both point at it). Historical alpha builds remain available under `@alpha`.
+**RC1 prepared; Beta 1 still published.** Package versions in this repository are
+`0.2.0-rc.1` / `0.1.0-rc.1`. Until RC1 is published under the npm `next` dist-tag, plain installs
+resolve to Beta 1 (`latest` / `beta`). Historical alpha builds remain available under `@alpha`.
 This is not a stable `1.0` guarantee — pin exact versions when you need reproducibility. See
-[Versioning and dist-tags](../releases/versioning.md) and [Beta status](../releases/beta-status.md).
+[Versioning and dist-tags](../releases/versioning.md) and [RC1 status](../releases/rc1-status.md).
 
 ```bash
+# Published today (Beta 1)
 npm install @resili/core
+
+# After RC1 publication
+npm install @resili/core@0.2.0-rc.1
 ```
 
 ## Core

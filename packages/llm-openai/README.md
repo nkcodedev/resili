@@ -2,18 +2,18 @@
 
 > OpenAI Chat Completions adapter for the Resili LLM foundation.
 
-**Public beta.** This package is the first provider adapter for [`@resili/llm`](https://github.com/nkcodedev/resili/blob/main/packages/llm/README.md). It is **not** an OpenAI SDK replacement and not an agent framework.
+This package is the OpenAI Chat Completions provider adapter for [`@resili/llm`](https://github.com/nkcodedev/resili/blob/main/packages/llm/README.md). It is **not** an OpenAI SDK replacement and not an agent framework.
 
 You create the official `openai` client. Resili never stores API keys and never contacts a Resili service.
 
 ## Installation
 
-**Public Beta.** Beta 1 is the current public release. Plain installs resolve to Beta 1 (`latest` and
-`beta` currently both point at it). Historical `alpha` builds remain available under `@alpha`. This
-is not a stable `1.0` guarantee. The current release is `0.1.0-beta.1`; see [versioning](https://github.com/nkcodedev/resili/blob/main/docs/releases/versioning.md).
+**First stable RC1 (prepared).** Package version `0.1.0-rc.1`. Intended npm dist-tag after
+publication: `next`. Until published, the registry still serves Beta 1 on `latest` / `beta`.
+Historical `alpha` builds remain under `@alpha`. This is not a stable `1.0` guarantee. See [versioning](https://github.com/nkcodedev/resili/blob/main/docs/releases/versioning.md).
 
 ```bash
-pnpm add @resili/core @resili/llm @resili/llm-openai openai
+pnpm add @resili/core@0.2.0-rc.1 @resili/llm@0.1.0-rc.1 @resili/llm-openai@0.1.0-rc.1 openai
 ```
 
 Node.js 20 or newer is required for Resili. The official `openai` SDK **v7** declares `node >= 22`. Use SDK v4–v6 on Node 20, or Node 22+ with v7.
@@ -147,7 +147,7 @@ Do not hard-code vendor prices here. Example USD amounts in this README are **il
 - Events and metrics come from `@resili/llm` and do not include prompts or completions.
 - Normalized error messages are classification text only.
 
-## Beta limitations
+## Current limitations
 
 - Chat Completions only (no Responses API, Assistants, embeddings, or images). Unary `generate()` and pull-through `stream()` are supported. Streaming reads `choices[0]` only.
 - Single user message from `LlmRequest.input`
@@ -166,6 +166,14 @@ The Responses API is **deferred**, not implemented. The full limitation list is 
   [Errors](https://github.com/nkcodedev/resili/blob/main/docs/llm/errors.md)
 - [Documentation home](https://github.com/nkcodedev/resili/blob/main/docs/README.md) · [`@resili/llm` README](https://github.com/nkcodedev/resili/blob/main/packages/llm/README.md)
 - Runnable examples: [`examples/llm-openai`](https://github.com/nkcodedev/resili/tree/main/examples/llm-openai)
+
+## Maintainer
+
+Created and maintained by **Nitin Kaushal**.
+
+- GitHub: https://github.com/nkcodedev
+- Repository: https://github.com/nkcodedev/resili
+- Email: nkcodedev.chd@gmail.com
 
 ## License
 

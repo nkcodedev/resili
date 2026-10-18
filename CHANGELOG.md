@@ -8,20 +8,40 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Documentation
+
+- Package README / metadata hardening for npm presentation: monorepo `repository.directory`,
+  absolute GitHub documentation links (avoids npm resolving `../../README.md` to
+  `https://www.npmjs.com/package/README.md`), RC1 install pins, and `pnpm docs:links` validation.
+
+## [RC.1] - 2026-10-18
+
+First stable release candidate. Prepared in-repo; intended npm dist-tag after publication: `next`.
+`latest` / `beta` remain on Beta 1 until a later stable cut. See
+[`docs/releases/rc1-status.md`](./docs/releases/rc1-status.md).
+
+### Versions
+
+| Family    | Packages                                                      | Version      |
+| --------- | ------------------------------------------------------------- | ------------ |
+| Core/HTTP | `@resili/core`, `-fetch`, `-axios`, `-undici`                 | `0.2.0-rc.1` |
+| LLM       | `@resili/llm`, `-llm-openai`, `-llm-anthropic`, `-llm-gemini` | `0.1.0-rc.1` |
+
 ### Changed
 
-- **HTTP status retries require explicit opt-in:** `httpClassifier.isRetryable` no longer treats
-  resolved responses with HTTP `.status` (`408` / `429` / `5xx`) as automatically retryable.
-  Status-based retries remain available via `retry.retryOn` or a custom classifier.
-  `httpClassifier.isFailure` is unchanged, so Circuit Breaker still counts selected `.status`
-  values (`408`, `500`, `502`, `503`, `504`) as failures. Thrown timeout / abort / network
-  classification is unchanged. Undici’s `statusCode` field remains unrecognized by the default
-  classifier.
+- **HTTP status retries require explicit opt-in (behavioral compatibility change):**
+  `httpClassifier.isRetryable` no longer treats resolved responses with HTTP `.status`
+  (`408` / `429` / `5xx`) as automatically retryable. Status-based retries remain available via
+  `retry.retryOn` or a custom classifier. `httpClassifier.isFailure` is unchanged, so Circuit
+  Breaker still counts selected `.status` values (`408`, `500`, `502`, `503`, `504`) as failures.
+  Thrown timeout / abort / network classification is unchanged. Undici’s `statusCode` field
+  remains unrecognized by the default classifier.
 
-  **Beta 1 → stable migration:** If you relied on `createFetch` / `createAxios` with `retry` but
+  **Beta 1 → RC1 migration:** If you relied on `createFetch` / `createAxios` with `retry` but
   without `retryOn` to repeat requests after a resolved `503`/`429`/etc., add an explicit
   `retryOn` (or custom classifier). Prefer that only for operations that are safe to replay;
-  timeouts and other thrown retries can still repeat non-idempotent work.
+  timeouts and other thrown retries can still repeat non-idempotent work. This cut does **not**
+  claim full HTTP idempotency guarantees.
 
 ### Fixed
 
@@ -30,6 +50,29 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   Cancellation normalizes to Core `AbortError` / `ERR_ABORTED` for already-aborted and in-flight
   `generate()` / `stream()` signals, remains non-retryable, and does not start another generation.
   Timeout / `RetryExceededError` semantics are unchanged.
+
+### Documentation
+
+- Install / versioning docs describe RC1 as prepared; published registry guidance remains Beta 1
+  until RC1 is published under `next`
+- README portability and npm link guidance from the Beta 1 docs pass retained
+
+### Release engineering
+
+- Same gates as Beta: Node 20/22 CI, API Extractor for all eight packages, `pnpm pack:check`
+  (pack rewrite, workspace leak check, fresh ESM+CJS consumer)
+
+### Install (after publication)
+
+```bash
+npm install @resili/core@0.2.0-rc.1
+npm install @resili/llm@0.1.0-rc.1 @resili/llm-openai@0.1.0-rc.1 openai
+```
+
+### Known limitations
+
+Unchanged product limits from Beta (process-local state, text-in/text-out LLM surface, no separate
+stream idle timeout). See [`docs/releases/rc1-status.md`](./docs/releases/rc1-status.md).
 
 ## [Beta.1] - 2026-08-26
 
