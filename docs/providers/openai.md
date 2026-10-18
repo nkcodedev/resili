@@ -104,9 +104,9 @@ Do not re-enable SDK retries on the client you inject. See [Retries](../llm/retr
 cancellation and per-attempt timeouts close the HTTP connection rather than merely abandoning a
 promise.
 
-`AbortError` and `APIUserAbortError` are **rethrown unchanged** rather than converted to an
-`LlmError`, so a cancellation is never miscounted as a provider failure. See
-[Cancellation](../llm/cancellation.md).
+`AbortError` and `APIUserAbortError` (including openai@7 instances where `.name === "Error"`) are
+normalized to Core `AbortError` / `ERR_ABORTED` rather than converted to an `LlmError`, so a
+cancellation is never miscounted as a provider failure. See [Cancellation](../llm/cancellation.md).
 
 ## Usage mapping
 

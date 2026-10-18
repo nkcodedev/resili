@@ -1,7 +1,8 @@
-import { TimeoutError } from "@resili/core";
+import { AbortError, TimeoutError, RetryExceededError } from "@resili/core";
 import {
   createLlmClient,
   createPricingResolver,
+  isLlmError,
   isLlmErrorRetryable,
   LlmError,
   type LlmEvent,
@@ -296,6 +297,85 @@ describe("createLlmClient + OpenAI provider", () => {
 
     await expect(llm.generate({ input: "Hello" })).rejects.toBeInstanceOf(TimeoutError);
     expect(seenSignal).toBeInstanceOf(AbortSignal);
+    await llm.destroy();
+  });
+
+  it("normalizes openai@7-shaped APIUserAbortError to AbortError / ERR_ABORTED", async () => {
+    class APIUserAbortError extends Error {
+      constructor() {
+        super("Request was aborted.");
+      }
+    }
+
+    let attempts = 0;
+    let retryStarted = 0;
+    const controller = new AbortController();
+    const llm = createLlmClient({
+      provider: createOpenAiProvider({
+        client: mockClient((_body, options) => {
+          attempts += 1;
+
+          return new Promise((_resolve, reject) => {
+            options?.signal?.addEventListener(
+              "abort",
+              () => {
+                const sdkAbort = new APIUserAbortError();
+                expect(sdkAbort.name).toBe("Error");
+                expect(sdkAbort.constructor.name).toBe("APIUserAbortError");
+                reject(sdkAbort);
+              },
+              { once: true },
+            );
+          });
+        }),
+        model: "gpt-4.1-mini",
+      }),
+      model: "gpt-4.1-mini",
+      retry: { maxAttempts: 3, backoff: "fixed", jitter: "none", baseDelayMs: 0 },
+    });
+    llm.onCore("RetryStarted", () => {
+      retryStarted += 1;
+    });
+
+    const pending = llm.generate({ input: "Hello", signal: controller.signal });
+    controller.abort();
+    const error = await pending.then(
+      () => undefined,
+      (reason: unknown) => reason,
+    );
+
+    expect(error).toBeInstanceOf(AbortError);
+    expect(error).toMatchObject({ code: "ERR_ABORTED" });
+    expect(isLlmError(error)).toBe(false);
+    expect(isLlmErrorRetryable(error)).toBe(false);
+    expect(attempts).toBe(1);
+    expect(retryStarted).toBe(0);
+    await llm.destroy();
+  });
+
+  it("keeps retry(maxAttempts:1) + timeout as RetryExceededError(TimeoutError)", async () => {
+    const llm = createLlmClient({
+      provider: createOpenAiProvider({
+        client: mockClient(
+          () =>
+            new Promise(() => {
+              // hang until timeout
+            }),
+        ),
+        model: "gpt-4.1-mini",
+      }),
+      model: "gpt-4.1-mini",
+      timeout: { perAttemptMs: 15 },
+      retry: { maxAttempts: 1, backoff: "fixed", jitter: "none", baseDelayMs: 0 },
+    });
+
+    const error = await llm.generate({ input: "Hello" }).then(
+      () => undefined,
+      (reason: unknown) => reason,
+    );
+    expect(error).toBeInstanceOf(RetryExceededError);
+    expect((error as RetryExceededError).lastError).toBeInstanceOf(TimeoutError);
+    expect((error as RetryExceededError).lastError).toMatchObject({ code: "ERR_TIMEOUT" });
     await llm.destroy();
   });
 
