@@ -13,6 +13,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Package README / metadata hardening for npm presentation: monorepo `repository.directory`,
   absolute GitHub documentation links (avoids npm resolving `../../README.md` to
   `https://www.npmjs.com/package/README.md`), RC1 install pins, and `pnpm docs:links` validation.
+- Point package `homepage` metadata at the GitHub repository while `https://resili.nkcode.dev/`
+  returns HTTP 404 (DNS resolves; no site content deployed from this repository).
 
 ## [RC.1] - 2026-10-18
 
