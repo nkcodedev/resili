@@ -31,6 +31,7 @@
     "api:extract": "pnpm --filter @resili/core --filter @resili/fetch --filter @resili/axios --filter @resili/undici --filter @resili/llm --filter @resili/llm-openai --filter @resili/llm-anthropic --filter @resili/llm-gemini api:extract",
     "api:check": "pnpm --filter @resili/core --filter @resili/fetch --filter @resili/axios --filter @resili/undici --filter @resili/llm --filter @resili/llm-openai --filter @resili/llm-anthropic --filter @resili/llm-gemini api:check",
     "pack:check": "node scripts/check-packed-packages.mjs",
+    "docs:links": "node scripts/check-package-readme-links.mjs",
     "changeset": "changeset",
     "version-packages": "changeset version",
     "release": "semantic-release",

@@ -15,15 +15,15 @@ publication: `next`. Until published, the registry still serves Beta 1 on `lates
 Historical `alpha` builds remain under `@alpha`. This is not a stable `1.0` guarantee.
 
 ```bash
-pnpm add @resili/core @resili/llm
+pnpm add @resili/core@0.2.0-rc.1 @resili/llm@0.1.0-rc.1
 ```
 
 ```bash
-npm install @resili/core @resili/llm
+npm install @resili/core@0.2.0-rc.1 @resili/llm@0.1.0-rc.1
 ```
 
 ```bash
-yarn add @resili/core @resili/llm
+yarn add @resili/core@0.2.0-rc.1 @resili/llm@0.1.0-rc.1
 ```
 
 Node.js 20 or newer is required. `@resili/llm` depends only on `@resili/core` at runtime. Package version is `0.1.0-rc.1`; see [versioning](https://github.com/nkcodedev/resili/blob/main/docs/releases/versioning.md).
@@ -230,7 +230,7 @@ Metrics use Resili's `MetricsRecorder`. The only label is `result` = `success` |
 - Events, metrics, and Resili-generated error messages do not include prompts, completions, or authorization headers.
 - This package makes no outbound calls and does not contact a Resili service.
 
-## Current alpha limitations
+## Current limitations
 
 - Official adapters: [`@resili/llm-openai`](https://github.com/nkcodedev/resili/blob/main/packages/llm-openai/README.md) (Chat Completions, unary + streaming), [`@resili/llm-anthropic`](https://github.com/nkcodedev/resili/blob/main/packages/llm-anthropic/README.md) (Messages, unary + streaming), and [`@resili/llm-gemini`](https://github.com/nkcodedev/resili/blob/main/packages/llm-gemini/README.md) (`generateContent` / `generateContentStream` text-in/text-out). No Azure or Bedrock adapters yet
 - Streaming `timeout.perAttemptMs` is full-attempt lifetime, not TTFB or idle-chunk timeout
@@ -258,6 +258,14 @@ The full list is in [alpha status](https://github.com/nkcodedev/resili/blob/main
   [Telemetry and privacy](https://github.com/nkcodedev/resili/blob/main/docs/observability/telemetry.md)
 - Providers: [OpenAI](https://github.com/nkcodedev/resili/blob/main/docs/providers/openai.md),
   [Anthropic](https://github.com/nkcodedev/resili/blob/main/docs/providers/anthropic.md), [Gemini](https://github.com/nkcodedev/resili/blob/main/docs/providers/gemini.md)
+
+## Maintainer
+
+Created and maintained by **Nitin Kaushal**.
+
+- GitHub: https://github.com/nkcodedev
+- Repository: https://github.com/nkcodedev/resili
+- Email: nkcodedev.chd@gmail.com
 
 ## License
 

@@ -16,15 +16,15 @@ publication: `next`. Until published, the registry still serves Beta 1 on `lates
 Historical `alpha` builds remain under `@alpha`. This is not a stable `1.0` guarantee.
 
 ```bash
-pnpm add @resili/core
+pnpm add @resili/core@0.2.0-rc.1
 ```
 
 ```bash
-npm install @resili/core
+npm install @resili/core@0.2.0-rc.1
 ```
 
 ```bash
-yarn add @resili/core
+yarn add @resili/core@0.2.0-rc.1
 ```
 
 Resili targets Node.js 20 or newer and ships ESM, CommonJS, and TypeScript declarations. Package version is `0.2.0-rc.1`; see [versioning](https://github.com/nkcodedev/resili/blob/main/docs/releases/versioning.md).
@@ -376,6 +376,7 @@ The full list is in [alpha status](https://github.com/nkcodedev/resili/blob/main
 Created and maintained by **Nitin Kaushal**.
 
 - GitHub: https://github.com/nkcodedev
+- Repository: https://github.com/nkcodedev/resili
 - Email: nkcodedev.chd@gmail.com
 
 If you find the project useful, please consider starring the repository.

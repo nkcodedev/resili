@@ -18,15 +18,15 @@ publication: `next`. Until published, the registry still serves Beta 1 on `lates
 Historical `alpha` builds remain under `@alpha`. This is not a stable `1.0` guarantee.
 
 ```bash
-pnpm add @resili/core @resili/axios
+pnpm add @resili/core@0.2.0-rc.1 @resili/axios@0.2.0-rc.1
 ```
 
 ```bash
-npm install @resili/core @resili/axios
+npm install @resili/core@0.2.0-rc.1 @resili/axios@0.2.0-rc.1
 ```
 
 ```bash
-yarn add @resili/core @resili/axios
+yarn add @resili/core@0.2.0-rc.1 @resili/axios@0.2.0-rc.1
 ```
 
 Node.js 20 or newer is required. Package version is `0.2.0-rc.1`; see
@@ -237,6 +237,7 @@ for behavior beyond request wrapping.
 Created and maintained by **Nitin Kaushal**.
 
 - GitHub: https://github.com/nkcodedev
+- Repository: https://github.com/nkcodedev/resili
 - Email: nkcodedev.chd@gmail.com
 
 If you find the project useful, please consider starring the repository.

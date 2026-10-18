@@ -2,7 +2,7 @@
 
 > Google Gemini `generateContent` adapter for the Resili LLM foundation.
 
-**Public beta.** This package is a provider adapter for [`@resili/llm`](https://github.com/nkcodedev/resili/blob/main/packages/llm/README.md). It is **not** a Gemini SDK replacement and not an agent framework.
+This package is the Google Gemini provider adapter for [`@resili/llm`](https://github.com/nkcodedev/resili/blob/main/packages/llm/README.md). It is **not** a Gemini SDK replacement and not an agent framework.
 
 You create the official `@google/genai` client. Resili never stores API keys and never contacts a Resili service.
 
@@ -13,7 +13,7 @@ publication: `next`. Until published, the registry still serves Beta 1 on `lates
 Historical `alpha` builds remain under `@alpha`. This is not a stable `1.0` guarantee. Package version is `0.1.0-rc.1` (aligned with the LLM family); see [versioning](https://github.com/nkcodedev/resili/blob/main/docs/releases/versioning.md).
 
 ```bash
-pnpm add @resili/core @resili/llm @resili/llm-gemini @google/genai
+pnpm add @resili/core@0.2.0-rc.1 @resili/llm@0.1.0-rc.1 @resili/llm-gemini@0.1.0-rc.1 @google/genai
 ```
 
 This adapter targets **`@google/genai`**, not the legacy `@google/generative-ai` SDK. The two have
@@ -155,7 +155,7 @@ Abort / 499 is rethrown so Resili owns cancellation. `cause` is a sanitized snap
 - Normalized error messages are classification text only.
 - API keys remain owned by the application.
 
-## Beta limitations
+## Current limitations
 
 - `models.generateContent` and `generateContentStream` (no tools, multimodal input, embeddings, files, grounding, Vertex-specific setup, or Live API)
 - Single user text from `LlmRequest.input` (`contents` string)
@@ -175,6 +175,14 @@ The full limitation list is in [alpha status](https://github.com/nkcodedev/resil
   [Errors](https://github.com/nkcodedev/resili/blob/main/docs/llm/errors.md)
 - [Documentation home](https://github.com/nkcodedev/resili/blob/main/docs/README.md) · [`@resili/llm` README](https://github.com/nkcodedev/resili/blob/main/packages/llm/README.md)
 - Runnable examples: [`examples/llm-gemini`](https://github.com/nkcodedev/resili/tree/main/examples/llm-gemini)
+
+## Maintainer
+
+Created and maintained by **Nitin Kaushal**.
+
+- GitHub: https://github.com/nkcodedev
+- Repository: https://github.com/nkcodedev/resili
+- Email: nkcodedev.chd@gmail.com
 
 ## License
 

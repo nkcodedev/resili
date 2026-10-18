@@ -2,7 +2,7 @@
 
 > Anthropic Messages adapter for the Resili LLM foundation.
 
-**Public beta.** This package is a provider adapter for [`@resili/llm`](https://github.com/nkcodedev/resili/blob/main/packages/llm/README.md). It is **not** an Anthropic SDK replacement and not an agent framework.
+This package is the Anthropic Messages provider adapter for [`@resili/llm`](https://github.com/nkcodedev/resili/blob/main/packages/llm/README.md). It is **not** an Anthropic SDK replacement and not an agent framework.
 
 You create the official `@anthropic-ai/sdk` client. Resili never stores API keys and never contacts a Resili service.
 
@@ -13,7 +13,7 @@ publication: `next`. Until published, the registry still serves Beta 1 on `lates
 Historical `alpha` builds remain under `@alpha`. This is not a stable `1.0` guarantee. See [versioning](https://github.com/nkcodedev/resili/blob/main/docs/releases/versioning.md).
 
 ```bash
-pnpm add @resili/core @resili/llm @resili/llm-anthropic @anthropic-ai/sdk
+pnpm add @resili/core@0.2.0-rc.1 @resili/llm@0.1.0-rc.1 @resili/llm-anthropic@0.1.0-rc.1 @anthropic-ai/sdk
 ```
 
 Node.js 20 or newer is required. The official Anthropic TypeScript SDK documents **Node.js 20 LTS or later**.
@@ -152,7 +152,7 @@ Cache and thinking token counts, when present, are copied to `usage.dimensions` 
 - Normalized error messages are classification text only.
 - API keys remain owned by the application.
 
-## Beta limitations
+## Current limitations
 
 - Messages API only (no tools, vision, embeddings, batches, or beta APIs). Unary `generate()` and pull-through `stream()` are supported.
 - Single user message from `LlmRequest.input`
@@ -172,6 +172,14 @@ The full limitation list is in [alpha status](https://github.com/nkcodedev/resil
   [Errors](https://github.com/nkcodedev/resili/blob/main/docs/llm/errors.md)
 - [Documentation home](https://github.com/nkcodedev/resili/blob/main/docs/README.md) · [`@resili/llm` README](https://github.com/nkcodedev/resili/blob/main/packages/llm/README.md)
 - Runnable examples: [`examples/llm-anthropic`](https://github.com/nkcodedev/resili/tree/main/examples/llm-anthropic)
+
+## Maintainer
+
+Created and maintained by **Nitin Kaushal**.
+
+- GitHub: https://github.com/nkcodedev
+- Repository: https://github.com/nkcodedev/resili
+- Email: nkcodedev.chd@gmail.com
 
 ## License
 

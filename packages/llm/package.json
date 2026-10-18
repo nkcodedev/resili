@@ -48,7 +48,8 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/nkcodedev/resili.git"
+    "url": "git+https://github.com/nkcodedev/resili.git",
+    "directory": "packages/llm"
   },
   "bugs": {
     "url": "https://github.com/nkcodedev/resili/issues"
