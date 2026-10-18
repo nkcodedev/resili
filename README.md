@@ -2,7 +2,7 @@
 
 > A TypeScript-first resilience toolkit for Node.js applications, HTTP clients, and LLM providers.
 
-[![version](https://img.shields.io/badge/beta-0.2.0--beta.1-blue.svg)](docs/releases/versioning.md)
+[![version](https://img.shields.io/badge/rc-0.2.0--rc.1-blue.svg)](docs/releases/versioning.md)
 [![license](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![typescript](https://img.shields.io/badge/types-TypeScript-blue.svg)](#)
 [![node](https://img.shields.io/badge/node-%3E%3D20-brightgreen.svg)](packages/core/package.json)
@@ -42,54 +42,59 @@ const response = await users.call("42");
 
 ## Status
 
-Beta. Prepared for the npm `beta` dist-tag, with the full test suite, type-checking, API-report
-verification, and packed-consumer gates green.
+First stable **RC1** is prepared in this repository (`0.2.0-rc.1` / `0.1.0-rc.1`), with the full test
+suite, type-checking, API-report verification, and packed-consumer gates green. Intended npm
+dist-tag after publication: `next`.
 
-Suitable for evaluation, integration testing, and early adoption where you can pin exact versions.
-APIs are expected to be substantially stable; this is not yet a semver-stable `latest` / `1.0`
-guarantee. See [Beta status](docs/releases/beta-status.md).
+The **published** registry still serves Beta 1 on `latest` / `beta` until RC1 is published. This is
+not yet a semver-stable `1.0` guarantee. See [RC1 status](docs/releases/rc1-status.md) and
+[Versioning](docs/releases/versioning.md).
 
 ## Packages
 
 ### Core
 
-| Package                         | Purpose                                                                                | Beta version   | Status |
-| ------------------------------- | -------------------------------------------------------------------------------------- | -------------- | ------ |
-| [`@resili/core`](packages/core) | Runtime: context, pipeline, nine policies, events, metrics, errors. Zero dependencies. | `0.2.0-beta.1` | Beta   |
+| Package                         | Purpose                                                                                | Version      | Status |
+| ------------------------------- | -------------------------------------------------------------------------------------- | ------------ | ------ |
+| [`@resili/core`](packages/core) | Runtime: context, pipeline, nine policies, events, metrics, errors. Zero dependencies. | `0.2.0-rc.1` | RC1    |
 
 ### HTTP
 
-| Package                             | Purpose                                             | Beta version   | Status |
-| ----------------------------------- | --------------------------------------------------- | -------------- | ------ |
-| [`@resili/fetch`](packages/fetch)   | fetch-compatible adapter                            | `0.2.0-beta.1` | Beta   |
-| [`@resili/axios`](packages/axios)   | axios-compatible adapter (injected implementation)  | `0.2.0-beta.1` | Beta   |
-| [`@resili/undici`](packages/undici) | undici-compatible adapter (injected implementation) | `0.2.0-beta.1` | Beta   |
+| Package                             | Purpose                                             | Version      | Status |
+| ----------------------------------- | --------------------------------------------------- | ------------ | ------ |
+| [`@resili/fetch`](packages/fetch)   | fetch-compatible adapter                            | `0.2.0-rc.1` | RC1    |
+| [`@resili/axios`](packages/axios)   | axios-compatible adapter (injected implementation)  | `0.2.0-rc.1` | RC1    |
+| [`@resili/undici`](packages/undici) | undici-compatible adapter (injected implementation) | `0.2.0-rc.1` | RC1    |
 
 ### LLM
 
-| Package                                           | Purpose                                                          | Beta version   | Status |
-| ------------------------------------------------- | ---------------------------------------------------------------- | -------------- | ------ |
-| [`@resili/llm`](packages/llm)                     | Provider-neutral client, usage, pricing, Budget Guard, telemetry | `0.1.0-beta.1` | Beta   |
-| [`@resili/llm-openai`](packages/llm-openai)       | OpenAI Chat Completions — unary + streaming                      | `0.1.0-beta.1` | Beta   |
-| [`@resili/llm-anthropic`](packages/llm-anthropic) | Anthropic Messages — unary + streaming                           | `0.1.0-beta.1` | Beta   |
-| [`@resili/llm-gemini`](packages/llm-gemini)       | Google Gemini (`@google/genai`) — unary + streaming              | `0.1.0-beta.1` | Beta   |
+| Package                                           | Purpose                                                          | Version      | Status |
+| ------------------------------------------------- | ---------------------------------------------------------------- | ------------ | ------ |
+| [`@resili/llm`](packages/llm)                     | Provider-neutral client, usage, pricing, Budget Guard, telemetry | `0.1.0-rc.1` | RC1    |
+| [`@resili/llm-openai`](packages/llm-openai)       | OpenAI Chat Completions — unary + streaming                      | `0.1.0-rc.1` | RC1    |
+| [`@resili/llm-anthropic`](packages/llm-anthropic) | Anthropic Messages — unary + streaming                           | `0.1.0-rc.1` | RC1    |
+| [`@resili/llm-gemini`](packages/llm-gemini)       | Google Gemini (`@google/genai`) — unary + streaming              | `0.1.0-rc.1` | RC1    |
 
 The two version lines move independently. See [Versioning](docs/releases/versioning.md).
 
 ## Installation
 
-**Public Beta.** Beta 1 is the current public release. Plain installs resolve to Beta 1 (`latest` and
-`beta` currently both point at it). Historical `alpha` builds remain available under `@alpha`. This
-is not a stable `1.0` guarantee.
+**RC1 prepared; Beta 1 still published.** Until RC1 is on npm under `next`, plain installs resolve
+to Beta 1 (`latest` / `beta`). Historical `alpha` builds remain available under `@alpha`. This is
+not a stable `1.0` guarantee.
 
 ```bash
+# Current published release (Beta 1)
 npm install @resili/core
 
+# After RC1 publication (exact pin or @next)
+npm install @resili/core@0.2.0-rc.1
+
 # with an HTTP adapter
-npm install @resili/core @resili/fetch
+npm install @resili/core@0.2.0-rc.1 @resili/fetch@0.2.0-rc.1
 
 # with LLM support
-npm install @resili/core @resili/llm @resili/llm-openai openai
+npm install @resili/core@0.2.0-rc.1 @resili/llm@0.1.0-rc.1 @resili/llm-openai@0.1.0-rc.1 openai
 ```
 
 Node 20 or newer. Every package ships ESM and CommonJS builds with TypeScript declarations.

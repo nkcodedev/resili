@@ -11,9 +11,9 @@ For the full project overview, see the [repository README](https://github.com/nk
 
 ## Installation
 
-**Public Beta.** Beta 1 is the current public release. Plain installs resolve to Beta 1 (`latest` and
-`beta` currently both point at it). Historical `alpha` builds remain available under `@alpha`. This
-is not a stable `1.0` guarantee.
+**First stable RC1 (prepared).** Package version `0.2.0-rc.1`. Intended npm dist-tag after
+publication: `next`. Until published, the registry still serves Beta 1 on `latest` / `beta`.
+Historical `alpha` builds remain under `@alpha`. This is not a stable `1.0` guarantee.
 
 ```bash
 pnpm add @resili/core
@@ -27,8 +27,7 @@ npm install @resili/core
 yarn add @resili/core
 ```
 
-Resili targets Node.js 20 or newer and ships ESM, CommonJS, and TypeScript declarations. The current
-release is `0.2.0-beta.1`; see [versioning](https://github.com/nkcodedev/resili/blob/main/docs/releases/versioning.md).
+Resili targets Node.js 20 or newer and ships ESM, CommonJS, and TypeScript declarations. Package version is `0.2.0-rc.1`; see [versioning](https://github.com/nkcodedev/resili/blob/main/docs/releases/versioning.md).
 
 ## Quick Start
 

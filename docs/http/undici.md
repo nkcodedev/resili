@@ -6,7 +6,7 @@ An undici-shaped `request` function backed by a Resili pipeline.
 Application → createUndici(...) → @resili/core → your undici request
 ```
 
-Current version: **`0.2.0-beta.1`**. Depends only on `@resili/core`.
+Current version: **`0.2.0-rc.1`**. Depends only on `@resili/core`.
 
 ## Installation
 

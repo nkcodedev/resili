@@ -2,15 +2,15 @@
 
 A TypeScript-first resilience toolkit for Node.js applications, HTTP clients, and LLM providers.
 
-All packages are on public Beta. Beta 1 is the current release — plain `npm install` resolves to it
-(`latest` and `beta` currently both point at Beta 1). Historical `alpha` builds remain available.
-See [Versioning](./releases/versioning.md).
+First stable RC1 is prepared in-repo (`0.2.0-rc.1` / `0.1.0-rc.1`). The public registry still serves
+Beta 1 on `latest` / `beta` until RC1 is published under `next`. Historical `alpha` builds remain
+available. See [Versioning](./releases/versioning.md) and [RC1 status](./releases/rc1-status.md).
 
-| Line        | Packages                                        | Current        |
-| ----------- | ----------------------------------------------- | -------------- |
-| Core + HTTP | `@resili/core`, `-fetch`, `-axios`, `-undici`     | `0.2.0-beta.1` |
-| LLM         | `@resili/llm`, `-llm-openai`, `-llm-anthropic`    | `0.1.0-beta.1` |
-|             | `@resili/llm-gemini`                             | `0.1.0-beta.1` |
+| Line        | Packages                                        | In-repo        | Published      |
+| ----------- | ----------------------------------------------- | -------------- | -------------- |
+| Core + HTTP | `@resili/core`, `-fetch`, `-axios`, `-undici`     | `0.2.0-rc.1`   | `0.2.0-beta.1` |
+| LLM         | `@resili/llm`, `-llm-openai`, `-llm-anthropic`    | `0.1.0-rc.1`   | `0.1.0-beta.1` |
+|             | `@resili/llm-gemini`                             | `0.1.0-rc.1`   | `0.1.0-beta.1` |
 
 ## Start here
 
@@ -108,7 +108,8 @@ Deeper specifications: [ARCHITECTURE.md](./ARCHITECTURE.md),
 ## Release status
 
 - [Alpha status](./releases/alpha-status.md) — historical alpha stage and product limitations
-- [Beta status](./releases/beta-status.md)
+- [RC1 status](./releases/rc1-status.md) — first stable release candidate (prepared; not yet published)
+- [Beta status](./releases/beta-status.md) — published Beta 1 on `latest` / `beta`
 - [Beta readiness](./releases/BETA_READINESS.md)
 - [Beta release plan](./releases/BETA_RELEASE_PLAN.md)
 - [Core API freeze review](./releases/BETA_API_REVIEW.md)

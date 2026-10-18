@@ -13,9 +13,9 @@ For the full framework overview, see the [repository README](https://github.com/
 
 ## Installation
 
-**Public Beta.** Beta 1 is the current public release. Plain installs resolve to Beta 1 (`latest` and
-`beta` currently both point at it). Historical `alpha` builds remain available under `@alpha`. This
-is not a stable `1.0` guarantee.
+**First stable RC1 (prepared).** Package version `0.2.0-rc.1`. Intended npm dist-tag after
+publication: `next`. Until published, the registry still serves Beta 1 on `latest` / `beta`.
+Historical `alpha` builds remain under `@alpha`. This is not a stable `1.0` guarantee.
 
 ```bash
 pnpm add @resili/core @resili/axios
@@ -29,7 +29,7 @@ npm install @resili/core @resili/axios
 yarn add @resili/core @resili/axios
 ```
 
-Node.js 20 or newer is required. The current release is `0.2.0-beta.1`; see
+Node.js 20 or newer is required. Package version is `0.2.0-rc.1`; see
 [versioning](https://github.com/nkcodedev/resili/blob/main/docs/releases/versioning.md).
 
 `axios` itself is **not** a dependency or peer dependency of this package. You inject
