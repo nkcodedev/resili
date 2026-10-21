@@ -3,6 +3,8 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "tsup";
 
+import { dedupeSourceMappingComments } from "../../scripts/dedupe-sourcemap-comments.mjs";
+
 const packageDir = dirname(fileURLToPath(import.meta.url));
 const coreVersion = JSON.parse(readFileSync(join(packageDir, "package.json"), "utf8")) as {
   readonly version: string;
@@ -40,5 +42,8 @@ export default defineConfig({
     return {
       js: format === "cjs" ? ".cjs" : ".js",
     };
+  },
+  onSuccess() {
+    dedupeSourceMappingComments(join(packageDir, "dist"));
   },
 });

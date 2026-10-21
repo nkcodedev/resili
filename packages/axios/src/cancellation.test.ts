@@ -17,6 +17,26 @@ const RESPONSE: AxiosResponse<{ readonly ok: true }> = Object.freeze({
 });
 
 describe("createAxios caller cancellation", () => {
+  it("normalizes ERR_CANCELED and does not open the circuit", async () => {
+    const canceled = Object.assign(new Error("canceled"), {
+      name: "CanceledError",
+      code: "ERR_CANCELED",
+    });
+    const axiosImplementation = createAxiosImplementation(() => Promise.reject(canceled));
+    const axios = createAxios({
+      axios: axiosImplementation,
+      circuitBreaker: {
+        minimumThroughput: 1,
+        failureRateThreshold: 50,
+        resetTimeoutMs: 60_000,
+      },
+    });
+
+    await expect(axios.get("/users")).rejects.toBeInstanceOf(AbortError);
+    await expect(axios.get("/users")).rejects.toMatchObject({ code: "ERR_ABORTED" });
+    expect(axiosImplementation).toHaveBeenCalledTimes(2);
+    await axios.destroy();
+  });
   it("does not invoke axios when the caller signal is already aborted", async () => {
     const axiosImplementation = createAxiosImplementation(() => Promise.resolve(RESPONSE));
     const axios = createAxios({ axios: axiosImplementation });

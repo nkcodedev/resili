@@ -161,7 +161,7 @@ function isHttpFailureStatus(status: number): boolean {
 
 function isErrorFailure(error: unknown, ctx: Context): boolean {
   if (
-    error instanceof AbortError ||
+    isCallerCancellation(error) ||
     error instanceof CircuitOpenError ||
     error instanceof BulkheadRejectedError ||
     error instanceof RateLimitExceededError
@@ -185,7 +185,7 @@ function isErrorRetryable(error: unknown, ctx: Context): boolean {
     return true;
   }
 
-  if (error instanceof AbortError || error instanceof CircuitOpenError) {
+  if (isCallerCancellation(error) || error instanceof CircuitOpenError) {
     return false;
   }
 
@@ -194,6 +194,26 @@ function isErrorRetryable(error: unknown, ctx: Context): boolean {
   }
 
   return false;
+}
+
+function isCallerCancellation(error: unknown): boolean {
+  if (error instanceof AbortError) {
+    return true;
+  }
+
+  if (!(error instanceof Error)) {
+    return false;
+  }
+
+  const name = getErrorName(error);
+
+  if (name === "AbortError" || name === "CanceledError") {
+    return true;
+  }
+
+  const code = getErrorCode(error);
+
+  return code === "ERR_ABORTED" || code === "ERR_CANCELED" || code === "ABORT_ERR";
 }
 
 function isUnknownNonAbortError(error: unknown, _ctx: Context): boolean {

@@ -111,7 +111,13 @@ export function createLlmClient(options: CreateLlmClientOptions): LlmClient {
     throw new ConfigurationError("LLM client options must be an object.", { field: "options" });
   }
 
-  if (typeof options.provider.execute !== "function") {
+  const provider: unknown = (candidate as { readonly provider?: unknown }).provider;
+
+  if (
+    provider === null ||
+    typeof provider !== "object" ||
+    typeof (provider as { readonly execute?: unknown }).execute !== "function"
+  ) {
     throw new ConfigurationError("options.provider must be a defined LLM provider.", {
       field: "provider",
     });
@@ -430,12 +436,37 @@ function normalizeCallerCancellation(error: unknown): unknown {
     return error;
   }
 
-  if (error instanceof Error && error.name === "AbortError") {
+  if (isCallerCancellationShape(error)) {
     return new AbortError({
       reason: error,
-      cause: error,
+      ...(error instanceof Error ? { cause: error } : {}),
     });
   }
 
   return error;
+}
+
+function isCallerCancellationShape(error: unknown): boolean {
+  if (typeof error !== "object" || error === null) {
+    return false;
+  }
+
+  const name = "name" in error && typeof error.name === "string" ? error.name : undefined;
+  const code = "code" in error && typeof error.code === "string" ? error.code : undefined;
+  const constructorName =
+    "constructor" in error &&
+    typeof error.constructor === "function" &&
+    typeof error.constructor.name === "string"
+      ? error.constructor.name
+      : undefined;
+
+  return (
+    name === "AbortError" ||
+    name === "CanceledError" ||
+    name === "APIUserAbortError" ||
+    constructorName === "APIUserAbortError" ||
+    code === "ERR_CANCELED" ||
+    code === "ERR_ABORTED" ||
+    code === "ABORT_ERR"
+  );
 }

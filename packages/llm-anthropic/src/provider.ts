@@ -66,7 +66,7 @@ export function createAnthropicProvider(options: CreateAnthropicProviderOptions)
     });
   }
 
-  if (typeof options.client.messages.create !== "function") {
+  if (!hasFunction(options.client, ["messages", "create"])) {
     throw new ConfigurationError("options.client must expose messages.create.", {
       field: "client",
     });
@@ -293,4 +293,18 @@ function eventToFrame(event: AnthropicStreamEvent, fallbackModel: string): LlmPr
   }
 
   return {};
+}
+
+function hasFunction(value: unknown, path: readonly string[]): boolean {
+  let current: unknown = value;
+
+  for (const key of path) {
+    if (current === null || typeof current !== "object") {
+      return false;
+    }
+
+    current = (current as Record<string, unknown>)[key];
+  }
+
+  return typeof current === "function";
 }

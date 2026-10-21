@@ -56,6 +56,14 @@ const pricing = createPricingResolver([
 ]);
 
 describe("createLlmClient", () => {
+  it("rejects missing, null, and partial provider configuration", () => {
+    expect(() => createLlmClient(undefined as never)).toThrow(ConfigurationError);
+    expect(() => createLlmClient(null as never)).toThrow(ConfigurationError);
+    expect(() => createLlmClient({} as never)).toThrow(ConfigurationError);
+    expect(() => createLlmClient({ provider: null } as never)).toThrow(ConfigurationError);
+    expect(() => createLlmClient({ provider: {} } as never)).toThrow(ConfigurationError);
+  });
+
   it("returns a normalized response from the provider", async () => {
     const llm = createLlmClient({
       provider: exampleProvider(() => successResponse()),

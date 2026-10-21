@@ -420,10 +420,18 @@ function sleep(services: PolicyServices, delayMs: number, ctx: Context): Promise
   });
 }
 
-function createAbortError(ctx: Context): Error {
+function createAbortError(ctx: Context): AbortError {
   const reason: unknown = ctx.signal.reason;
 
-  return reason instanceof Error ? reason : new AbortError({ reason, context: ctx.snapshot() });
+  if (reason instanceof AbortError) {
+    return reason;
+  }
+
+  return new AbortError({
+    reason,
+    context: ctx.snapshot(),
+    ...(reason instanceof Error ? { cause: reason } : {}),
+  });
 }
 
 function resolveKey(key: string | KeyResolver | undefined, ctx: Context): string {

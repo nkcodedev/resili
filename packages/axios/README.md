@@ -13,8 +13,8 @@ For the full framework overview, see the [repository README](https://github.com/
 
 ## Installation
 
-**First stable RC1 (prepared).** Package version `0.2.0-rc.1`. Intended npm dist-tag after
-publication: `next`. Until published, the registry still serves Beta 1 on `latest` / `beta`.
+**First stable RC1 is published on npm `next`.** Package version `0.2.0-rc.1`. `latest` and `beta`
+still serve Beta 1.
 Historical `alpha` builds remain under `@alpha`. This is not a stable `1.0` guarantee.
 
 ```bash
@@ -62,7 +62,7 @@ currently does not import or bundle the real `axios` package.
 ## createAxios()
 
 ```ts
-import { createAxios, type AxiosImplementation, type AxiosRequestConfig } from "/axios";
+import { createAxios, type AxiosImplementation, type AxiosRequestConfig } from "@resili/axios";
 
 const axiosImplementation: AxiosImplementation = async (config) => {
   return {
@@ -100,7 +100,7 @@ passed to `@resili/core`.
 ## GET Example
 
 ```ts
-import { createAxios, type AxiosImplementation, type AxiosRequestConfig } from "/axios";
+import { createAxios, type AxiosImplementation, type AxiosRequestConfig } from "@resili/axios";
 
 const axiosImplementation: AxiosImplementation = async <T, D>(config: AxiosRequestConfig<D>) => ({
   data: { users: [] } as T,
@@ -138,7 +138,7 @@ context signal. AbortSignal is the only supported cancellation mechanism.
 ## POST Example
 
 ```ts
-import { createAxios, type AxiosImplementation, type AxiosRequestConfig } from "/axios";
+import { createAxios, type AxiosImplementation, type AxiosRequestConfig } from "@resili/axios";
 
 const axiosImplementation: AxiosImplementation = async <T, D>(config: AxiosRequestConfig<D>) => ({
   data: { id: "42" } as T,
@@ -162,7 +162,7 @@ the request config.
 ## Retry Example
 
 ```ts
-import { createAxios, type AxiosImplementation, type AxiosRequestConfig } from "/axios";
+import { createAxios, type AxiosImplementation, type AxiosRequestConfig } from "@resili/axios";
 
 const axiosImplementation: AxiosImplementation = async <T, D>(config: AxiosRequestConfig<D>) => ({
   data: { ok: true } as T,

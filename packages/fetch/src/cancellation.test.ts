@@ -6,6 +6,30 @@ import { createFetch, type FetchImplementation } from "./index";
 const RESPONSE = new Response("ok", { status: 200 });
 
 describe("createFetch caller cancellation", () => {
+  it("normalizes a DOMException AbortError and preserves it as the cause", async () => {
+    const dom = new DOMException("The operation was aborted.", "AbortError");
+    const fetch = createFetchImplementation(() => Promise.reject(dom));
+    const resilientFetch = createFetch({
+      fetch,
+      circuitBreaker: {
+        minimumThroughput: 1,
+        failureRateThreshold: 50,
+        resetTimeoutMs: 60_000,
+      },
+    });
+
+    const error = await resilientFetch("https://example.com/users").then(
+      () => undefined,
+      (caught: unknown) => caught,
+    );
+
+    expect(error).toBeInstanceOf(AbortError);
+    expect(error).toMatchObject({ code: "ERR_ABORTED" });
+    expect((error as AbortError).cause).toBe(dom);
+
+    await expect(resilientFetch("https://example.com/users")).rejects.toBeInstanceOf(AbortError);
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
   it("does not invoke fetch when the caller signal is already aborted", async () => {
     const fetch = createFetchImplementation(() => Promise.resolve(RESPONSE));
     const resilientFetch = createFetch({ fetch });

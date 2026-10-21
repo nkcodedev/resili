@@ -1,5 +1,6 @@
 import {
   AbortError,
+  ConfigurationError,
   createClient,
   type Client,
   type Context,
@@ -100,7 +101,19 @@ export interface ResilientAxios {
  * @public
  */
 export function createAxios(options: CreateAxiosOptions): ResilientAxios {
-  const axiosImplementation = options.axios;
+  const candidate: unknown = options;
+
+  if (candidate === null || typeof candidate !== "object" || Array.isArray(candidate)) {
+    throw new ConfigurationError("Axios options must be an object.", { field: "options" });
+  }
+
+  const axiosOption: unknown = (candidate as { readonly axios?: unknown }).axios;
+
+  if (typeof axiosOption !== "function") {
+    throw new ConfigurationError("options.axios must be a function.", { field: "axios" });
+  }
+
+  const axiosImplementation = axiosOption as CreateAxiosOptions["axios"];
   const client: Client<readonly [], AxiosResponse> = createClient<readonly [], AxiosResponse>(
     (): Promise<AxiosResponse> => axiosImplementation({}),
     createCoreConfig(options),
@@ -112,7 +125,12 @@ export function createAxios(options: CreateAxiosOptions): ResilientAxios {
       (ctx: Context) => {
         throwIfAborted(ctx.signal);
 
-        return axiosImplementation<T, D>({ ...config, signal: ctx.signal });
+        return Promise.resolve(axiosImplementation<T, D>({ ...config, signal: ctx.signal })).then(
+          (value) => value,
+          (error: unknown) => {
+            throw normalizedError(error);
+          },
+        );
       },
       config.signal === undefined ? undefined : { signal: config.signal },
     );
@@ -150,7 +168,45 @@ function throwIfAborted(signal: AbortSignal): void {
     return;
   }
 
-  const reason: unknown = signal.reason;
+  throw toCallerAbort(signal.reason);
+}
 
-  throw reason instanceof Error ? reason : new AbortError({ reason });
+function normalizedError(error: unknown): Error {
+  if (isCallerCancellationShape(error)) {
+    return toCallerAbort(error);
+  }
+
+  return error instanceof Error ? error : new Error("Operation failed.", { cause: error });
+}
+
+function toCallerAbort(reason: unknown): AbortError {
+  if (reason instanceof AbortError) {
+    return reason;
+  }
+
+  return new AbortError({
+    reason,
+    ...(reason instanceof Error ? { cause: reason } : {}),
+  });
+}
+
+function isCallerCancellationShape(error: unknown): boolean {
+  if (error instanceof AbortError) {
+    return true;
+  }
+
+  if (typeof error !== "object" || error === null) {
+    return false;
+  }
+
+  const name = "name" in error && typeof error.name === "string" ? error.name : undefined;
+  const code = "code" in error && typeof error.code === "string" ? error.code : undefined;
+
+  return (
+    name === "AbortError" ||
+    name === "CanceledError" ||
+    code === "ERR_CANCELED" ||
+    code === "ERR_ABORTED" ||
+    code === "ABORT_ERR"
+  );
 }

@@ -1,4 +1,10 @@
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { defineConfig } from "tsup";
+
+import { dedupeSourceMappingComments } from "../../scripts/dedupe-sourcemap-comments.mjs";
+
+const packageDir = dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
   tsconfig: "tsconfig.tsup.json",
@@ -20,5 +26,8 @@ export default defineConfig({
     return {
       js: format === "cjs" ? ".cjs" : ".js",
     };
+  },
+  onSuccess() {
+    dedupeSourceMappingComments(join(packageDir, "dist"));
   },
 });

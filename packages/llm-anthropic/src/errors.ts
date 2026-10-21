@@ -1,3 +1,4 @@
+import { AbortError } from "@resili/core";
 import { LlmError, type LlmErrorClassification } from "@resili/llm";
 
 const SECRET_PATTERN = /sk-ant-[a-zA-Z0-9_-]+|sk-[a-zA-Z0-9_-]+|Bearer\s+\S+/gi;
@@ -19,13 +20,13 @@ export interface AnthropicErrorCause {
 /**
  * Maps an Anthropic SDK / HTTP failure to {@link LlmError}.
  *
- * Abort errors are rethrown unchanged so Resili timeout/cancel can own them.
+ * Caller cancellation is normalized to Core {@link AbortError} (`ERR_ABORTED`).
  *
  * @internal
  */
 export function mapAnthropicError(error: unknown, model: string): never {
   if (isAbortLike(error)) {
-    throw error;
+    throw toAbortError(error);
   }
 
   const status = getNumber(error, "status") ?? getNumber(error, "statusCode");
@@ -48,7 +49,38 @@ export function mapAnthropicError(error: unknown, model: string): never {
 export function isAbortLike(error: unknown): boolean {
   const name = getErrorName(error);
 
-  return name === "AbortError" || name === "APIUserAbortError";
+  if (name === "AbortError" || name === "APIUserAbortError") {
+    return true;
+  }
+
+  return getConstructorName(error) === "APIUserAbortError";
+}
+
+function toAbortError(error: unknown): AbortError {
+  if (error instanceof AbortError) {
+    return error;
+  }
+
+  return new AbortError({
+    reason: error,
+    ...(error instanceof Error ? { cause: error } : {}),
+  });
+}
+
+function getConstructorName(error: unknown): string | undefined {
+  if (typeof error !== "object" || error === null || !("constructor" in error)) {
+    return undefined;
+  }
+
+  const constructor = (error as { readonly constructor?: unknown }).constructor;
+
+  if (typeof constructor !== "function") {
+    return undefined;
+  }
+
+  const name = constructor.name;
+
+  return typeof name === "string" && name.length > 0 ? name : undefined;
 }
 
 function classify(

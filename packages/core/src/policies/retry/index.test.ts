@@ -4,7 +4,12 @@ import type { FailureClassifier, Outcome } from "../../core/classification";
 import type { Clock } from "../../core/clock";
 import { createContext, type Context } from "../../core/context";
 import type { ResiliEvent } from "../../core/events";
-import { ConfigurationError, RateLimitExceededError, RetryExceededError } from "../../core/errors";
+import {
+  AbortError,
+  ConfigurationError,
+  RateLimitExceededError,
+  RetryExceededError,
+} from "../../core/errors";
 import { noopMetrics } from "../../core/metrics";
 import type { PolicyServices } from "../../core/policy";
 import { memoryStore } from "../../core/state";
@@ -161,6 +166,73 @@ describe("retryPolicy", () => {
     expect(emit).toHaveBeenCalledWith(
       expect.objectContaining({ type: "RetryStarted", attemptNumber: 4, delayMs: 15 }),
     );
+  });
+
+  it("does not start another attempt when the caller aborts during backoff", async () => {
+    const clock = new FakeClock();
+    const controller = new AbortController();
+    const policy = retryPolicy.create(createServices({ clock }), {
+      maxAttempts: 3,
+      baseDelayMs: 400,
+      maxDelayMs: 400,
+      jitter: "none",
+    });
+    let calls = 0;
+    const result = policy.execute(
+      createContext({
+        requestId: "request",
+        operationName: "operation",
+        serviceName: "service",
+        startedAt: 0,
+        signal: controller.signal,
+      }),
+      () => {
+        calls += 1;
+
+        return Promise.reject(new Error("down"));
+      },
+    );
+
+    await Promise.resolve();
+    expect(calls).toBe(1);
+    controller.abort();
+
+    await expect(result).rejects.toBeInstanceOf(AbortError);
+    await expect(result).rejects.toMatchObject({ code: "ERR_ABORTED" });
+    expect(calls).toBe(1);
+    expect(clock.clearedTimers).toBe(1);
+    clock.tick(400);
+    await Promise.resolve();
+    expect(calls).toBe(1);
+  });
+
+  it("does not invoke the operation when the caller signal is already aborted", async () => {
+    const controller = new AbortController();
+    controller.abort(new DOMException("The operation was aborted.", "AbortError"));
+    const policy = retryPolicy.create(createServices(), {
+      maxAttempts: 3,
+      baseDelayMs: 400,
+      jitter: "none",
+    });
+    let calls = 0;
+
+    await expect(
+      policy.execute(
+        createContext({
+          requestId: "request",
+          operationName: "operation",
+          serviceName: "service",
+          startedAt: 0,
+          signal: controller.signal,
+        }),
+        () => {
+          calls += 1;
+
+          return Promise.resolve("ok");
+        },
+      ),
+    ).rejects.toMatchObject({ name: "AbortError", code: "ERR_ABORTED" });
+    expect(calls).toBe(0);
   });
 
   it("respects classifier retryAfter when enabled", async () => {

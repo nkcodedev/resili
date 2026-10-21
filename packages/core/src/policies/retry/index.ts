@@ -1,6 +1,11 @@
 import type { Outcome } from "../../core/classification";
 import type { Context } from "../../core/context";
-import { ConfigurationError, isResiliError, RetryExceededError } from "../../core/errors";
+import {
+  AbortError,
+  ConfigurationError,
+  isResiliError,
+  RetryExceededError,
+} from "../../core/errors";
 import {
   definePolicy,
   type Next,
@@ -92,6 +97,10 @@ async function executeWithRetry<T>(
   let lastError: unknown;
 
   for (;;) {
+    if (isAborted(rootContext.signal)) {
+      throw toCallerAbort(rootContext.signal.reason);
+    }
+
     const attemptContext =
       attemptNumber === rootContext.attemptNumber
         ? rootContext
@@ -116,6 +125,10 @@ async function executeWithRetry<T>(
 
       lastError = new Error("Retry predicate requested retry for successful outcome.");
     } catch (error) {
+      if (isAborted(rootContext.signal)) {
+        throw toCallerAbort(rootContext.signal.reason ?? error);
+      }
+
       const outcome: Outcome = Object.freeze({
         status: "error",
         error,
@@ -164,7 +177,10 @@ async function executeWithRetry<T>(
 
     totalDelayMs += delayMs;
     emitRetryStarted(services, rootContext, nextAttempt, delayMs, lastError);
-    await sleep(services, delayMs);
+    await sleep(services, delayMs, rootContext.signal);
+    if (isAborted(rootContext.signal)) {
+      throw toCallerAbort(rootContext.signal.reason);
+    }
     attemptNumber = nextAttempt;
   }
 }
@@ -201,16 +217,44 @@ function resolveDelayMs(
   return Math.min(options.maxDelayMs, rawDelay);
 }
 
-function sleep(services: PolicyServices, delayMs: number): Promise<void> {
+function isAborted(signal: AbortSignal): boolean {
+  return signal.aborted;
+}
+
+function sleep(services: PolicyServices, delayMs: number, signal: AbortSignal): Promise<void> {
+  if (isAborted(signal)) {
+    return Promise.reject(toCallerAbort(signal.reason));
+  }
+
   if (delayMs <= 0) {
     return Promise.resolve();
   }
 
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     const timer = services.clock.setTimeout(() => {
+      signal.removeEventListener("abort", onAbort);
       services.clock.clearTimeout(timer);
       resolve();
     }, delayMs);
+
+    const onAbort = (): void => {
+      services.clock.clearTimeout(timer);
+      signal.removeEventListener("abort", onAbort);
+      reject(toCallerAbort(signal.reason));
+    };
+
+    signal.addEventListener("abort", onAbort, { once: true });
+  });
+}
+
+function toCallerAbort(reason: unknown): AbortError {
+  if (reason instanceof AbortError) {
+    return reason;
+  }
+
+  return new AbortError({
+    reason,
+    ...(reason instanceof Error ? { cause: reason } : {}),
   });
 }
 

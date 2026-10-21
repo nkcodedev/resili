@@ -1,4 +1,4 @@
-import { AbortError, TimeoutError, RetryExceededError } from "@resili/core";
+import { AbortError, ConfigurationError, RetryExceededError, TimeoutError } from "@resili/core";
 import {
   createLlmClient,
   createPricingResolver,
@@ -60,6 +60,20 @@ function mockClient(
 }
 
 describe("createOpenAiProvider", () => {
+  it("rejects missing, null, and partial clients before dereferencing them", () => {
+    expect(() => createOpenAiProvider(undefined as never)).toThrow(ConfigurationError);
+    expect(() => createOpenAiProvider(null as never)).toThrow(ConfigurationError);
+    expect(() => createOpenAiProvider({} as never)).toThrow(ConfigurationError);
+    expect(() => createOpenAiProvider({ client: null } as never)).toThrow(ConfigurationError);
+    expect(() => createOpenAiProvider({ client: {} } as never)).toThrow(ConfigurationError);
+    expect(() => createOpenAiProvider({ client: { chat: {} } } as never)).toThrow(
+      ConfigurationError,
+    );
+    expect(() => createOpenAiProvider({ client: { chat: { completions: {} } } } as never)).toThrow(
+      ConfigurationError,
+    );
+  });
+
   it("normalizes a successful Chat Completions response", async () => {
     const create = vi.fn(() => Promise.resolve(completion()));
     const provider = createOpenAiProvider({

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { createClient, TimeoutError } from "../../index";
+import { AbortError, CircuitOpenError, createClient, TimeoutError } from "../../index";
 
 describe("core policy interaction regressions", () => {
   it("keeps canonical policy order around the operation", async () => {
@@ -145,5 +145,85 @@ describe("core policy interaction regressions", () => {
     await expect(client.call()).resolves.toBe("ok");
     await expect(client.call()).resolves.toBe("ok");
     expect(attempts).toBe(2);
+  });
+
+  it("does not open the circuit when cancellation is classified as non-failure", async () => {
+    let calls = 0;
+    const client = createClient(
+      () => {
+        calls += 1;
+        const error = Object.assign(new Error("canceled"), {
+          name: "CanceledError",
+          code: "ERR_CANCELED",
+        });
+
+        return Promise.reject(error);
+      },
+      {
+        circuitBreaker: {
+          minimumThroughput: 1,
+          failureRateThreshold: 50,
+          resetTimeoutMs: 60_000,
+        },
+        retry: { maxAttempts: 2, jitter: "none", baseDelayMs: 0, maxDelayMs: 0 },
+      },
+    );
+
+    await expect(client.call()).rejects.toMatchObject({ code: "ERR_CANCELED" });
+    await expect(client.call()).rejects.toMatchObject({ code: "ERR_CANCELED" });
+    expect(calls).toBe(2);
+  });
+
+  it("opens the circuit after a genuine dependency failure", async () => {
+    const client = createClient(() => Promise.reject(new Error("upstream")), {
+      circuitBreaker: {
+        minimumThroughput: 1,
+        failureRateThreshold: 50,
+        resetTimeoutMs: 60_000,
+      },
+    });
+
+    await expect(client.call()).rejects.toThrow("upstream");
+    await expect(client.call()).rejects.toBeInstanceOf(CircuitOpenError);
+  });
+
+  it("does not count a caller abort during retry backoff as an extra circuit failure", async () => {
+    const controller = new AbortController();
+    let calls = 0;
+    const client = createClient(() => Promise.resolve("unused"), {
+      circuitBreaker: {
+        window: { type: "count", size: 2 },
+        minimumThroughput: 2,
+        failureRateThreshold: 50,
+        resetTimeoutMs: 60_000,
+      },
+      retry: { maxAttempts: 3, jitter: "none", baseDelayMs: 400, maxDelayMs: 400 },
+    });
+
+    const pending = client.execute(
+      () => {
+        calls += 1;
+
+        if (calls === 1) {
+          return Promise.reject(new Error("upstream"));
+        }
+
+        return Promise.resolve("ok");
+      },
+      { signal: controller.signal },
+    );
+    await Promise.resolve();
+    controller.abort();
+
+    await expect(pending).rejects.toBeInstanceOf(AbortError);
+    expect(calls).toBe(1);
+    await expect(
+      client.execute(() => {
+        calls += 1;
+
+        return Promise.resolve("ok");
+      }),
+    ).resolves.toBe("ok");
+    expect(calls).toBe(2);
   });
 });

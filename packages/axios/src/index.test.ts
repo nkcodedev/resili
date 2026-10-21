@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import type { Outcome } from "@resili/core";
+import { ConfigurationError, type Outcome } from "@resili/core";
 import {
   createAxios,
   type AxiosImplementation,
@@ -263,6 +263,15 @@ describe("createAxios", () => {
     });
     expect(attempts).toBe(3);
     await axios.destroy();
+  });
+
+  it("rejects missing, null, and partial axios configuration", () => {
+    expect(() => createAxios(undefined as never)).toThrow(ConfigurationError);
+    expect(() => createAxios(null as never)).toThrow(ConfigurationError);
+    expect(() => createAxios([] as never)).toThrow(ConfigurationError);
+    expect(() => createAxios({} as never)).toThrow(ConfigurationError);
+    expect(() => createAxios({ axios: null } as never)).toThrow(ConfigurationError);
+    expect(() => createAxios({ axios: {} } as never)).toThrow(ConfigurationError);
   });
 });
 
