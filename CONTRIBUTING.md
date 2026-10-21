@@ -19,7 +19,7 @@ Resili is a TypeScript-first resilience toolkit for Node.js. Contributions are w
 
 ## Development Setup
 
-Resili uses pnpm workspaces and requires Node.js 20 or newer. CI currently runs on Node.js 22 with pnpm 10.
+Resili uses pnpm workspaces and requires Node.js 20 or newer. CI runs the validate and packed-consumer jobs on Node.js 20 and 22 with pnpm 10.
 
 ```bash
 git clone https://github.com/nkcodedev/resili.git
@@ -31,12 +31,17 @@ pnpm install
 
 ```text
 packages/
-  core/     @resili/core runtime, policies, events, metrics, plugins
-  fetch/    @resili/fetch adapter
-  axios/    @resili/axios adapter
-  undici/   @resili/undici adapter
-docs/       Architecture, API specification, internal design, feature designs
-.github/    CI workflows, issue templates, pull request template
+  core/            @resili/core runtime, policies, events, metrics, plugins
+  fetch/           @resili/fetch adapter
+  axios/           @resili/axios adapter
+  undici/          @resili/undici adapter
+  llm/             @resili/llm client, pricing, Budget Guard
+  llm-openai/      @resili/llm-openai adapter
+  llm-anthropic/   @resili/llm-anthropic adapter
+  llm-gemini/      @resili/llm-gemini adapter
+docs/              Architecture, API specification, usage guides
+examples/          Offline and credentialed samples. Not part of CI.
+.github/           CI workflows, issue templates, pull request template
 ```
 
 ## Common Commands
@@ -49,7 +54,7 @@ pnpm lint         # Run ESLint
 pnpm typecheck    # Typecheck all workspace packages
 pnpm test         # Run Vitest tests
 pnpm build        # Build all workspace packages
-pnpm api:check    # Run API Extractor for @resili/core
+pnpm api:check    # Run API Extractor for the eight publishable packages
 ```
 
 Additional useful commands:
@@ -141,6 +146,9 @@ Current adapter packages are:
 - `@resili/fetch`
 - `@resili/axios`
 - `@resili/undici`
+- `@resili/llm-openai`
+- `@resili/llm-anthropic`
+- `@resili/llm-gemini`
 
 New adapter proposals should start with an issue describing the target API, supported surface area, cancellation behavior, and how the adapter composes with `@resili/core`.
 

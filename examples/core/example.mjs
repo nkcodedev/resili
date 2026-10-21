@@ -21,7 +21,15 @@ async function flakyLookup(id) {
 // 1. Declarative configuration.
 const client = createClient(flakyLookup, {
   timeout: { perAttemptMs: 1_000 },
-  retry: { maxAttempts: 3, backoff: "exponential", baseDelayMs: 50, jitter: "none" },
+  retry: {
+    maxAttempts: 3,
+    backoff: "exponential",
+    baseDelayMs: 50,
+    jitter: "none",
+    retryOn(outcome) {
+      return outcome.status === "error";
+    },
+  },
   // failureRateThreshold is a PERCENTAGE: 50 means half the calls in the window.
   circuitBreaker: { minimumThroughput: 10, failureRateThreshold: 50 },
 });
@@ -44,7 +52,13 @@ const withFallback = resili(async () => {
   throw new Error("dependency is down");
 })
   .timeout({ perAttemptMs: 1_000 })
-  .retry({ maxAttempts: 2, jitter: "none" })
+  .retry({
+    maxAttempts: 2,
+    jitter: "none",
+    retryOn(outcome) {
+      return outcome.status === "error";
+    },
+  })
   .fallback({
     handler(error) {
       const cause = error instanceof RetryExceededError ? error.lastError : error;

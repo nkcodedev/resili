@@ -7,6 +7,8 @@ Runnable, self-contained examples. None of these are workspace packages and none
 | Example                            | Needs credentials   | Needs network | Shows                                                                     |
 | ---------------------------------- | ------------------- | ------------- | ------------------------------------------------------------------------- |
 | [`core`](./core)                   | No                  | No            | Retry, timeout, breaker, fallback, cancellation on a plain async function |
+| [`budget-guard`](./budget-guard)   | No                  | No            | Estimated-cost rejection before a local LLM provider is called            |
+| [`stackblitz`](./stackblitz)       | No                  | No            | Published `@resili/core@0.2.0-rc.2`: retry, then an open circuit          |
 | [`fetch`](./fetch)                 | No                  | No            | Status-code retry through a fetch-compatible client                       |
 | [`axios`](./axios)                 | No                  | No            | An axios instance you own, injected                                       |
 | [`undici`](./undici)               | No                  | No            | `origin`/`path`, `statusCode`, body draining on retry                     |
@@ -14,8 +16,9 @@ Runnable, self-contained examples. None of these are workspace packages and none
 | [`llm-anthropic`](./llm-anthropic) | `ANTHROPIC_API_KEY` | Yes           | `generate()` and `stream()` against Anthropic                             |
 | [`llm-gemini`](./llm-gemini)       | `GEMINI_API_KEY`    | Yes           | `generate()` and `stream()` against Gemini                                |
 
-The four non-LLM examples start a local HTTP server on an ephemeral port, or use a local function, so
-they run offline with no accounts involved.
+The core, HTTP, Budget Guard, and StackBlitz examples use a local function or a local server. They
+run offline with no accounts. The StackBlitz folder installs published `@resili/core` from npm, so
+that install needs network access. The OpenAI, Anthropic, and Gemini examples need credentials.
 
 ## Running an example
 

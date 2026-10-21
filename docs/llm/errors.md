@@ -149,19 +149,19 @@ See [Streaming](streaming.md#the-commit-point).
 
 Each adapter translates its SDK's errors. Highlights of what differs:
 
-| Signal                        | OpenAI                                       | Anthropic                     | Gemini                                |
-| ----------------------------- | -------------------------------------------- | ----------------------------- | ------------------------------------- |
-| 401                           | `authentication`                             | `authentication`              | `authentication` / `UNAUTHENTICATED`  |
-| 403                           | `authorization`                              | `authorization`               | `authorization` / `PERMISSION_DENIED` |
-| 429                           | `rate_limited`                               | `rate_limited`                | `rate_limited` / `RESOURCE_EXHAUSTED` |
-| 503                           | `overloaded`                                 | `overloaded`                  | `overloaded` / `UNAVAILABLE`          |
-| Other 5xx                     | `provider_unavailable`                       | `provider_unavailable`        | `provider_unavailable`                |
-| Overload-specific             | —                                            | **529**, `overloaded_error`   | —                                     |
-| Context limit                 | `context_length_exceeded`                    | **413** / `request_too_large` | —                                     |
-| Content policy                | `content_filter`, `content_policy_violation` | `refusal` (finish reason)     | `SAFETY` family (finish reason)       |
-| Timeout                       | `APIConnectionTimeoutError`                  | `timeout_error`, **408**      | `DEADLINE_EXCEEDED`, 408, **504**     |
-| Conflict (409)                | —                                            | **`network_transient`**       | —                                     |
-| Cancellation (passed through) | `AbortError`, `APIUserAbortError`            | same                          | plus `DOMException`, **499**          |
+| Signal                                    | OpenAI                                       | Anthropic                     | Gemini                                                                       |
+| ----------------------------------------- | -------------------------------------------- | ----------------------------- | ---------------------------------------------------------------------------- |
+| 401                                       | `authentication`                             | `authentication`              | `authentication` / `UNAUTHENTICATED`                                         |
+| 403                                       | `authorization`                              | `authorization`               | `authorization` / `PERMISSION_DENIED`                                        |
+| 429                                       | `rate_limited`                               | `rate_limited`                | `rate_limited` / `RESOURCE_EXHAUSTED`                                        |
+| 503                                       | `overloaded`                                 | `overloaded`                  | `overloaded` / `UNAVAILABLE`                                                 |
+| Other 5xx                                 | `provider_unavailable`                       | `provider_unavailable`        | `provider_unavailable`                                                       |
+| Overload-specific                         | —                                            | **529**, `overloaded_error`   | —                                                                            |
+| Context limit                             | `context_length_exceeded`                    | **413** / `request_too_large` | —                                                                            |
+| Content policy                            | `content_filter`, `content_policy_violation` | `refusal` (finish reason)     | `SAFETY` family (finish reason)                                              |
+| Timeout                                   | `APIConnectionTimeoutError`                  | `timeout_error`, **408**      | `DEADLINE_EXCEEDED`, 408, **504**                                            |
+| Conflict (409)                            | —                                            | **`network_transient`**       | —                                                                            |
+| Cancellation (normalized to `AbortError`) | `AbortError`, `APIUserAbortError`            | same                          | `CANCELLED` / `CANCELED`; HTTP **499** when the message matches abort/cancel |
 
 Gemini uses Google API status names (`UNAUTHENTICATED`, `RESOURCE_EXHAUSTED`, `INVALID_ARGUMENT`,
 `NOT_FOUND`, `FAILED_PRECONDITION`) as well as HTTP status codes. Anthropic mapping a 409 to
@@ -174,9 +174,10 @@ Per-adapter detail: [OpenAI](../providers/openai.md), [Anthropic](../providers/a
 
 ## Error causes
 
-The original SDK error is on `cause`, and each adapter attaches a small redacted summary — `name`,
-`status`, `code`/`type`, and `requestID` where available. Secret-looking values are redacted, and
-prompts and completions never appear in a Resili-generated message.
+`LlmError.cause` is a small redacted snapshot — `name`, `status`, `code`/`type`, and `requestID`
+where available. Secret-looking values are redacted. Headers, bodies, prompts, and API keys are
+omitted. Prompts and completions never appear in a Resili-generated message. Published RC2 still
+attaches the original provider error as `AbortError.cause`.
 
 ```ts
 if (isLlmError(error)) {

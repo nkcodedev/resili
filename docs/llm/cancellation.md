@@ -45,11 +45,11 @@ Adapters recognize their SDK's cancellation errors and normalize them to Resili'
 [`AbortError`](../reference/errors.md) (`ERR_ABORTED`) instead of mapping them to an
 [`LlmError`](errors.md).
 
-| Adapter   | Recognized as cancellation                                                 |
-| --------- | -------------------------------------------------------------------------- |
-| OpenAI    | `AbortError`, `APIUserAbortError` (including openai@7 `.name === "Error"`) |
-| Anthropic | `AbortError`, `APIUserAbortError`                                          |
-| Gemini    | `AbortError`, `DOMException`, HTTP status `499`                            |
+| Adapter   | Recognized as cancellation                                                                                                             |
+| --------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| OpenAI    | `AbortError`, `APIUserAbortError` (including openai@7 `.name === "Error"`)                                                             |
+| Anthropic | `AbortError`, `APIUserAbortError`                                                                                                      |
+| Gemini    | `AbortError`; Google `CANCELLED` / `CANCELED`; HTTP `499` when the message matches abort/cancel. A bare `499` stays a provider failure |
 
 Already-aborted caller signals are also normalized to `AbortError` / `ERR_ABORTED` before the
 provider is called.

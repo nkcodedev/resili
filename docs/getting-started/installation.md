@@ -10,20 +10,18 @@ Resili is published as independently versioned packages. Install only what you u
 
 ## Current release channel
 
-**RC2 is prepared in this repository and is not yet published.** In-repo versions are
-`0.2.0-rc.2` / `0.1.0-rc.2`. npm `next` still serves RC1 (`0.2.0-rc.1` / `0.1.0-rc.1`). Plain
-installs still resolve to Beta 1 (`latest` / `beta`). Historical alpha builds remain under `@alpha`.
-This is not a stable `1.0` guarantee — pin exact versions when you need reproducibility. See
-[Versioning and dist-tags](../releases/versioning.md) and [RC2 status](../releases/rc2-status.md).
+**RC2 is published on npm `next`** (`0.2.0-rc.2` / `0.1.0-rc.2`). Plain installs still resolve to
+Beta 1 (`latest` / `beta`). Historical alpha builds remain under `@alpha`. RC1 remains available
+as exact versions (`0.2.0-rc.1` / `0.1.0-rc.1`). This is not a stable release — pin exact versions
+when you need reproducibility. See [Versioning and dist-tags](../releases/versioning.md) and
+[RC2 status](../releases/rc2-status.md).
 
 ```bash
 # Default install (Beta 1 on latest)
 npm install @resili/core
 
 # Published release candidate (npm next)
-npm install @resili/core@0.2.0-rc.1
-
-# RC2 exact pin (prepared; not on the registry yet)
+npm install @resili/core@next
 npm install @resili/core@0.2.0-rc.2
 ```
 

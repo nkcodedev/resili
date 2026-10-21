@@ -6,7 +6,7 @@ An axios-shaped API backed by a Resili pipeline.
 Application → createAxios(...) → @resili/core → your axios implementation
 ```
 
-Current version: **`0.2.0-rc.2`** (prepared; not yet published). Depends only on `@resili/core`.
+Current version: **`0.2.0-rc.2`**, published on npm `next`. Depends only on `@resili/core`. `latest` remains Beta 1. This is not a stable release.
 
 ## Installation
 

@@ -1,0 +1,11 @@
+{
+  "name": "resili-stackblitz-example",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@resili/core": "0.2.0-rc.2"
+  }
+}

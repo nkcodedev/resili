@@ -6,8 +6,8 @@ Maps Google's `@google/genai` SDK to the `@resili/llm` provider contract.
 @resili/llm → @resili/llm-gemini → @google/genai
 ```
 
-Current version: **`0.1.0-rc.2`** (prepared; not yet published), aligned with the other LLM
-packages. Provider name: `"gemini"`.
+Current version: **`0.1.0-rc.2`**, published on npm `next`, aligned with the other LLM
+packages. Provider name: `"gemini"`. `latest` remains Beta 1. This is not a stable release.
 
 ## SDK: `@google/genai`, not the legacy SDK
 
@@ -98,9 +98,10 @@ raise it on the client you inject. See [Retries](../llm/retries.md).
 Gemini takes the signal at **`config.abortSignal`**, not a top-level `signal` field — a difference
 from the OpenAI and Anthropic adapters that matters only if you are writing your own.
 
-Recognized as cancellation and **rethrown unchanged**: `AbortError`, `DOMException`, and HTTP status
-**499**. Gemini's use of 499 for client-closed-request is why the abort check is broader here. See
-[Cancellation](../llm/cancellation.md).
+Recognized as cancellation and normalized to Core `AbortError` (`ERR_ABORTED`): an error named
+`AbortError`, a Google status of `CANCELLED` or `CANCELED`, and HTTP status **499** when the message
+matches abort or cancel. A bare status `499` stays a provider failure. Published RC2 keeps the
+original provider error as `cause`. See [Cancellation](../llm/cancellation.md).
 
 ## Cumulative snapshot de-duplication
 

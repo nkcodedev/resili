@@ -10,9 +10,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [RC.2] - 2026-10-21
 
-Second release candidate. Prepared in-repo and **not yet published**. Intended npm dist-tag after
-publication: `next`. Do not move `latest` or `beta`. Until publication, `next` remains RC1
-(`0.2.0-rc.1` / `0.1.0-rc.1`). See [`docs/releases/rc2-status.md`](./docs/releases/rc2-status.md).
+Second release candidate. Published on npm `next`. `latest` and `beta` remain Beta 1. This is not
+a stable release. See [`docs/releases/rc2-status.md`](./docs/releases/rc2-status.md).
 
 ### Versions
 
@@ -36,8 +35,7 @@ publication: `next`. Do not move `latest` or `beta`. Until publication, `next` r
 
 ### Documentation
 
-- In-repo install pins describe RC2 as prepared, not published. npm `next` remains RC1, and
-  `latest` / `beta` remain Beta 1.
+- Install pins describe RC2 as the published `next` release. `latest` / `beta` remain Beta 1.
 - Package README / metadata hardening for npm presentation: monorepo `repository.directory`,
   absolute GitHub documentation links (avoids npm resolving `../../README.md` to
   `https://www.npmjs.com/package/README.md`), and `pnpm docs:links` validation.

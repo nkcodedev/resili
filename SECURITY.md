@@ -6,12 +6,14 @@ resource exhaustion, dependency handling, or package integrity.
 
 ## Supported Versions
 
-Resili is currently in `0.0.0` development releases. Security fixes are handled
-on the active development branch until stable release lines are established.
+There is no stable `1.0` line. Security fixes are handled on `main`. Published
+packages are Beta 1 on npm `latest` / `beta` and RC2 on npm `next`.
 
-| Version | Supported          |
-| ------- | ------------------ |
-| `0.0.x` | Active development |
+| Version                                                                        | Supported                                                  |
+| ------------------------------------------------------------------------------ | ---------------------------------------------------------- |
+| `@resili/core@0.2.0-rc.2` and the matching RC2 HTTP and LLM packages on `next` | Current candidate. Report issues against this line.        |
+| `@resili/core@0.2.0-beta.1` and the matching Beta 1 LLM packages on `latest`   | Default install. Fixes may land only in a newer candidate. |
+| Older alpha and RC1 versions                                                   | Not a maintained security line.                            |
 
 ## Reporting a Vulnerability
 
