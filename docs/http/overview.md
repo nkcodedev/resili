@@ -14,9 +14,9 @@ HTTP client      globalThis.fetch | your axios | your undici
 
 | Package                       | Wraps                          | Version      |
 | ----------------------------- | ------------------------------ | ------------ |
-| [`@resili/fetch`](fetch.md)   | A fetch-compatible function    | `0.2.0-rc.1` |
-| [`@resili/axios`](axios.md)   | An axios-compatible function   | `0.2.0-rc.1` |
-| [`@resili/undici`](undici.md) | An undici-compatible `request` | `0.2.0-rc.1` |
+| [`@resili/fetch`](fetch.md)   | A fetch-compatible function    | `0.2.0-rc.2` |
+| [`@resili/axios`](axios.md)   | An axios-compatible function   | `0.2.0-rc.2` |
+| [`@resili/undici`](undici.md) | An undici-compatible `request` | `0.2.0-rc.2` |
 
 ## What they have in common
 

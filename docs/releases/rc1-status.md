@@ -3,7 +3,8 @@
 **Stage: Release candidate (published on `next`).** Eight RC1 packages are on the public registry
 under the `next` dist-tag. `latest` and `beta` still serve Beta 1. Independent consumer testing
 is a **NO-GO** for promoting RC1 to `latest`; see
-[RC1 release-blocker review](../RC1_RELEASE_BLOCKER_REVIEW.md).
+[RC1 release-blocker review](../RC1_RELEASE_BLOCKER_REVIEW.md). The follow-up cut is
+[RC2](./rc2-status.md), prepared in-repo and not yet published.
 
 | Line        | Packages                                                      | `next` (RC1) | `latest` / `beta` |
 | ----------- | ------------------------------------------------------------- | ------------ | ----------------- |
@@ -106,9 +107,9 @@ See CHANGELOG [RC.1].
 
 Do **not** create the GitHub Release or Git tags from this document alone.
 
-## Manual publish plan (after this PR merges — not executed here)
+## Publish record
 
-Publish in dependency order with `--tag next` only:
+RC1 was published with `--tag next`. Do not republish these versions. Dependency order:
 
 1. `@resili/core@0.2.0-rc.1`
 2. `@resili/fetch@0.2.0-rc.1`

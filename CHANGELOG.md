@@ -8,6 +8,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [RC.2] - 2026-10-21
+
+Second release candidate. Prepared in-repo and **not yet published**. Intended npm dist-tag after
+publication: `next`. Do not move `latest` or `beta`. Until publication, `next` remains RC1
+(`0.2.0-rc.1` / `0.1.0-rc.1`). See [`docs/releases/rc2-status.md`](./docs/releases/rc2-status.md).
+
+### Versions
+
+| Family    | Packages                                                      | Version      |
+| --------- | ------------------------------------------------------------- | ------------ |
+| Core/HTTP | `@resili/core`, `-fetch`, `-axios`, `-undici`                 | `0.2.0-rc.2` |
+| LLM       | `@resili/llm`, `-llm-openai`, `-llm-anthropic`, `-llm-gemini` | `0.1.0-rc.2` |
+
 ### Fixed
 
 - Caller abort during a retry delay no longer starts another attempt. The delay listens to the
@@ -19,16 +32,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Missing or partial Axios, Undici, LLM, OpenAI, Anthropic, and Gemini clients throw
   `ConfigurationError` instead of `TypeError`.
 - Package bundles no longer emit a duplicate `//# sourceMappingURL=` comment.
-- Axios README examples import `@resili/axios`. Publication docs record that RC1 is on npm `next`
-  and that `latest` / `beta` remain Beta 1.
+- Axios README examples import `@resili/axios`.
 
 ### Documentation
 
+- In-repo install pins describe RC2 as prepared, not published. npm `next` remains RC1, and
+  `latest` / `beta` remain Beta 1.
 - Package README / metadata hardening for npm presentation: monorepo `repository.directory`,
   absolute GitHub documentation links (avoids npm resolving `../../README.md` to
-  `https://www.npmjs.com/package/README.md`), RC1 install pins, and `pnpm docs:links` validation.
-- Point package `homepage` metadata at the GitHub repository while `https://resili.nkcode.dev/`
-  returns HTTP 404 (DNS resolves; no site content deployed from this repository).
+  `https://www.npmjs.com/package/README.md`), and `pnpm docs:links` validation.
+- Package `homepage` metadata stays on the GitHub repository while `https://resili.nkcode.dev/`
+  returns HTTP 404.
 
 ## [RC.1] - 2026-10-18
 

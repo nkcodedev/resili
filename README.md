@@ -42,10 +42,10 @@ const response = await users.call("42");
 
 ## Status
 
-First stable **RC1** (`0.2.0-rc.1` / `0.1.0-rc.1`) is published on the npm `next` dist-tag. `latest`
-and `beta` still serve Beta 1. This is not a semver-stable `1.0` guarantee. See
-[RC1 status](docs/releases/rc1-status.md) and [Versioning](docs/releases/versioning.md). Independent
-consumer testing found release blockers; do not promote RC1 to `latest` until those fixes ship.
+**RC2** (`0.2.0-rc.2` / `0.1.0-rc.2`) is prepared in this repository and is **not yet published**.
+npm `next` still serves RC1 (`0.2.0-rc.1` / `0.1.0-rc.1`). `latest` and `beta` still serve Beta 1.
+This is not a semver-stable `1.0` guarantee. See [RC2 status](docs/releases/rc2-status.md) and
+[Versioning](docs/releases/versioning.md).
 
 ## Packages
 
@@ -53,45 +53,48 @@ consumer testing found release blockers; do not promote RC1 to `latest` until th
 
 | Package                         | Purpose                                                                                | Version      | Status |
 | ------------------------------- | -------------------------------------------------------------------------------------- | ------------ | ------ |
-| [`@resili/core`](packages/core) | Runtime: context, pipeline, nine policies, events, metrics, errors. Zero dependencies. | `0.2.0-rc.1` | RC1    |
+| [`@resili/core`](packages/core) | Runtime: context, pipeline, nine policies, events, metrics, errors. Zero dependencies. | `0.2.0-rc.2` | RC2    |
 
 ### HTTP
 
 | Package                             | Purpose                                             | Version      | Status |
 | ----------------------------------- | --------------------------------------------------- | ------------ | ------ |
-| [`@resili/fetch`](packages/fetch)   | fetch-compatible adapter                            | `0.2.0-rc.1` | RC1    |
-| [`@resili/axios`](packages/axios)   | axios-compatible adapter (injected implementation)  | `0.2.0-rc.1` | RC1    |
-| [`@resili/undici`](packages/undici) | undici-compatible adapter (injected implementation) | `0.2.0-rc.1` | RC1    |
+| [`@resili/fetch`](packages/fetch)   | fetch-compatible adapter                            | `0.2.0-rc.2` | RC2    |
+| [`@resili/axios`](packages/axios)   | axios-compatible adapter (injected implementation)  | `0.2.0-rc.2` | RC2    |
+| [`@resili/undici`](packages/undici) | undici-compatible adapter (injected implementation) | `0.2.0-rc.2` | RC2    |
 
 ### LLM
 
 | Package                                           | Purpose                                                          | Version      | Status |
 | ------------------------------------------------- | ---------------------------------------------------------------- | ------------ | ------ |
-| [`@resili/llm`](packages/llm)                     | Provider-neutral client, usage, pricing, Budget Guard, telemetry | `0.1.0-rc.1` | RC1    |
-| [`@resili/llm-openai`](packages/llm-openai)       | OpenAI Chat Completions — unary + streaming                      | `0.1.0-rc.1` | RC1    |
-| [`@resili/llm-anthropic`](packages/llm-anthropic) | Anthropic Messages — unary + streaming                           | `0.1.0-rc.1` | RC1    |
-| [`@resili/llm-gemini`](packages/llm-gemini)       | Google Gemini (`@google/genai`) — unary + streaming              | `0.1.0-rc.1` | RC1    |
+| [`@resili/llm`](packages/llm)                     | Provider-neutral client, usage, pricing, Budget Guard, telemetry | `0.1.0-rc.2` | RC2    |
+| [`@resili/llm-openai`](packages/llm-openai)       | OpenAI Chat Completions — unary + streaming                      | `0.1.0-rc.2` | RC2    |
+| [`@resili/llm-anthropic`](packages/llm-anthropic) | Anthropic Messages — unary + streaming                           | `0.1.0-rc.2` | RC2    |
+| [`@resili/llm-gemini`](packages/llm-gemini)       | Google Gemini (`@google/genai`) — unary + streaming              | `0.1.0-rc.2` | RC2    |
 
 The two version lines move independently. See [Versioning](docs/releases/versioning.md).
 
 ## Installation
 
-**RC1 prepared; Beta 1 still published.** Until RC1 is on npm under `next`, plain installs resolve
-to Beta 1 (`latest` / `beta`). Historical `alpha` builds remain available under `@alpha`. This is
-not a stable `1.0` guarantee.
+**RC2 is prepared and not yet published.** Plain installs resolve to Beta 1 (`latest` / `beta`).
+`npm install @resili/core@next` currently installs RC1. Historical `alpha` builds remain available
+under `@alpha`. This is not a stable `1.0` guarantee.
 
 ```bash
-# Current published release (Beta 1)
+# Current default release (Beta 1)
 npm install @resili/core
 
-# After RC1 publication (exact pin or @next)
+# Published release candidate (npm next)
 npm install @resili/core@0.2.0-rc.1
 
+# RC2 exact pins (prepared; not on the registry yet)
+npm install @resili/core@0.2.0-rc.2
+
 # with an HTTP adapter
-npm install @resili/core@0.2.0-rc.1 @resili/fetch@0.2.0-rc.1
+npm install @resili/core@0.2.0-rc.2 @resili/fetch@0.2.0-rc.2
 
 # with LLM support
-npm install @resili/core@0.2.0-rc.1 @resili/llm@0.1.0-rc.1 @resili/llm-openai@0.1.0-rc.1 openai
+npm install @resili/core@0.2.0-rc.2 @resili/llm@0.1.0-rc.2 @resili/llm-openai@0.1.0-rc.2 openai
 ```
 
 Node 20 or newer. Every package ships ESM and CommonJS builds with TypeScript declarations.

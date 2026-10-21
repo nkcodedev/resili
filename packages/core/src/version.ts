@@ -5,4 +5,4 @@
  *
  * @public
  */
-export const RESILI_VERSION = "0.2.0-rc.1" as string;
+export const RESILI_VERSION = "0.2.0-rc.2" as string;

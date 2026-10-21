@@ -1,8 +1,8 @@
 # Beta status
 
-**Stage: Beta (published).** Eight packages are published publicly. Beta 1 is still the current
-**published** release on `latest` / `beta`. The in-repo cut is now [first stable RC1](./rc1-status.md)
-(`0.2.0-rc.1` / `0.1.0-rc.1`), which is not yet on the registry.
+**Stage: Beta (published).** Eight packages are published publicly. Beta 1 is still the default
+release on `latest` / `beta`. RC1 is published on `next`. The in-repo cut is now
+[RC2](./rc2-status.md) (`0.2.0-rc.2` / `0.1.0-rc.2`), which is not yet on the registry.
 
 | Line        | Packages                                                      | Published      |
 | ----------- | ------------------------------------------------------------- | -------------- |

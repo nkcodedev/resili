@@ -8,12 +8,12 @@ You create the official `openai` client. Resili never stores API keys and never 
 
 ## Installation
 
-**First stable RC1 is published on npm `next`.** Package version `0.1.0-rc.1`. `latest` and `beta`
-still serve Beta 1.
+**RC2 is prepared in this repository and is not yet published.** Package version `0.1.0-rc.2`.
+npm `next` still serves RC1 (`0.1.0-rc.1`). `latest` and `beta` still serve Beta 1.
 Historical `alpha` builds remain under `@alpha`. This is not a stable `1.0` guarantee. See [versioning](https://github.com/nkcodedev/resili/blob/main/docs/releases/versioning.md).
 
 ```bash
-pnpm add @resili/core@0.2.0-rc.1 @resili/llm@0.1.0-rc.1 @resili/llm-openai@0.1.0-rc.1 openai
+pnpm add @resili/core@0.2.0-rc.2 @resili/llm@0.1.0-rc.2 @resili/llm-openai@0.1.0-rc.2 openai
 ```
 
 Node.js 20 or newer is required for Resili. The official `openai` SDK **v7** declares `node >= 22`. Use SDK v4–v6 on Node 20, or Node 22+ with v7.

@@ -6,7 +6,7 @@ Maps the Anthropic SDK's Messages API to the `@resili/llm` provider contract.
 @resili/llm → @resili/llm-anthropic → @anthropic-ai/sdk
 ```
 
-Current version: **`0.1.0-alpha.4`**. Provider name: `"anthropic"`.
+Current version: **`0.1.0-rc.2`** (prepared; not yet published). Provider name: `"anthropic"`.
 
 ## Installation
 

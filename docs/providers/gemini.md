@@ -6,8 +6,8 @@ Maps Google's `@google/genai` SDK to the `@resili/llm` provider contract.
 @resili/llm → @resili/llm-gemini → @google/genai
 ```
 
-Current version: **`0.1.0-alpha.3`** — one behind the other LLM packages, which are at
-`0.1.0-alpha.4`. It is the current release for this package. Provider name: `"gemini"`.
+Current version: **`0.1.0-rc.2`** (prepared; not yet published), aligned with the other LLM
+packages. Provider name: `"gemini"`.
 
 ## SDK: `@google/genai`, not the legacy SDK
 
