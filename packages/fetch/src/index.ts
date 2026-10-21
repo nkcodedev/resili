@@ -68,7 +68,12 @@ export function createFetch(options: CreateFetchOptions = {}): ResilientFetch {
       (ctx: Context) => {
         throwIfAborted(ctx.signal);
 
-        return fetchImplementation(input, { ...init, signal: ctx.signal });
+        return Promise.resolve(fetchImplementation(input, { ...init, signal: ctx.signal })).then(
+          (value) => value,
+          (error: unknown) => {
+            throw normalizedError(error);
+          },
+        );
       },
       init?.signal == null ? undefined : { signal: init.signal },
     )) as ResilientFetch;
@@ -84,9 +89,47 @@ function throwIfAborted(signal: AbortSignal): void {
     return;
   }
 
-  const reason: unknown = signal.reason;
+  throw toCallerAbort(signal.reason);
+}
 
-  throw reason instanceof Error ? reason : new AbortError({ reason });
+function normalizedError(error: unknown): Error {
+  if (isCallerCancellationShape(error)) {
+    return toCallerAbort(error);
+  }
+
+  return error instanceof Error ? error : new Error("Operation failed.", { cause: error });
+}
+
+function toCallerAbort(reason: unknown): AbortError {
+  if (reason instanceof AbortError) {
+    return reason;
+  }
+
+  return new AbortError({
+    reason,
+    ...(reason instanceof Error ? { cause: reason } : {}),
+  });
+}
+
+function isCallerCancellationShape(error: unknown): boolean {
+  if (error instanceof AbortError) {
+    return true;
+  }
+
+  if (typeof error !== "object" || error === null) {
+    return false;
+  }
+
+  const name = "name" in error && typeof error.name === "string" ? error.name : undefined;
+  const code = "code" in error && typeof error.code === "string" ? error.code : undefined;
+
+  return (
+    name === "AbortError" ||
+    name === "CanceledError" ||
+    code === "ERR_CANCELED" ||
+    code === "ERR_ABORTED" ||
+    code === "ABORT_ERR"
+  );
 }
 
 function createCoreConfig(options: CreateFetchOptions): ResiliConfig<Response> {

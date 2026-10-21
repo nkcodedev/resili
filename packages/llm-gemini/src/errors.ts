@@ -1,3 +1,4 @@
+import { AbortError } from "@resili/core";
 import { LlmError, type LlmErrorClassification } from "@resili/llm";
 
 const SECRET_PATTERN = /AIza[0-9A-Za-z_-]+|ya29\.[0-9A-Za-z._-]+|Bearer\s+\S+/gi;
@@ -20,13 +21,15 @@ export interface GeminiErrorCause {
 /**
  * Maps a Gemini SDK / HTTP failure to {@link LlmError}.
  *
- * Abort errors are rethrown unchanged so Resili timeout/cancel can own them.
+ * Caller cancellation is normalized to Core {@link AbortError} (`ERR_ABORTED`).
+ * A bare HTTP status `499` is not treated as cancellation unless the error
+ * also carries a cancel/abort signal (`CANCELLED` or an abort message).
  *
  * @internal
  */
 export function mapGeminiError(error: unknown, model: string): never {
   if (isAbortLike(error)) {
-    throw error;
+    throw toAbortError(error);
   }
 
   const status = getNumber(error, "status") ?? getNumber(error, "statusCode");
@@ -49,9 +52,37 @@ export function mapGeminiError(error: unknown, model: string): never {
  */
 export function isAbortLike(error: unknown): boolean {
   const name = getErrorName(error);
+
+  if (name === "AbortError") {
+    return true;
+  }
+
+  const token = (getString(error, "code") ?? getGoogleStatusName(error) ?? "").toUpperCase();
+
+  if (token === "CANCELLED" || token === "CANCELED") {
+    return true;
+  }
+
   const status = getNumber(error, "status");
 
-  return name === "AbortError" || name === "DOMException" || status === 499;
+  if (status !== 499) {
+    return false;
+  }
+
+  const message = error instanceof Error ? error.message : (getString(error, "message") ?? "");
+
+  return /abort|cancel/i.test(message);
+}
+
+function toAbortError(error: unknown): AbortError {
+  if (error instanceof AbortError) {
+    return error;
+  }
+
+  return new AbortError({
+    reason: error,
+    ...(error instanceof Error ? { cause: error } : {}),
+  });
 }
 
 function classify(

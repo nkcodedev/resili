@@ -78,6 +78,19 @@ describe("httpClassifier", () => {
     expect(httpClassifier.isRetryable(resiliAbort, ctx)).toBe(false);
     expect(httpClassifier.isFailure(failure(nativeAbort), ctx)).toBe(false);
     expect(httpClassifier.isRetryable(failure(nativeAbort), ctx)).toBe(false);
+
+    const axiosCancel = Object.assign(new Error("canceled"), {
+      name: "CanceledError",
+      code: "ERR_CANCELED",
+    });
+
+    expect(httpClassifier.isFailure(failure(axiosCancel), ctx)).toBe(false);
+    expect(httpClassifier.isRetryable(failure(axiosCancel), ctx)).toBe(false);
+
+    const statusOnly = Object.assign(new Error("client closed request"), { status: 499 });
+
+    expect(httpClassifier.isFailure(failure(statusOnly), ctx)).toBe(true);
+    expect(httpClassifier.isRetryable(failure(statusOnly), ctx)).toBe(false);
   });
 
   it("classifies circuit-open errors as terminal", () => {

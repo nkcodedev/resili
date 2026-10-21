@@ -628,11 +628,28 @@ function normalizeAbortReasonIfAbort(error: unknown): unknown {
     return error;
   }
 
-  if (error instanceof Error && error.name === "AbortError") {
+  if (isCallerCancellationShape(error)) {
     return normalizeAbortReason(error);
   }
 
   return error;
+}
+
+function isCallerCancellationShape(error: unknown): boolean {
+  if (typeof error !== "object" || error === null) {
+    return false;
+  }
+
+  const name = "name" in error && typeof error.name === "string" ? error.name : undefined;
+  const code = "code" in error && typeof error.code === "string" ? error.code : undefined;
+
+  return (
+    name === "AbortError" ||
+    name === "CanceledError" ||
+    code === "ERR_CANCELED" ||
+    code === "ERR_ABORTED" ||
+    code === "ABORT_ERR"
+  );
 }
 
 function normalizeFinalError(error: unknown, request: LlmRequest, committed: boolean): unknown {

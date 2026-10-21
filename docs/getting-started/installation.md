@@ -10,9 +10,9 @@ Resili is published as independently versioned packages. Install only what you u
 
 ## Current release channel
 
-**RC1 prepared; Beta 1 still published.** Package versions in this repository are
-`0.2.0-rc.1` / `0.1.0-rc.1`. Until RC1 is published under the npm `next` dist-tag, plain installs
-resolve to Beta 1 (`latest` / `beta`). Historical alpha builds remain available under `@alpha`.
+**RC1 is published on npm `next`; Beta 1 remains `latest` / `beta`.** Package versions in this
+repository are `0.2.0-rc.1` / `0.1.0-rc.1`. Plain installs still resolve to Beta 1. Historical
+alpha builds remain available under `@alpha`.
 This is not a stable `1.0` guarantee — pin exact versions when you need reproducibility. See
 [Versioning and dist-tags](../releases/versioning.md) and [RC1 status](../releases/rc1-status.md).
 

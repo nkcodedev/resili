@@ -1,4 +1,4 @@
-import { ConfigurationError, TimeoutError } from "@resili/core";
+import { AbortError, ConfigurationError, TimeoutError } from "@resili/core";
 import {
   createLlmClient,
   createPricingResolver,
@@ -266,6 +266,14 @@ describe("createGeminiProvider", () => {
 
   it("rejects invalid options", () => {
     expect(() => createGeminiProvider(undefined as never)).toThrow(ConfigurationError);
+    expect(() => createGeminiProvider(null as never)).toThrow(ConfigurationError);
+    expect(() => createGeminiProvider({} as never)).toThrow(ConfigurationError);
+    expect(() => createGeminiProvider({ client: null, model: MODEL } as never)).toThrow(
+      ConfigurationError,
+    );
+    expect(() => createGeminiProvider({ client: {}, model: MODEL } as never)).toThrow(
+      ConfigurationError,
+    );
     expect(() =>
       createGeminiProvider({
         client: { models: {} } as never,
@@ -381,11 +389,33 @@ describe("createGeminiProvider", () => {
     expect((mapped as LlmError).message).not.toContain(PROMPT);
   });
 
-  it("rethrows abort errors", async () => {
+  it("normalizes abort errors to AbortError", async () => {
     const abort = Object.assign(new Error("aborted"), { name: "AbortError" });
     const mapped = await executeFailing(abort);
 
-    expect(mapped).toBe(abort);
+    expect(mapped).toBeInstanceOf(AbortError);
+    expect(mapped).toMatchObject({ code: "ERR_ABORTED" });
+    expect((mapped as AbortError).cause).toBe(abort);
+  });
+
+  it("does not treat a bare HTTP 499 as caller cancellation", async () => {
+    const mapped = await executeFailing(
+      Object.assign(new Error("client closed request"), { status: 499 }),
+    );
+
+    expect(mapped).toBeInstanceOf(LlmError);
+    expect(mapped).not.toBeInstanceOf(AbortError);
+  });
+
+  it("normalizes Gemini CANCELLED and abort-message 499 errors", async () => {
+    const cancelled = Object.assign(new Error("The operation was cancelled."), {
+      status: 499,
+      error: { status: "CANCELLED" },
+    });
+    const mapped = await executeFailing(cancelled);
+
+    expect(mapped).toBeInstanceOf(AbortError);
+    expect((mapped as AbortError).cause).toBe(cancelled);
   });
 });
 

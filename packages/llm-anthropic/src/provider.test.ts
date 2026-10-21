@@ -1,4 +1,4 @@
-import { ConfigurationError, TimeoutError } from "@resili/core";
+import { AbortError, ConfigurationError, TimeoutError } from "@resili/core";
 import {
   createLlmClient,
   createPricingResolver,
@@ -226,6 +226,25 @@ describe("createAnthropicProvider", () => {
     expect(JSON.stringify(result)).not.toContain("stop_reason");
   });
 
+  it("rejects missing, null, and partial clients before dereferencing them", () => {
+    expect(() => createAnthropicProvider(undefined as never)).toThrow(ConfigurationError);
+    expect(() => createAnthropicProvider(null as never)).toThrow(ConfigurationError);
+    expect(() => createAnthropicProvider({} as never)).toThrow(ConfigurationError);
+    expect(() =>
+      createAnthropicProvider({ client: null, model: MODEL, maxTokens: 64 } as never),
+    ).toThrow(ConfigurationError);
+    expect(() =>
+      createAnthropicProvider({ client: {}, model: MODEL, maxTokens: 64 } as never),
+    ).toThrow(ConfigurationError);
+    expect(() =>
+      createAnthropicProvider({
+        client: { messages: {} },
+        model: MODEL,
+        maxTokens: 64,
+      } as never),
+    ).toThrow(ConfigurationError);
+  });
+
   it("requires a positive integer maxTokens", () => {
     expect(() =>
       createAnthropicProvider({
@@ -255,6 +274,25 @@ describe("Anthropic error normalization", () => {
       return caught;
     }
   }
+
+  it("normalizes APIUserAbortError, including constructor-name-only errors", async () => {
+    class APIUserAbortError extends Error {
+      override name = "Error";
+    }
+
+    const sdkError = new APIUserAbortError("Request was aborted.");
+    const mapped = await executeFailing(sdkError);
+
+    expect(mapped).toBeInstanceOf(AbortError);
+    expect(mapped).toMatchObject({ code: "ERR_ABORTED" });
+    expect((mapped as AbortError).cause).toBe(sdkError);
+
+    const named = Object.assign(new Error("aborted"), { name: "APIUserAbortError" });
+    const mappedNamed = await executeFailing(named);
+
+    expect(mappedNamed).toBeInstanceOf(AbortError);
+    expect((mappedNamed as AbortError).cause).toBe(named);
+  });
 
   it("maps authentication errors", async () => {
     const mapped = await executeFailing(

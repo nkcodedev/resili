@@ -1,13 +1,14 @@
 # First stable RC1 status
 
-**Stage: Release candidate (prepared in-repo).** Eight packages are versioned for RC1. They are
-**not yet published** to npm. Until publication, the public registry still serves Beta 1 on
-`latest` and `beta`.
+**Stage: Release candidate (published on `next`).** Eight RC1 packages are on the public registry
+under the `next` dist-tag. `latest` and `beta` still serve Beta 1. Independent consumer testing
+is a **NO-GO** for promoting RC1 to `latest`; see
+[RC1 release-blocker review](../RC1_RELEASE_BLOCKER_REVIEW.md).
 
-| Line        | Packages                                                      | RC1 version  | Published today |
-| ----------- | ------------------------------------------------------------- | ------------ | --------------- |
-| Core + HTTP | `@resili/core`, `-fetch`, `-axios`, `-undici`                 | `0.2.0-rc.1` | `0.2.0-beta.1`  |
-| LLM         | `@resili/llm`, `-llm-openai`, `-llm-anthropic`, `-llm-gemini` | `0.1.0-rc.1` | `0.1.0-beta.1`  |
+| Line        | Packages                                                      | `next` (RC1) | `latest` / `beta` |
+| ----------- | ------------------------------------------------------------- | ------------ | ----------------- |
+| Core + HTTP | `@resili/core`, `-fetch`, `-axios`, `-undici`                 | `0.2.0-rc.1` | `0.2.0-beta.1`    |
+| LLM         | `@resili/llm`, `-llm-openai`, `-llm-anthropic`, `-llm-gemini` | `0.1.0-rc.1` | `0.1.0-beta.1`    |
 
 See [Versioning](./versioning.md). Historical Beta guidance remains in [Beta status](./beta-status.md).
 
@@ -18,26 +19,23 @@ See [Versioning](./versioning.md). Historical Beta guidance remains in [Beta sta
   (status-based retries require explicit `retryOn` / custom classifier).
 - Same release gates as Beta: lint, typecheck, tests, build, API Extractor, `pnpm pack:check`,
   Node 20/22 CI.
-- Intended npm dist-tag after publication: **`next`**. Do **not** move `latest` or `beta` for RC1.
+- npm dist-tag: **`next`**. Do **not** move `latest` or `beta` for RC1.
 
 ## What RC1 does not mean
 
-- That packages are already on the public registry
 - A stable `1.0` / LTS guarantee
 - That `npm install @resili/core` (unpinned) installs RC1
 - Distributed policy or Budget Guard state
 - Complete provider feature parity (tools, multimodal, embeddings, Responses API)
 
-## Install (after publication)
+## Install
 
 ```bash
 npm install @resili/core@0.2.0-rc.1
 npm install @resili/llm@0.1.0-rc.1 @resili/llm-openai@0.1.0-rc.1 openai
-# or, once the next tag is set:
+# or the next dist-tag:
 npm install @resili/core@next
 ```
-
-Until publication, use local packs from this repository (`pnpm pack` / `pnpm pack:check` artifacts).
 
 ## Beta 1 → RC1 migration
 

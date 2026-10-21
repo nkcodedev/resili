@@ -42,13 +42,10 @@ const response = await users.call("42");
 
 ## Status
 
-First stable **RC1** is prepared in this repository (`0.2.0-rc.1` / `0.1.0-rc.1`), with the full test
-suite, type-checking, API-report verification, and packed-consumer gates green. Intended npm
-dist-tag after publication: `next`.
-
-The **published** registry still serves Beta 1 on `latest` / `beta` until RC1 is published. This is
-not yet a semver-stable `1.0` guarantee. See [RC1 status](docs/releases/rc1-status.md) and
-[Versioning](docs/releases/versioning.md).
+First stable **RC1** (`0.2.0-rc.1` / `0.1.0-rc.1`) is published on the npm `next` dist-tag. `latest`
+and `beta` still serve Beta 1. This is not a semver-stable `1.0` guarantee. See
+[RC1 status](docs/releases/rc1-status.md) and [Versioning](docs/releases/versioning.md). Independent
+consumer testing found release blockers; do not promote RC1 to `latest` until those fixes ship.
 
 ## Packages
 

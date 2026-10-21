@@ -17,6 +17,28 @@ const RESPONSE: UndiciResponse = Object.freeze({
 const ORIGIN = "https://api.example.com";
 
 describe("createUndici caller cancellation", () => {
+  it("normalizes a DOMException AbortError and does not open the circuit", async () => {
+    const dom = new DOMException("The operation was aborted.", "AbortError");
+    const request = createUndiciImplementation(() => Promise.reject(dom));
+    const send = createUndici({
+      request,
+      circuitBreaker: {
+        minimumThroughput: 1,
+        failureRateThreshold: 50,
+        resetTimeoutMs: 60_000,
+      },
+    });
+    const error = await send({ origin: ORIGIN, path: "/users" }).then(
+      () => undefined,
+      (caught: unknown) => caught,
+    );
+
+    expect(error).toBeInstanceOf(AbortError);
+    expect(error).toMatchObject({ code: "ERR_ABORTED" });
+    expect((error as AbortError).cause).toBe(dom);
+    await expect(send({ origin: ORIGIN, path: "/users" })).rejects.toBeInstanceOf(AbortError);
+    expect(request).toHaveBeenCalledTimes(2);
+  });
   it("does not invoke request when the caller signal is already aborted", async () => {
     const request = createUndiciImplementation(() => Promise.resolve(RESPONSE));
     const send = createUndici({ request });

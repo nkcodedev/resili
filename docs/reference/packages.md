@@ -1,7 +1,7 @@
 # Package reference
 
-Eight packages, two version lines. First stable RC1 is prepared in-repo; Beta 1 remains the
-published release on `latest` / `beta` until RC1 ships under `next`.
+Eight packages, two version lines. First stable RC1 is published on npm `next`. Beta 1 remains
+the default release on `latest` / `beta`.
 
 ## Matrix
 
@@ -35,8 +35,8 @@ npm install @resili/core @resili/fetch
 npm install @resili/core @resili/llm @resili/llm-openai openai
 ```
 
-Plain installs still resolve to Beta 1 until RC1 is published. After publication, pin
-`@0.2.0-rc.1` / `@0.1.0-rc.1` or use `@next`. See [Versioning](../releases/versioning.md).
+Plain installs still resolve to Beta 1. Pin `@0.2.0-rc.1` / `@0.1.0-rc.1` or use `@next` for RC1.
+See [Versioning](../releases/versioning.md).
 
 ## Version lines
 

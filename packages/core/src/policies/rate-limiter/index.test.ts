@@ -4,7 +4,7 @@ import { httpClassifier } from "../../core/classification";
 import type { Clock } from "../../core/clock";
 import { createContext, type Context } from "../../core/context";
 import type { ResiliEvent } from "../../core/events";
-import { ConfigurationError, RateLimitExceededError } from "../../core/errors";
+import { AbortError, ConfigurationError, RateLimitExceededError } from "../../core/errors";
 import { noopMetrics } from "../../core/metrics";
 import type { PolicyServices } from "../../core/policy";
 import { memoryStore } from "../../core/state";
@@ -271,7 +271,8 @@ describe("rateLimiterPolicy", () => {
     await Promise.resolve();
     await Promise.resolve();
     controller.abort();
-    await expect(waiting).rejects.toBeInstanceOf(Error);
+    await expect(waiting).rejects.toBeInstanceOf(AbortError);
+    await expect(waiting).rejects.toMatchObject({ code: "ERR_ABORTED" });
     expect(clock.activeTimers).toBe(0);
 
     clock.tick(100);

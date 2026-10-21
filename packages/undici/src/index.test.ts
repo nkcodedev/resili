@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import type { Outcome } from "@resili/core";
+import { ConfigurationError, type Outcome } from "@resili/core";
 import {
   createUndici,
   type UndiciImplementation,
@@ -235,6 +235,15 @@ describe("createUndici", () => {
     });
     expect(attempts).toBe(3);
     await resilientRequest.destroy();
+  });
+
+  it("rejects missing, null, and partial request configuration", () => {
+    expect(() => createUndici(undefined as never)).toThrow(ConfigurationError);
+    expect(() => createUndici(null as never)).toThrow(ConfigurationError);
+    expect(() => createUndici([] as never)).toThrow(ConfigurationError);
+    expect(() => createUndici({} as never)).toThrow(ConfigurationError);
+    expect(() => createUndici({ request: null } as never)).toThrow(ConfigurationError);
+    expect(() => createUndici({ request: {} } as never)).toThrow(ConfigurationError);
   });
 });
 

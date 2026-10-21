@@ -55,7 +55,7 @@ export function createOpenAiProvider(options: CreateOpenAiProviderOptions): LlmP
     });
   }
 
-  if (typeof options.client.chat.completions.create !== "function") {
+  if (!hasFunction(options.client, ["chat", "completions", "create"])) {
     throw new ConfigurationError("options.client must expose chat.completions.create.", {
       field: "client",
     });
@@ -210,6 +210,20 @@ function mapOpenAiStream(
       };
     },
   };
+}
+
+function hasFunction(value: unknown, path: readonly string[]): boolean {
+  let current: unknown = value;
+
+  for (const key of path) {
+    if (current === null || typeof current !== "object") {
+      return false;
+    }
+
+    current = (current as Record<string, unknown>)[key];
+  }
+
+  return typeof current === "function";
 }
 
 function chunkToFrame(

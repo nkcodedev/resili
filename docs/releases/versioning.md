@@ -2,22 +2,18 @@
 
 ## Install
 
-**Published today:** Beta 1. Plain installs resolve to Beta 1:
+**Default install:** Beta 1 on `latest` / `beta`. RC1 is available on `next`:
 
 ```bash
 npm install @resili/core
 npm install @resili/llm @resili/llm-openai
 ```
 
-`latest` and `beta` currently both point at Beta 1. Historical alpha builds remain available as
-`@alpha` / exact `*-alpha.*` versions.
-
-**Prepared in this repository:** first stable RC1 (`0.2.0-rc.1` / `0.1.0-rc.1`). RC1 is **not yet
-published**. After publication, install exact RC versions or `@next`. See
+`latest` and `beta` currently both point at Beta 1. RC1 is published on `next`. Historical alpha
+builds remain available as `@alpha` / exact `*-alpha.*` versions. See
 [RC1 status](./rc1-status.md).
 
 ```bash
-# After RC1 is published (intended tag: next)
 npm install @resili/core@0.2.0-rc.1
 npm install @resili/llm@0.1.0-rc.1
 # or
@@ -28,18 +24,18 @@ Neither Beta nor RC1 is a stable `1.0` guarantee — pin exact versions in produ
 
 ## Current dist-tags (public registry)
 
-Until RC1 is published, tags remain:
+Current tags:
 
-| Package                 | `latest` / `beta` | `alpha` (historical) | `next` (RC1, after publish) |
-| ----------------------- | ----------------- | -------------------- | --------------------------- |
-| `@resili/core`          | `0.2.0-beta.1`    | `0.2.0-alpha.3`      | `0.2.0-rc.1` (planned)      |
-| `@resili/fetch`         | `0.2.0-beta.1`    | `0.2.0-alpha.3`      | `0.2.0-rc.1` (planned)      |
-| `@resili/axios`         | `0.2.0-beta.1`    | `0.2.0-alpha.3`      | `0.2.0-rc.1` (planned)      |
-| `@resili/undici`        | `0.2.0-beta.1`    | `0.2.0-alpha.3`      | `0.2.0-rc.1` (planned)      |
-| `@resili/llm`           | `0.1.0-beta.1`    | `0.1.0-alpha.4`      | `0.1.0-rc.1` (planned)      |
-| `@resili/llm-openai`    | `0.1.0-beta.1`    | `0.1.0-alpha.4`      | `0.1.0-rc.1` (planned)      |
-| `@resili/llm-anthropic` | `0.1.0-beta.1`    | `0.1.0-alpha.4`      | `0.1.0-rc.1` (planned)      |
-| `@resili/llm-gemini`    | `0.1.0-beta.1`    | `0.1.0-alpha.3`      | `0.1.0-rc.1` (planned)      |
+| Package                 | `latest` / `beta` | `alpha` (historical) | `next` (RC1) |
+| ----------------------- | ----------------- | -------------------- | ------------ |
+| `@resili/core`          | `0.2.0-beta.1`    | `0.2.0-alpha.3`      | `0.2.0-rc.1` |
+| `@resili/fetch`         | `0.2.0-beta.1`    | `0.2.0-alpha.3`      | `0.2.0-rc.1` |
+| `@resili/axios`         | `0.2.0-beta.1`    | `0.2.0-alpha.3`      | `0.2.0-rc.1` |
+| `@resili/undici`        | `0.2.0-beta.1`    | `0.2.0-alpha.3`      | `0.2.0-rc.1` |
+| `@resili/llm`           | `0.1.0-beta.1`    | `0.1.0-alpha.4`      | `0.1.0-rc.1` |
+| `@resili/llm-openai`    | `0.1.0-beta.1`    | `0.1.0-alpha.4`      | `0.1.0-rc.1` |
+| `@resili/llm-anthropic` | `0.1.0-beta.1`    | `0.1.0-alpha.4`      | `0.1.0-rc.1` |
+| `@resili/llm-gemini`    | `0.1.0-beta.1`    | `0.1.0-alpha.3`      | `0.1.0-rc.1` |
 
 Verify at any time:
 

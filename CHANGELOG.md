@@ -8,6 +8,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- Caller abort during a retry delay no longer starts another attempt. The delay listens to the
+  root `AbortSignal`, clears its timer, and rejects with Core `AbortError` (`ERR_ABORTED`).
+- Fetch, Axios, Undici, the rate limiter, Anthropic, and Gemini normalize caller cancellation to
+  Core `AbortError` and keep the original error as `cause`. Axios `ERR_CANCELED`, Anthropic
+  `APIUserAbortError`, and Gemini `CANCELLED` no longer count as dependency failures. A bare HTTP
+  status `499` stays a provider failure.
+- Missing or partial Axios, Undici, LLM, OpenAI, Anthropic, and Gemini clients throw
+  `ConfigurationError` instead of `TypeError`.
+- Package bundles no longer emit a duplicate `//# sourceMappingURL=` comment.
+- Axios README examples import `@resili/axios`. Publication docs record that RC1 is on npm `next`
+  and that `latest` / `beta` remain Beta 1.
+
 ### Documentation
 
 - Package README / metadata hardening for npm presentation: monorepo `repository.directory`,

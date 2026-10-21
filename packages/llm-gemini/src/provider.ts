@@ -61,7 +61,7 @@ export function createGeminiProvider(options: CreateGeminiProviderOptions): LlmP
     });
   }
 
-  if (typeof options.client.models.generateContent !== "function") {
+  if (!hasFunction(options.client, ["models", "generateContent"])) {
     throw new ConfigurationError("options.client must expose models.generateContent.", {
       field: "client",
     });
@@ -296,4 +296,18 @@ export function incrementalVisibleText(previous: string, incoming: string): stri
   }
 
   return incoming;
+}
+
+function hasFunction(value: unknown, path: readonly string[]): boolean {
+  let current: unknown = value;
+
+  for (const key of path) {
+    if (current === null || typeof current !== "object") {
+      return false;
+    }
+
+    current = (current as Record<string, unknown>)[key];
+  }
+
+  return typeof current === "function";
 }
