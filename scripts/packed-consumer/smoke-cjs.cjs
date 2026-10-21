@@ -128,8 +128,8 @@ async function close(server) {
 
 async function coreSmoke() {
   assert.equal(RESILI_VERSION, corePkg.version);
-  assert.equal(RESILI_VERSION, "0.2.0-rc.1");
-  assert.equal(llmPkg.version, "0.1.0-rc.1");
+  assert.equal(RESILI_VERSION, "0.2.0-rc.2");
+  assert.equal(llmPkg.version, "0.1.0-rc.2");
   const metrics = {
     ...noopMetrics,
     counter() {

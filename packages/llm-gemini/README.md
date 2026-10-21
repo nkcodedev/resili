@@ -8,12 +8,12 @@ You create the official `@google/genai` client. Resili never stores API keys and
 
 ## Installation
 
-**First stable RC1 is published on npm `next`.** Package version `0.1.0-rc.1`. `latest` and `beta`
-still serve Beta 1.
-Historical `alpha` builds remain under `@alpha`. This is not a stable `1.0` guarantee. Package version is `0.1.0-rc.1` (aligned with the LLM family); see [versioning](https://github.com/nkcodedev/resili/blob/main/docs/releases/versioning.md).
+**RC2 is prepared in this repository and is not yet published.** Package version `0.1.0-rc.2`.
+npm `next` still serves RC1 (`0.1.0-rc.1`). `latest` and `beta` still serve Beta 1.
+Historical `alpha` builds remain under `@alpha`. This is not a stable `1.0` guarantee. Package version is `0.1.0-rc.2` (aligned with the LLM family); see [versioning](https://github.com/nkcodedev/resili/blob/main/docs/releases/versioning.md).
 
 ```bash
-pnpm add @resili/core@0.2.0-rc.1 @resili/llm@0.1.0-rc.1 @resili/llm-gemini@0.1.0-rc.1 @google/genai
+pnpm add @resili/core@0.2.0-rc.2 @resili/llm@0.1.0-rc.2 @resili/llm-gemini@0.1.0-rc.2 @google/genai
 ```
 
 This adapter targets **`@google/genai`**, not the legacy `@google/generative-ai` SDK. The two have

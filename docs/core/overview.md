@@ -4,7 +4,7 @@
 the metrics contract, the error hierarchy, and the plugin system. It has **zero runtime
 dependencies** and knows nothing about HTTP or LLMs.
 
-Current version: **`0.2.0-alpha.3`**.
+Current version: **`0.2.0-rc.2`** (prepared; not yet published). npm `next` still serves `0.2.0-rc.1`.
 
 ## Two entry points
 

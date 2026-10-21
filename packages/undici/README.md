@@ -13,23 +13,23 @@ For the full framework overview, see the [repository README](https://github.com/
 
 ## Installation
 
-**First stable RC1 is published on npm `next`.** Package version `0.2.0-rc.1`. `latest` and `beta`
-still serve Beta 1.
+**RC2 is prepared in this repository and is not yet published.** Package version `0.2.0-rc.2`.
+npm `next` still serves RC1 (`0.2.0-rc.1`). `latest` and `beta` still serve Beta 1.
 Historical `alpha` builds remain under `@alpha`. This is not a stable `1.0` guarantee.
 
 ```bash
-pnpm add @resili/core@0.2.0-rc.1 @resili/undici@0.2.0-rc.1
+pnpm add @resili/core@0.2.0-rc.2 @resili/undici@0.2.0-rc.2
 ```
 
 ```bash
-npm install @resili/core@0.2.0-rc.1 @resili/undici@0.2.0-rc.1
+npm install @resili/core@0.2.0-rc.2 @resili/undici@0.2.0-rc.2
 ```
 
 ```bash
-yarn add @resili/core@0.2.0-rc.1 @resili/undici@0.2.0-rc.1
+yarn add @resili/core@0.2.0-rc.2 @resili/undici@0.2.0-rc.2
 ```
 
-Node.js 20 or newer is required. Package version is `0.2.0-rc.1`; see
+Node.js 20 or newer is required. Package version is `0.2.0-rc.2`; see
 [versioning](https://github.com/nkcodedev/resili/blob/main/docs/releases/versioning.md).
 
 `undici` itself is **not** a dependency or peer dependency of this package. You inject

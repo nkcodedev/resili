@@ -1,20 +1,20 @@
 # Package reference
 
-Eight packages, two version lines. First stable RC1 is published on npm `next`. Beta 1 remains
-the default release on `latest` / `beta`.
+Eight packages, two version lines. RC2 is prepared in-repo and is not yet published. npm `next`
+still serves RC1. Beta 1 remains the default release on `latest` / `beta`.
 
 ## Matrix
 
 | Package                 | Purpose                                                         | Version      | Dependencies                  | Optional peers               | Node   | Status |
 | ----------------------- | --------------------------------------------------------------- | ------------ | ----------------------------- | ---------------------------- | ------ | ------ |
-| `@resili/core`          | Runtime: context, pipeline, 9 policies, events, metrics, errors | `0.2.0-rc.1` | **none**                      | —                            | `>=20` | RC1    |
-| `@resili/fetch`         | fetch-compatible adapter                                        | `0.2.0-rc.1` | `@resili/core`                | —                            | `>=20` | RC1    |
-| `@resili/axios`         | axios-compatible adapter (injected implementation)              | `0.2.0-rc.1` | `@resili/core`                | —                            | `>=20` | RC1    |
-| `@resili/undici`        | undici-compatible adapter (injected implementation)             | `0.2.0-rc.1` | `@resili/core`                | —                            | `>=20` | RC1    |
-| `@resili/llm`           | LLM foundation: contracts, usage, pricing, budget, telemetry    | `0.1.0-rc.1` | `@resili/core`                | —                            | `>=20` | RC1    |
-| `@resili/llm-openai`    | OpenAI Chat Completions adapter                                 | `0.1.0-rc.1` | `@resili/core`, `@resili/llm` | `openai >=4.0.0`             | `>=20` | RC1    |
-| `@resili/llm-anthropic` | Anthropic Messages adapter                                      | `0.1.0-rc.1` | `@resili/core`, `@resili/llm` | `@anthropic-ai/sdk >=0.20.0` | `>=20` | RC1    |
-| `@resili/llm-gemini`    | Google Gemini adapter (`@google/genai`)                         | `0.1.0-rc.1` | `@resili/core`, `@resili/llm` | `@google/genai >=1.0.0`      | `>=20` | RC1    |
+| `@resili/core`          | Runtime: context, pipeline, 9 policies, events, metrics, errors | `0.2.0-rc.2` | **none**                      | —                            | `>=20` | RC2    |
+| `@resili/fetch`         | fetch-compatible adapter                                        | `0.2.0-rc.2` | `@resili/core`                | —                            | `>=20` | RC2    |
+| `@resili/axios`         | axios-compatible adapter (injected implementation)              | `0.2.0-rc.2` | `@resili/core`                | —                            | `>=20` | RC2    |
+| `@resili/undici`        | undici-compatible adapter (injected implementation)             | `0.2.0-rc.2` | `@resili/core`                | —                            | `>=20` | RC2    |
+| `@resili/llm`           | LLM foundation: contracts, usage, pricing, budget, telemetry    | `0.1.0-rc.2` | `@resili/core`                | —                            | `>=20` | RC2    |
+| `@resili/llm-openai`    | OpenAI Chat Completions adapter                                 | `0.1.0-rc.2` | `@resili/core`, `@resili/llm` | `openai >=4.0.0`             | `>=20` | RC2    |
+| `@resili/llm-anthropic` | Anthropic Messages adapter                                      | `0.1.0-rc.2` | `@resili/core`, `@resili/llm` | `@anthropic-ai/sdk >=0.20.0` | `>=20` | RC2    |
+| `@resili/llm-gemini`    | Google Gemini adapter (`@google/genai`)                         | `0.1.0-rc.2` | `@resili/core`, `@resili/llm` | `@google/genai >=1.0.0`      | `>=20` | RC2    |
 
 Every package ships ESM and CommonJS builds with TypeScript declarations for both.
 
@@ -35,17 +35,19 @@ npm install @resili/core @resili/fetch
 npm install @resili/core @resili/llm @resili/llm-openai openai
 ```
 
-Plain installs still resolve to Beta 1. Pin `@0.2.0-rc.1` / `@0.1.0-rc.1` or use `@next` for RC1.
+Plain installs still resolve to Beta 1. `@next` currently installs published RC1 (`0.2.0-rc.1` /
+`0.1.0-rc.1`). RC2 pins (`@0.2.0-rc.2` / `@0.1.0-rc.2`) are prepared and not on the registry yet.
 See [Versioning](../releases/versioning.md).
 
 ## Version lines
 
-| Line        | Packages                                                      | In-repo      | Published      |
-| ----------- | ------------------------------------------------------------- | ------------ | -------------- |
-| Core + HTTP | `@resili/core`, `-fetch`, `-axios`, `-undici`                 | `0.2.0-rc.1` | `0.2.0-beta.1` |
-| LLM         | `@resili/llm`, `-llm-openai`, `-llm-anthropic`, `-llm-gemini` | `0.1.0-rc.1` | `0.1.0-beta.1` |
+| Line        | Packages                                                      | In-repo (RC2) | `latest` / `beta` |
+| ----------- | ------------------------------------------------------------- | ------------- | ----------------- |
+| Core + HTTP | `@resili/core`, `-fetch`, `-axios`, `-undici`                 | `0.2.0-rc.2`  | `0.2.0-beta.1`    |
+| LLM         | `@resili/llm`, `-llm-openai`, `-llm-anthropic`, `-llm-gemini` | `0.1.0-rc.2`  | `0.1.0-beta.1`    |
 
-The lines version independently. Gemini is aligned with the LLM family at RC1.
+The lines version independently. Gemini is aligned with the LLM family at RC2. npm `next` remains
+RC1 until RC2 is published.
 
 A healthy install has one copy of each:
 
