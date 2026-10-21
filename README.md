@@ -41,6 +41,16 @@ const response = await users.call("42");
 
 A local version of this flow, with a mocked dependency, is in [`examples/core`](examples/core). A StackBlitz-style project that installs published `@resili/core@0.2.0-rc.2` is in [`examples/stackblitz`](examples/stackblitz).
 
+### See Resili in action
+
+[![Open in StackBlitz](https://developer.stackblitz.com/img/open_in_stackblitz.svg)](https://stackblitz.com/fork/github/nkcodedev/resili/tree/main/examples/stackblitz?file=index.mjs&title=Resili)
+
+![Resili retry and circuit breaker demo](docs/assets/resili-demo.gif)
+
+The recording is `node examples/stackblitz/demo.mjs` with published `@resili/core@0.2.0-rc.2`. A local function fails twice. Resili waits and retries. The third attempt returns `recovered`. A second function then fails once, the circuit opens, and the next call stops with `ERR_CIRCUIT_OPEN` without entering that function. No API key is used.
+
+The StackBlitz button opens that example folder from `main`. It installs `@resili/core@0.2.0-rc.2` and does not use the monorepo. In the terminal, run `node index.mjs`.
+
 ## Which package to install
 
 | You are calling               | Install                                                                         |
