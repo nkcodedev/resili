@@ -4,7 +4,7 @@
 classifies provider failures, accounts for token usage, computes cost from **your** price table,
 enforces a budget, and emits privacy-safe telemetry.
 
-Current version: **`0.1.0-rc.2`** (prepared; not yet published). Depends only on `@resili/core`.
+Current version: **`0.1.0-rc.2`**, published on npm `next`. Depends only on `@resili/core`. `latest` remains Beta 1. This is not a stable release.
 
 ## Architecture
 

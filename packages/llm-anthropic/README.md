@@ -8,9 +8,7 @@ You create the official `@anthropic-ai/sdk` client. Resili never stores API keys
 
 ## Installation
 
-**RC2 is prepared in this repository and is not yet published.** Package version `0.1.0-rc.2`.
-npm `next` still serves RC1 (`0.1.0-rc.1`). `latest` and `beta` still serve Beta 1.
-Historical `alpha` builds remain under `@alpha`. This is not a stable `1.0` guarantee. See [versioning](https://github.com/nkcodedev/resili/blob/main/docs/releases/versioning.md).
+**RC2 (`0.1.0-rc.2`) is published on npm `next`.** `latest` and `beta` still serve Beta 1 (`0.1.0-beta.1`). Historical `alpha` builds remain under `@alpha`. RC1 remains available as `0.1.0-rc.1`. This is not a stable release. See [versioning](https://github.com/nkcodedev/resili/blob/main/docs/releases/versioning.md).
 
 ```bash
 pnpm add @resili/core@0.2.0-rc.2 @resili/llm@0.1.0-rc.2 @resili/llm-anthropic@0.1.0-rc.2 @anthropic-ai/sdk

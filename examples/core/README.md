@@ -20,7 +20,8 @@ node example.mjs
 ## What it shows
 
 1. **Declarative configuration** with `createClient`, plus `client.on(...)` subscriptions for
-   `RetryStarted` and `RequestCompleted`.
+   `RetryStarted` and `RequestCompleted`. A plain `Error` is not retryable by the default
+   classifier, so this example passes `retry.retryOn`.
 2. **The fluent builder** with a `fallback` handler, unwrapping `RetryExceededError.lastError` to find
    the real cause.
 3. **Caller cancellation** through `client.execute(operation, { signal })`, where the operation reads

@@ -1,7 +1,7 @@
 # Package reference
 
-Eight packages, two version lines. RC2 is prepared in-repo and is not yet published. npm `next`
-still serves RC1. Beta 1 remains the default release on `latest` / `beta`.
+Eight packages, two version lines. RC2 is published on npm `next`. Beta 1 remains the default
+release on `latest` / `beta`. This is not a stable release.
 
 ## Matrix
 
@@ -35,8 +35,8 @@ npm install @resili/core @resili/fetch
 npm install @resili/core @resili/llm @resili/llm-openai openai
 ```
 
-Plain installs still resolve to Beta 1. `@next` currently installs published RC1 (`0.2.0-rc.1` /
-`0.1.0-rc.1`). RC2 pins (`@0.2.0-rc.2` / `@0.1.0-rc.2`) are prepared and not on the registry yet.
+Plain installs still resolve to Beta 1. `@next` installs published RC2 (`0.2.0-rc.2` /
+`0.1.0-rc.2`). RC1 remains available at the exact versions `0.2.0-rc.1` / `0.1.0-rc.1`.
 See [Versioning](../releases/versioning.md).
 
 ## Version lines
@@ -46,8 +46,8 @@ See [Versioning](../releases/versioning.md).
 | Core + HTTP | `@resili/core`, `-fetch`, `-axios`, `-undici`                 | `0.2.0-rc.2`  | `0.2.0-beta.1`    |
 | LLM         | `@resili/llm`, `-llm-openai`, `-llm-anthropic`, `-llm-gemini` | `0.1.0-rc.2`  | `0.1.0-beta.1`    |
 
-The lines version independently. Gemini is aligned with the LLM family at RC2. npm `next` remains
-RC1 until RC2 is published.
+The lines version independently. Gemini is aligned with the LLM family at RC2. npm `next` points at
+these RC2 versions. `latest` and `beta` remain Beta 1.
 
 A healthy install has one copy of each:
 

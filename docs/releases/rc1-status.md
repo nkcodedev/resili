@@ -1,12 +1,11 @@
 # First stable RC1 status
 
-**Stage: Release candidate (published on `next`).** Eight RC1 packages are on the public registry
-under the `next` dist-tag. `latest` and `beta` still serve Beta 1. Independent consumer testing
-is a **NO-GO** for promoting RC1 to `latest`; see
-[RC1 release-blocker review](../RC1_RELEASE_BLOCKER_REVIEW.md). The follow-up cut is
-[RC2](./rc2-status.md), prepared in-repo and not yet published.
+**Stage: Release candidate (exact versions).** Eight RC1 packages remain on the public registry at
+`0.2.0-rc.1` / `0.1.0-rc.1`. npm `next` now points at [RC2](./rc2-status.md). `latest` and `beta`
+still serve Beta 1. Independent consumer testing is a **NO-GO** for promoting RC1 to `latest`; see
+[RC1 release-blocker review](../RC1_RELEASE_BLOCKER_REVIEW.md).
 
-| Line        | Packages                                                      | `next` (RC1) | `latest` / `beta` |
+| Line        | Packages                                                      | RC1 (exact)  | `latest` / `beta` |
 | ----------- | ------------------------------------------------------------- | ------------ | ----------------- |
 | Core + HTTP | `@resili/core`, `-fetch`, `-axios`, `-undici`                 | `0.2.0-rc.1` | `0.2.0-beta.1`    |
 | LLM         | `@resili/llm`, `-llm-openai`, `-llm-anthropic`, `-llm-gemini` | `0.1.0-rc.1` | `0.1.0-beta.1`    |
