@@ -175,6 +175,12 @@ Cockatiel also documents fallback. Opossum documents a fallback function for the
 
 Generated TypeDoc output is produced by `pnpm docs` into `docs/api/`.
 
+### Explore Resili on XERJ Corpus Hub
+
+Resili is indexed on the XERJ Corpus Hub, providing another way for developers and AI coding agents to discover and explore its source code and documentation.
+
+[Explore Resili on XERJ Corpus Hub](https://hub.xerj.org/corpus/nkcodedev--resili)
+
 ## Release status
 
 | Tag                 | What `npm install` resolves                               | Meaning                                 |
