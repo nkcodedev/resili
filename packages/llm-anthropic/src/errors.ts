@@ -61,9 +61,13 @@ function toAbortError(error: unknown): AbortError {
     return error;
   }
 
+  const status = getNumber(error, "status") ?? getNumber(error, "statusCode");
+  const type = getAnthropicType(error);
+  const cause = sanitizeCause(error, status, type);
+
   return new AbortError({
-    reason: error,
-    ...(error instanceof Error ? { cause: error } : {}),
+    reason: cause,
+    cause,
   });
 }
 
@@ -159,10 +163,10 @@ function sanitizeCause(
   const name = getErrorName(error);
 
   return Object.freeze({
-    ...(name === undefined ? {} : { name }),
+    ...(name === undefined ? {} : { name: redactSecrets(name) }),
     ...(status === undefined ? {} : { status }),
     ...(type === undefined ? {} : { type: redactSecrets(type) }),
-    ...(requestID === undefined ? {} : { requestID }),
+    ...(requestID === undefined ? {} : { requestID: redactSecrets(requestID) }),
   });
 }
 
@@ -255,5 +259,7 @@ function isNetworkCode(code: string | undefined): boolean {
 }
 
 function redactSecrets(value: string): string {
+  SECRET_PATTERN.lastIndex = 0;
+
   return value.replace(SECRET_PATTERN, "[redacted]");
 }

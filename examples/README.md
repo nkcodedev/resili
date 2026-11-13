@@ -8,7 +8,7 @@ Runnable, self-contained examples. None of these are workspace packages and none
 | ---------------------------------- | ------------------- | ------------- | ------------------------------------------------------------------------- |
 | [`core`](./core)                   | No                  | No            | Retry, timeout, breaker, fallback, cancellation on a plain async function |
 | [`budget-guard`](./budget-guard)   | No                  | No            | Estimated-cost rejection before a local LLM provider is called            |
-| [`stackblitz`](./stackblitz)       | No                  | No            | Published `@resili/core@0.2.0-rc.2`: retry, then an open circuit          |
+| [`stackblitz`](./stackblitz)       | No                  | No            | Published `@resili/core@0.2.0`: retry, then an open circuit               |
 | [`fetch`](./fetch)                 | No                  | No            | Status-code retry through a fetch-compatible client                       |
 | [`axios`](./axios)                 | No                  | No            | An axios instance you own, injected                                       |
 | [`undici`](./undici)               | No                  | No            | `origin`/`path`, `statusCode`, body draining on retry                     |

@@ -1,3 +1,5 @@
+import { inspect } from "node:util";
+
 import { AbortError } from "@resili/core";
 import { LlmError } from "@resili/llm";
 import { APIUserAbortError } from "openai";
@@ -39,8 +41,30 @@ describe("OpenAI abort detection (RESILI-INTEROP-001)", () => {
     } catch (error) {
       expect(error).toBeInstanceOf(AbortError);
       expect(error).toMatchObject({ code: "ERR_ABORTED" });
-      expect((error as AbortError).reason).toBe(sdkError);
-      expect((error as AbortError).cause).toBe(sdkError);
+      expect((error as AbortError).reason).not.toBe(sdkError);
+      expect((error as AbortError).cause).not.toBe(sdkError);
+      expect((error as AbortError).cause).toMatchObject({ name: "Error" });
+    }
+  });
+
+  it("does not expose provider secrets on an abort cause", () => {
+    const secret = "sk-liveSecretKeyValue";
+    const sdkError = Object.assign(new Error(`aborted ${secret}`), {
+      name: "APIUserAbortError",
+      requestID: `req-${secret}`,
+      headers: { authorization: `Bearer ${secret}` },
+      error: { message: secret, details: [{ apiKey: secret }] },
+    });
+
+    try {
+      mapOpenAiError(sdkError, "gpt-4.1-mini");
+      expect.unreachable("expected mapOpenAiError to throw");
+    } catch (error) {
+      const abort = error as AbortError;
+
+      expect(abort).toBeInstanceOf(AbortError);
+      expect(abort.cause).not.toBe(sdkError);
+      expect(renderedError(abort)).not.toContain(secret);
     }
   });
 
@@ -70,6 +94,18 @@ describe("OpenAI abort detection (RESILI-INTEROP-001)", () => {
     );
   });
 });
+
+function renderedError(error: AbortError): string {
+  return [
+    error.message,
+    inspect(error, { depth: 8 }),
+    inspect(error.cause, { depth: 8 }),
+    inspect(error.reason, { depth: 8 }),
+    JSON.stringify(error),
+    JSON.stringify(error.cause),
+    JSON.stringify(error.reason),
+  ].join("\n");
+}
 
 function expectMapped(error: unknown, classification: string): void {
   try {

@@ -18,8 +18,10 @@ See [Versioning](./versioning.md) and the [RC1 release-blocker review](../RC1_RE
   Core `AbortError` / `ERR_ABORTED`, with the original error preserved as `cause`.
 - Axios `ERR_CANCELED`, Anthropic `APIUserAbortError`, and Gemini `CANCELLED` do not count as
   dependency failures and do not open the circuit breaker. Genuine upstream failures still do.
-- Gemini HTTP status `499` is cancellation only when the error is `CANCELLED`/`CANCELED` or the
-  message is an abort/cancel. A bare status `499` stays a provider failure.
+- Published RC2 treats Gemini HTTP status `499` as cancellation only when the error is
+  `CANCELLED`/`CANCELED` or the message matches abort/cancel. A bare status `499` stays a provider
+  failure. The `Client Closed Request` classification and sanitized abort causes land in the
+  prepared stable cut (`0.2.0` / `0.1.0`); they are **not** in the published `0.1.0-rc.2` tarball.
 - Missing or partial Axios, Undici, LLM, OpenAI, Anthropic, and Gemini clients throw
   `ConfigurationError`.
 - Axios README imports use `@resili/axios`. Builds emit one `//# sourceMappingURL=` comment.
@@ -29,6 +31,7 @@ See [Versioning](./versioning.md) and the [RC1 release-blocker review](../RC1_RE
 - A stable `1.0` / LTS guarantee
 - That `npm install @resili/core` (no tag) installs RC2. That install still resolves to Beta 1
 - That `latest` or `beta` moved
+- That the stable `0.2.0` / `0.1.0` packages are already on npm `latest`
 
 ## Install
 
@@ -44,4 +47,4 @@ npm install @resili/llm@0.1.0-rc.2 @resili/llm-openai@0.1.0-rc.2 openai
 
 `latest` and `beta` remain Beta 1. `alpha` remains on the historical alpha versions. Do not treat
 RC2 as a stable release. Re-run independent consumer tests on Node.js 20 and 22 before any `latest`
-promotion.
+promotion. Prefer the prepared stable cut once it is published.

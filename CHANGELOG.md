@@ -8,6 +8,31 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.2.0] / [0.1.0] - 2026-11-13
+
+First stable release. Prepared in this repository for npm publication as `@resili/core@0.2.0` (and
+matching HTTP packages) and `@resili/llm@0.1.0` (and matching provider adapters). These versions are
+**not yet published** until the release is approved and the publish sequence completes. Historical
+Beta 1, RC1, and RC2 builds remain installable at exact versions.
+
+### Versions
+
+| Family    | Packages                                                      | Version |
+| --------- | ------------------------------------------------------------- | ------- |
+| Core/HTTP | `@resili/core`, `-fetch`, `-axios`, `-undici`                 | `0.2.0` |
+| LLM       | `@resili/llm`, `-llm-openai`, `-llm-anthropic`, `-llm-gemini` | `0.1.0` |
+
+### Fixed
+
+- Gemini HTTP `499` with the message `Client Closed Request` is caller cancellation
+  (`AbortError` / `ERR_ABORTED`) and does not open the circuit breaker. HTTP `499` with unrelated
+  error information stays `LlmError` / `ERR_LLM_UNKNOWN`.
+- Gemini, OpenAI, and Anthropic no longer attach the raw provider error as `AbortError.cause` or
+  `AbortError.reason`. The cause is a sanitized snapshot. A caller `AbortError` is preserved.
+
+This stable cut also includes the RC2 cancellation, configuration, and packaging fixes already
+described under `[RC.2]`.
+
 ## [RC.2] - 2026-10-21
 
 Second release candidate. Published on npm `next`. `latest` and `beta` remain Beta 1. This is not

@@ -8,10 +8,10 @@ You create the official `@google/genai` client. Resili never stores API keys and
 
 ## Installation
 
-**RC2 (`0.1.0-rc.2`) is published on npm `next`.** `latest` and `beta` still serve Beta 1 (`0.1.0-beta.1`). Historical `alpha` builds remain under `@alpha`. RC1 remains available as `0.1.0-rc.1`. This is not a stable release. Package version is `0.1.0-rc.2` (aligned with the LLM family); see [versioning](https://github.com/nkcodedev/resili/blob/main/docs/releases/versioning.md).
+**Stable `0.1.0` is prepared in this repository.** After npm publication, plain `npm install` resolves to this line on `latest`. Historical Beta, RC, and alpha builds remain available at exact versions. See [versioning](https://github.com/nkcodedev/resili/blob/main/docs/releases/versioning.md).
 
 ```bash
-pnpm add @resili/core@0.2.0-rc.2 @resili/llm@0.1.0-rc.2 @resili/llm-gemini@0.1.0-rc.2 @google/genai
+pnpm add @resili/core@0.2.0 @resili/llm@0.1.0 @resili/llm-gemini@0.1.0 @google/genai
 ```
 
 This adapter targets **`@google/genai`**, not the legacy `@google/generative-ai` SDK. The two have
@@ -144,7 +144,7 @@ Cached, thoughts, and tool-use prompt token counts, when present, are copied to 
 | other 5xx                            | `provider_unavailable`    | yes       |
 | other                                | `unknown`                 | no        |
 
-Abort / 499 is rethrown so Resili owns cancellation. `cause` is a sanitized snapshot (`status`, `code`/`type`, `requestID`). It does not include headers, bodies, prompts, or API keys.
+Caller cancellation becomes Core `AbortError` (`ERR_ABORTED`). HTTP `499` is cancellation when the Google status is `CANCELLED` or `CANCELED`, or when the message is an abort/cancel or `Client Closed Request`. A `499` with unrelated error information stays `LlmError` / `ERR_LLM_UNKNOWN` and can open the circuit breaker. `cause` is a sanitized snapshot (`status`, `code`/`type`, `requestID`). It does not include headers, bodies, prompts, raw provider errors, or API keys. A caller `AbortError` is preserved, including its reason.
 
 ## Security and privacy
 

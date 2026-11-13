@@ -6,7 +6,7 @@ A fetch-compatible function backed by a Resili pipeline.
 Application → createFetch(...) → @resili/core → fetch implementation
 ```
 
-Current version: **`0.2.0-rc.2`**, published on npm `next`. Depends only on `@resili/core`. `latest` remains Beta 1. This is not a stable release.
+Current version: **`0.2.0`**, published on npm `next`. Depends only on `@resili/core`. `latest` remains Beta 1. This is not a stable release.
 
 ## Installation
 
