@@ -2,7 +2,7 @@
 
 **Stage: Beta (published).** Eight packages are published publicly. Beta 1 is still the default
 release on `latest` / `beta`. npm `next` now points at [RC2](./rc2-status.md)
-(`0.2.0-rc.2` / `0.1.0-rc.2`). This is not a stable release.
+(`0.2.0-rc.2` / `0.1.0-rc.2`). The repository also prepares stable `0.2.0` / `0.1.0`.
 
 | Line        | Packages                                                      | Published      |
 | ----------- | ------------------------------------------------------------- | -------------- |

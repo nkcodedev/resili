@@ -1,4 +1,6 @@
-import { AbortError, ConfigurationError, TimeoutError } from "@resili/core";
+import { inspect } from "node:util";
+
+import { AbortError, CircuitOpenError, ConfigurationError, TimeoutError } from "@resili/core";
 import {
   createLlmClient,
   createPricingResolver,
@@ -389,35 +391,155 @@ describe("createGeminiProvider", () => {
     expect((mapped as LlmError).message).not.toContain(PROMPT);
   });
 
-  it("normalizes abort errors to AbortError", async () => {
-    const abort = Object.assign(new Error("aborted"), { name: "AbortError" });
+  it("normalizes abort errors to AbortError without keeping the raw provider error", async () => {
+    const abort = Object.assign(new Error(`aborted ${API_KEY}`), {
+      name: "AbortError",
+      status: 499,
+      headers: { "x-goog-api-key": API_KEY },
+      error: { message: API_KEY, details: [{ debugInfo: API_KEY }] },
+    });
     const mapped = await executeFailing(abort);
 
     expect(mapped).toBeInstanceOf(AbortError);
     expect(mapped).toMatchObject({ code: "ERR_ABORTED" });
-    expect((mapped as AbortError).cause).toBe(abort);
+    expect((mapped as AbortError).cause).not.toBe(abort);
+    expect((mapped as AbortError).reason).not.toBe(abort);
+    assertNoSecret(mapped, API_KEY);
   });
 
-  it("does not treat a bare HTTP 499 as caller cancellation", async () => {
+  it("preserves a caller AbortError and its reason", async () => {
+    const caller = new AbortError({ reason: "user-stop" });
+    const mapped = await executeFailing(caller);
+
+    expect(mapped).toBe(caller);
+    expect((mapped as AbortError).code).toBe("ERR_ABORTED");
+    expect((mapped as AbortError).reason).toBe("user-stop");
+  });
+
+  it("does not treat an unrelated HTTP 499 as caller cancellation", async () => {
     const mapped = await executeFailing(
-      Object.assign(new Error("client closed request"), { status: 499 }),
+      Object.assign(new Error("upstream dependency failed"), {
+        status: 499,
+        error: { status: "INTERNAL", message: "upstream dependency failed" },
+      }),
     );
 
     expect(mapped).toBeInstanceOf(LlmError);
     expect(mapped).not.toBeInstanceOf(AbortError);
+    expect(mapped).toMatchObject({ classification: "unknown", code: "ERR_LLM_UNKNOWN" });
   });
 
-  it("normalizes Gemini CANCELLED and abort-message 499 errors", async () => {
+  it("normalizes HTTP 499 CANCELLED and Client Closed Request errors", async () => {
     const cancelled = Object.assign(new Error("The operation was cancelled."), {
       status: 499,
-      error: { status: "CANCELLED" },
+      error: { status: "CANCELLED", message: API_KEY },
+      headers: { authorization: `Bearer ${API_KEY}` },
     });
-    const mapped = await executeFailing(cancelled);
+    const cancelledMapped = await executeFailing(cancelled);
 
-    expect(mapped).toBeInstanceOf(AbortError);
-    expect((mapped as AbortError).cause).toBe(cancelled);
+    expect(cancelledMapped).toBeInstanceOf(AbortError);
+    expect(cancelledMapped).toMatchObject({ code: "ERR_ABORTED" });
+    expect((cancelledMapped as AbortError).cause).toMatchObject({
+      status: 499,
+      code: "CANCELLED",
+    });
+    assertNoSecret(cancelledMapped, API_KEY);
+
+    const closed = Object.assign(new Error("Client Closed Request"), {
+      status: 499,
+      requestID: `req-${API_KEY}`,
+      error: { message: `nested ${API_KEY}`, details: [API_KEY] },
+    });
+    const closedMapped = await executeFailing(closed);
+
+    expect(closedMapped).toBeInstanceOf(AbortError);
+    expect(closedMapped).toMatchObject({ code: "ERR_ABORTED" });
+    expect((closedMapped as AbortError).cause).toMatchObject({ status: 499 });
+    expect((closedMapped as AbortError).cause).not.toBe(closed);
+    assertNoSecret(closedMapped, API_KEY);
   });
 });
+
+describe("Gemini HTTP 499 circuit breaker", () => {
+  function clientFor(error: Error) {
+    let calls = 0;
+    const llm = createLlmClient({
+      provider: createGeminiProvider({
+        client: mockClient(() => {
+          calls += 1;
+
+          return Promise.reject(error);
+        }),
+        model: MODEL,
+      }),
+      model: MODEL,
+      circuitBreaker: {
+        minimumThroughput: 1,
+        failureRateThreshold: 50,
+        resetTimeoutMs: 60_000,
+      },
+    });
+
+    return { llm, calls: () => calls };
+  }
+
+  it("does not open the circuit after HTTP 499 with CANCELLED", async () => {
+    const { llm, calls } = clientFor(
+      Object.assign(new Error("The operation was cancelled."), {
+        status: 499,
+        error: { status: "CANCELLED" },
+      }),
+    );
+
+    await expect(llm.generate({ input: "Hello" })).rejects.toMatchObject({ code: "ERR_ABORTED" });
+    await expect(llm.generate({ input: "Hello" })).rejects.toMatchObject({ code: "ERR_ABORTED" });
+    expect(calls()).toBe(2);
+    await llm.destroy();
+  });
+
+  it("does not open the circuit after HTTP 499 Client Closed Request", async () => {
+    const { llm, calls } = clientFor(
+      Object.assign(new Error("Client Closed Request"), { status: 499 }),
+    );
+
+    await expect(llm.generate({ input: "Hello" })).rejects.toBeInstanceOf(AbortError);
+    await expect(llm.generate({ input: "Hello" })).rejects.toBeInstanceOf(AbortError);
+    expect(calls()).toBe(2);
+    await llm.destroy();
+  });
+
+  it("opens the circuit after an unrelated HTTP 499", async () => {
+    const { llm, calls } = clientFor(
+      Object.assign(new Error("upstream dependency failed"), {
+        status: 499,
+        error: { status: "INTERNAL" },
+      }),
+    );
+
+    await expect(llm.generate({ input: "Hello" })).rejects.toMatchObject({
+      code: "ERR_LLM_UNKNOWN",
+    });
+    await expect(llm.generate({ input: "Hello" })).rejects.toBeInstanceOf(CircuitOpenError);
+    expect(calls()).toBe(1);
+    await llm.destroy();
+  });
+});
+
+function assertNoSecret(error: unknown, secret: string): void {
+  const abort = error as AbortError;
+  const rendered = [
+    abort.message,
+    inspect(abort, { depth: 8 }),
+    inspect(abort.cause, { depth: 8 }),
+    inspect(abort.reason, { depth: 8 }),
+    JSON.stringify(abort),
+    JSON.stringify(abort.cause),
+    JSON.stringify(abort.reason),
+  ].join("\n");
+
+  expect(rendered).not.toContain(secret);
+  expect(rendered).not.toContain(PROMPT);
+}
 
 describe("createLlmClient + Gemini provider", () => {
   const pricing = createPricingResolver([

@@ -285,13 +285,23 @@ describe("Anthropic error normalization", () => {
 
     expect(mapped).toBeInstanceOf(AbortError);
     expect(mapped).toMatchObject({ code: "ERR_ABORTED" });
-    expect((mapped as AbortError).cause).toBe(sdkError);
+    expect((mapped as AbortError).cause).not.toBe(sdkError);
+    expect((mapped as AbortError).cause).toMatchObject({ name: "Error" });
 
-    const named = Object.assign(new Error("aborted"), { name: "APIUserAbortError" });
+    const named = Object.assign(new Error(`aborted ${API_KEY}`), {
+      name: "APIUserAbortError",
+      request_id: `req-${API_KEY}`,
+      headers: { "x-api-key": API_KEY },
+      error: { message: API_KEY, type: "api_error" },
+    });
     const mappedNamed = await executeFailing(named);
 
     expect(mappedNamed).toBeInstanceOf(AbortError);
-    expect((mappedNamed as AbortError).cause).toBe(named);
+    expect((mappedNamed as AbortError).cause).not.toBe(named);
+    expect((mappedNamed as AbortError).code).toBe("ERR_ABORTED");
+    expect(JSON.stringify((mappedNamed as AbortError).cause)).not.toContain(API_KEY);
+    expect(JSON.stringify((mappedNamed as AbortError).reason)).not.toContain(API_KEY);
+    expect((mappedNamed as AbortError).message).not.toContain(API_KEY);
   });
 
   it("maps authentication errors", async () => {

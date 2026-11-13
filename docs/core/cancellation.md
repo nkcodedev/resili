@@ -152,9 +152,10 @@ const result = await llm.generate({ input: "…", signal: controller.signal });
 Each adapter recognizes its SDK's abort errors and normalizes them to Core `AbortError`
 (`ERR_ABORTED`) rather than an `LlmError`, so a cancellation stays a cancellation and is never
 misclassified as a provider failure. OpenAI and Anthropic recognize `AbortError` and
-`APIUserAbortError`. Gemini recognizes `AbortError`, Google `CANCELLED` / `CANCELED`, and HTTP `499`
-when the message matches abort or cancel. A bare HTTP `499` stays a provider failure. Published RC2
-keeps the original provider error as `cause`.
+`APIUserAbortError`. Gemini also recognizes Google `CANCELLED` / `CANCELED`, and HTTP `499` when the
+message is an abort/cancel or `Client Closed Request`. A `499` with unrelated error information stays
+a provider failure. Adapter abort causes are sanitized snapshots; a caller `AbortError` keeps its
+reason.
 
 ## Streaming cancellation
 

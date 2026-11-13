@@ -6,7 +6,7 @@ Maps the OpenAI SDK to the `@resili/llm` provider contract.
 @resili/llm → @resili/llm-openai → openai SDK
 ```
 
-Current version: **`0.1.0-rc.2`**, published on npm `next`. Provider name: `"openai"`. `latest` remains Beta 1. This is not a stable release.
+Current version: **`0.1.0`**, published on npm `next`. Provider name: `"openai"`. After publication this is the stable LLM line.
 
 ## Installation
 

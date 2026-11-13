@@ -6,6 +6,6 @@
     "node": ">=20"
   },
   "dependencies": {
-    "@resili/core": "0.2.0-rc.2"
+    "@resili/core": "0.2.0"
   }
 }

@@ -6,8 +6,7 @@ Maps Google's `@google/genai` SDK to the `@resili/llm` provider contract.
 @resili/llm → @resili/llm-gemini → @google/genai
 ```
 
-Current version: **`0.1.0-rc.2`**, published on npm `next`, aligned with the other LLM
-packages. Provider name: `"gemini"`. `latest` remains Beta 1. This is not a stable release.
+Current version: **`0.1.0`**, aligned with the other LLM packages. Provider name: `"gemini"`. After publication this is the stable LLM line.
 
 ## SDK: `@google/genai`, not the legacy SDK
 
@@ -100,8 +99,11 @@ from the OpenAI and Anthropic adapters that matters only if you are writing your
 
 Recognized as cancellation and normalized to Core `AbortError` (`ERR_ABORTED`): an error named
 `AbortError`, a Google status of `CANCELLED` or `CANCELED`, and HTTP status **499** when the message
-matches abort or cancel. A bare status `499` stays a provider failure. Published RC2 keeps the
-original provider error as `cause`. See [Cancellation](../llm/cancellation.md).
+is an abort/cancel or the client-closed-request phrase `Client Closed Request`. A 499 whose message
+and status name are unrelated stays `LlmError` / `ERR_LLM_UNKNOWN` and can open the circuit breaker.
+The abort `cause` is a sanitized snapshot (`status`, `code`/`type`, `requestID`), not the raw provider
+error. A caller `AbortError` is returned unchanged, including its reason. See
+[Cancellation](../llm/cancellation.md).
 
 ## Cumulative snapshot de-duplication
 

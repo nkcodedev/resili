@@ -9,7 +9,7 @@ TypeScript resilience policies for Node.js: wrap an async function, an HTTP clie
 [![license](https://img.shields.io/github/license/nkcodedev/resili)](LICENSE)
 [![node](https://img.shields.io/node/v/@resili/core)](https://www.npmjs.com/package/@resili/core)
 
-`npm next` is RC2. `npm latest` is still Beta 1. Node.js 20 or newer.
+Stable `0.2.0` / `0.1.0` is prepared in this repository and is not yet published. Until publication, npm `latest` is still Beta 1 and `next` is still RC2. Node.js 20 or newer.
 
 ## Why Resili?
 
@@ -19,10 +19,10 @@ Resili puts those controls in one typed pipeline around an async function. You o
 
 ## Quick start
 
-Install the published core package. This command installs Beta 1, which is the `latest` tag. Use `@next` or the exact RC2 version for the current release candidate.
+Install the core package. After the stable release is published, this installs `@resili/core@0.2.0`.
 
 ```bash
-npm install @resili/core@next
+npm install @resili/core
 ```
 
 ```ts
@@ -39,7 +39,7 @@ const response = await users.call("42");
 
 `failureRateThreshold` is a percentage. `50` means 50 percent of sampled calls, not `0.5`. Retry follows the classifier: a plain `Error` is not retried unless `retryOn` returns true. Network errors retry only when the call is marked idempotent.
 
-A local version of this flow, with a mocked dependency, is in [`examples/core`](examples/core). A StackBlitz-style project that installs published `@resili/core@0.2.0-rc.2` is in [`examples/stackblitz`](examples/stackblitz).
+A local version of this flow, with a mocked dependency, is in [`examples/core`](examples/core). A StackBlitz-style project that installs `@resili/core@0.2.0` (after publication) is in [`examples/stackblitz`](examples/stackblitz).
 
 ### See Resili in action
 
@@ -47,9 +47,9 @@ A local version of this flow, with a mocked dependency, is in [`examples/core`](
 
 ![Resili retry and circuit breaker demo](docs/assets/resili-demo.gif)
 
-The recording is `node examples/stackblitz/demo.mjs` with published `@resili/core@0.2.0-rc.2`. A local function fails twice. Resili waits and retries. The third attempt returns `recovered`. A second function then fails once, the circuit opens, and the next call stops with `ERR_CIRCUIT_OPEN` without entering that function. No API key is used.
+The recording is `node examples/stackblitz/demo.mjs` with `@resili/core@0.2.0`. A local function fails twice. Resili waits and retries. The third attempt returns `recovered`. A second function then fails once, the circuit opens, and the next call stops with `ERR_CIRCUIT_OPEN` without entering that function. No API key is used.
 
-The StackBlitz button opens that example folder from `main`. It installs `@resili/core@0.2.0-rc.2` and does not use the monorepo. In the terminal, run `node index.mjs`.
+The StackBlitz button opens that example folder from `main`. It installs `@resili/core@0.2.0` (after publication) and does not use the monorepo. In the terminal, run `node index.mjs`.
 
 ## Which package to install
 
@@ -64,11 +64,11 @@ The StackBlitz button opens that example folder from `main`. It installs `@resil
 | Anthropic Messages            | `@resili/core`, `@resili/llm`, `@resili/llm-anthropic`, and `@anthropic-ai/sdk` |
 | Gemini `generateContent`      | `@resili/core`, `@resili/llm`, `@resili/llm-gemini`, and `@google/genai`        |
 
-There is no unscoped `resili` package. Install only the scoped packages you use. Within one version line, install the same release together: Core and HTTP share `0.2.0-rc.2` on `next`; the LLM packages share `0.1.0-rc.2` on `next`.
+There is no unscoped `resili` package. Install only the scoped packages you use. Within one version line, install the same release together: Core and HTTP share `0.2.0`; the LLM packages share `0.1.0`.
 
 ```bash
-npm install @resili/core@0.2.0-rc.2 @resili/fetch@0.2.0-rc.2
-npm install @resili/core@0.2.0-rc.2 @resili/llm@0.1.0-rc.2 @resili/llm-openai@0.1.0-rc.2 openai
+npm install @resili/core @resili/fetch
+npm install @resili/core @resili/llm @resili/llm-openai openai
 ```
 
 ## Features
@@ -183,16 +183,16 @@ Resili is indexed on the XERJ Corpus Hub, providing another way for developers a
 
 ## Release status
 
-| Tag                 | What `npm install` resolves                               | Meaning                                 |
-| ------------------- | --------------------------------------------------------- | --------------------------------------- |
-| `latest` and `beta` | `@resili/core@0.2.0-beta.1`, LLM packages `@0.1.0-beta.1` | Default install. Not a stable release.  |
-| `next`              | `@resili/core@0.2.0-rc.2`, LLM packages `@0.1.0-rc.2`     | Published RC2.                          |
-| exact `rc.1`        | `0.2.0-rc.1` / `0.1.0-rc.1`                               | Previous candidate. Not the `next` tag. |
-| `alpha`             | Final alpha on each line                                  | Historical.                             |
+| Line / tag         | Versions                                 | Meaning                                                              |
+| ------------------ | ---------------------------------------- | -------------------------------------------------------------------- |
+| Stable (prepared)  | Core/HTTP `0.2.0`, LLM `0.1.0`           | This repository. Not published until the release sequence completes. |
+| npm `latest` today | Beta 1 (`0.2.0-beta.1` / `0.1.0-beta.1`) | Current default install until `latest` is promoted.                  |
+| npm `next` today   | RC2 (`0.2.0-rc.2` / `0.1.0-rc.2`)        | Previous candidate.                                                  |
+| Historical         | RC1, alpha                               | Exact versions only.                                                 |
 
-RC3 is planned and is not published. No stable `1.0` release has been approved. Do not point production at a tag if you need a reproducible install; pin exact versions.
+After publication, plain `npm install @resili/core` is intended to resolve to `0.2.0`. Pin exact versions when you need a reproducible install.
 
-Details: [RC2 status](docs/releases/rc2-status.md) · [Versioning](docs/releases/versioning.md)
+Details: [Stable status](docs/releases/stable-status.md) · [Versioning](docs/releases/versioning.md) · [RC2 status](docs/releases/rc2-status.md)
 
 ## Contributing
 

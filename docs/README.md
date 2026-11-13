@@ -2,16 +2,16 @@
 
 A TypeScript-first resilience toolkit for Node.js applications, HTTP clients, and LLM providers.
 
-**RC2** (`0.2.0-rc.2` / `0.1.0-rc.2`) is published on npm `next`. `latest` and `beta` still serve
-Beta 1. Historical `alpha` builds remain available. RC1 remains installable at exact versions.
-This is not a stable release. See [Versioning](./releases/versioning.md) and
-[RC2 status](./releases/rc2-status.md).
+**Stable** (`0.2.0` / `0.1.0`) is prepared in this repository and is not yet published. Until
+publication, npm `latest` / `beta` still serve Beta 1 and `next` still serves RC2. Historical
+`alpha` and RC1 builds remain available at exact versions. See [Versioning](./releases/versioning.md)
+and [Stable status](./releases/stable-status.md).
 
-| Line        | Packages                                     | `next` (published RC2) | `latest` / `beta` |
-| ----------- | -------------------------------------------- | ---------------------- | ----------------- |
-| Core + HTTP | `@resili/core`, `-fetch`, `-axios`, `-undici` | `0.2.0-rc.2`           | `0.2.0-beta.1`    |
-| LLM         | `@resili/llm`, `-llm-openai`, `-llm-anthropic` | `0.1.0-rc.2`           | `0.1.0-beta.1`    |
-|             | `@resili/llm-gemini`                         | `0.1.0-rc.2`           | `0.1.0-beta.1`    |
+| Line        | Packages                                       | Stable (prepared) | npm `latest` today |
+| ----------- | ---------------------------------------------- | ----------------- | ------------------ |
+| Core + HTTP | `@resili/core`, `-fetch`, `-axios`, `-undici`   | `0.2.0`           | `0.2.0-beta.1`     |
+| LLM         | `@resili/llm`, `-llm-openai`, `-llm-anthropic`  | `0.1.0`           | `0.1.0-beta.1`     |
+|             | `@resili/llm-gemini`                           | `0.1.0`           | `0.1.0-beta.1`     |
 
 ## Start here
 
@@ -109,6 +109,7 @@ Deeper specifications: [ARCHITECTURE.md](./ARCHITECTURE.md),
 ## Release status
 
 - [Alpha status](./releases/alpha-status.md) — historical alpha stage and product limitations
+- [Stable status](./releases/stable-status.md) — first stable cut (`0.2.0` / `0.1.0`, prepared)
 - [RC2 status](./releases/rc2-status.md) — second release candidate (published on `next`)
 - [RC1 status](./releases/rc1-status.md) — first release candidate (exact versions; `next` has moved to RC2)
 - [Beta status](./releases/beta-status.md) — published Beta 1 on `latest` / `beta`

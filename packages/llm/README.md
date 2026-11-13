@@ -10,21 +10,21 @@ Official adapters wrap **user-owned** vendor clients and return the contracts de
 
 ## Installation
 
-**RC2 (`0.1.0-rc.2`) is published on npm `next`.** `latest` and `beta` still serve Beta 1 (`0.1.0-beta.1`). Historical `alpha` builds remain under `@alpha`. RC1 remains available as `0.1.0-rc.1`. This is not a stable release.
+**Stable `0.1.0` is prepared in this repository.** After npm publication, plain `npm install` resolves to this line on `latest`. Historical Beta, RC, and alpha builds remain available at exact versions. See [versioning](https://github.com/nkcodedev/resili/blob/main/docs/releases/versioning.md).
 
 ```bash
-pnpm add @resili/core@0.2.0-rc.2 @resili/llm@0.1.0-rc.2
+pnpm add @resili/core@0.2.0 @resili/llm@0.1.0
 ```
 
 ```bash
-npm install @resili/core@0.2.0-rc.2 @resili/llm@0.1.0-rc.2
+npm install @resili/core@0.2.0 @resili/llm@0.1.0
 ```
 
 ```bash
-yarn add @resili/core@0.2.0-rc.2 @resili/llm@0.1.0-rc.2
+yarn add @resili/core@0.2.0 @resili/llm@0.1.0
 ```
 
-Node.js 20 or newer is required. `@resili/llm` depends only on `@resili/core` at runtime. Package version is `0.1.0-rc.2`; see [versioning](https://github.com/nkcodedev/resili/blob/main/docs/releases/versioning.md).
+Node.js 20 or newer is required. `@resili/llm` depends only on `@resili/core` at runtime. Package version is `0.1.0`; see [versioning](https://github.com/nkcodedev/resili/blob/main/docs/releases/versioning.md).
 
 ## What this package is responsible for
 

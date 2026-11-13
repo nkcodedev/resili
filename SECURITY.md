@@ -6,14 +6,16 @@ resource exhaustion, dependency handling, or package integrity.
 
 ## Supported Versions
 
-There is no stable `1.0` line. Security fixes are handled on `main`. Published
-packages are Beta 1 on npm `latest` / `beta` and RC2 on npm `next`.
+Security fixes are handled on `main`. This repository prepares Core/HTTP `0.2.0` and LLM `0.1.0`
+as the first stable cut. Until those versions are published and `latest` is promoted, npm `latest`
+still serves Beta 1 and `next` still serves RC2.
 
-| Version                                                                        | Supported                                                  |
-| ------------------------------------------------------------------------------ | ---------------------------------------------------------- |
-| `@resili/core@0.2.0-rc.2` and the matching RC2 HTTP and LLM packages on `next` | Current candidate. Report issues against this line.        |
-| `@resili/core@0.2.0-beta.1` and the matching Beta 1 LLM packages on `latest`   | Default install. Fixes may land only in a newer candidate. |
-| Older alpha and RC1 versions                                                   | Not a maintained security line.                            |
+| Version                                                                              | Supported                                                        |
+| ------------------------------------------------------------------------------------ | ---------------------------------------------------------------- |
+| `@resili/core@0.2.0` and the matching `0.2.0` / `0.1.0` packages (after publication) | Intended supported stable line. Report issues against this line. |
+| `@resili/core@0.2.0-rc.2` and matching RC2 packages on `next`                        | Previous candidate. Prefer the stable line after publication.    |
+| `@resili/core@0.2.0-beta.1` and matching Beta 1 packages on `latest` (until promote) | Current default install until `latest` moves.                    |
+| Older alpha and RC1 versions                                                         | Not a maintained security line.                                  |
 
 ## Reporting a Vulnerability
 

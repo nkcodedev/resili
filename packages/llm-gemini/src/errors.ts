@@ -22,8 +22,10 @@ export interface GeminiErrorCause {
  * Maps a Gemini SDK / HTTP failure to {@link LlmError}.
  *
  * Caller cancellation is normalized to Core {@link AbortError} (`ERR_ABORTED`).
- * A bare HTTP status `499` is not treated as cancellation unless the error
- * also carries a cancel/abort signal (`CANCELLED` or an abort message).
+ * HTTP status `499` is cancellation when the Google status is `CANCELLED` or
+ * `CANCELED`, or when the message is an abort/cancel or the client-closed-request
+ * reason phrase. A `499` with unrelated error information stays a provider failure.
+ * Provider abort causes are sanitized snapshots, not the raw SDK error.
  *
  * @internal
  */
@@ -63,15 +65,13 @@ export function isAbortLike(error: unknown): boolean {
     return true;
   }
 
-  const status = getNumber(error, "status");
+  const status = getNumber(error, "status") ?? getNumber(error, "statusCode");
 
   if (status !== 499) {
     return false;
   }
 
-  const message = error instanceof Error ? error.message : (getString(error, "message") ?? "");
-
-  return /abort|cancel/i.test(message);
+  return readDiagnosticMessages(error).some(isCancellationMessage);
 }
 
 function toAbortError(error: unknown): AbortError {
@@ -79,10 +79,44 @@ function toAbortError(error: unknown): AbortError {
     return error;
   }
 
+  const status = getNumber(error, "status") ?? getNumber(error, "statusCode");
+  const code = getString(error, "code") ?? getGoogleStatusName(error);
+  const type = getString(error, "type") ?? getGoogleStatusName(error);
+  const cause = sanitizeCause(error, status, code, type);
+
   return new AbortError({
-    reason: error,
-    ...(error instanceof Error ? { cause: error } : {}),
+    reason: cause,
+    cause,
   });
+}
+
+function isCancellationMessage(message: string): boolean {
+  return /abort|cancel/i.test(message) || /client closed request/i.test(message);
+}
+
+function readDiagnosticMessages(error: unknown): readonly string[] {
+  const messages: string[] = [];
+  const own = error instanceof Error ? error.message : getString(error, "message");
+
+  if (own !== undefined && own.length > 0) {
+    messages.push(own);
+  }
+
+  const nested = getNestedErrorMessage(error);
+
+  if (nested !== undefined && nested !== own) {
+    messages.push(nested);
+  }
+
+  return messages;
+}
+
+function getNestedErrorMessage(error: unknown): string | undefined {
+  if (typeof error !== "object" || error === null || !("error" in error)) {
+    return undefined;
+  }
+
+  return getString((error as { readonly error: unknown }).error, "message");
 }
 
 function classify(
@@ -151,11 +185,11 @@ function sanitizeCause(
   const name = getErrorName(error);
 
   return Object.freeze({
-    ...(name === undefined ? {} : { name }),
+    ...(name === undefined ? {} : { name: redactSecrets(name) }),
     ...(status === undefined ? {} : { status }),
     ...(code === undefined ? {} : { code: redactSecrets(code) }),
     ...(type === undefined ? {} : { type: redactSecrets(type) }),
-    ...(requestID === undefined ? {} : { requestID }),
+    ...(requestID === undefined ? {} : { requestID: redactSecrets(requestID) }),
   });
 }
 
@@ -268,5 +302,7 @@ function isNetworkCode(code: string | undefined): boolean {
 }
 
 function redactSecrets(value: string): string {
+  SECRET_PATTERN.lastIndex = 0;
+
   return value.replace(SECRET_PATTERN, "[redacted]");
 }

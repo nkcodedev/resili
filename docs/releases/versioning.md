@@ -2,42 +2,40 @@
 
 ## Install
 
-**Default install:** Beta 1 on `latest` / `beta`. Published RC2 is on `next`. RC1 remains available
-at exact versions. This is not a stable release.
+**Prepared stable:** Core/HTTP `0.2.0` and LLM `0.1.0` in this repository. These versions are not
+published until the release sequence completes. Until then, npm `latest` / `beta` still resolve to
+Beta 1 and `next` still resolves to RC2.
 
 ```bash
 npm install @resili/core
 npm install @resili/llm @resili/llm-openai
 ```
 
-`latest` and `beta` currently both point at Beta 1. `next` currently points at RC2
-(`0.2.0-rc.2` / `0.1.0-rc.2`). Historical alpha builds remain available as `@alpha` / exact
-`*-alpha.*` versions. RC1 remains installable as `0.2.0-rc.1` / `0.1.0-rc.1`. See
-[RC2 status](./rc2-status.md) and [RC1 status](./rc1-status.md).
-
 ```bash
-# Published release candidate (npm next)
-npm install @resili/core@next
-npm install @resili/core@0.2.0-rc.2
-npm install @resili/llm@0.1.0-rc.2
+# Exact stable pins (after publication)
+npm install @resili/core@0.2.0
+npm install @resili/llm@0.1.0
 ```
 
-Neither Beta, RC1, nor RC2 is a stable `1.0` guarantee — pin exact versions in production.
+Historical Beta, RC1, RC2, and alpha builds remain available at exact versions. See
+[Stable status](./stable-status.md), [RC2 status](./rc2-status.md), and [RC1 status](./rc1-status.md).
+
+Pin exact versions in production when you need a reproducible install.
 
 ## Current dist-tags (public registry)
 
 Current tags:
 
-| Package                 | `latest` / `beta` | `alpha` (historical) | `next` (published RC2) |
-| ----------------------- | ----------------- | -------------------- | ---------------------- |
-| `@resili/core`          | `0.2.0-beta.1`    | `0.2.0-alpha.3`      | `0.2.0-rc.2`           |
-| `@resili/fetch`         | `0.2.0-beta.1`    | `0.2.0-alpha.3`      | `0.2.0-rc.2`           |
-| `@resili/axios`         | `0.2.0-beta.1`    | `0.2.0-alpha.3`      | `0.2.0-rc.2`           |
-| `@resili/undici`        | `0.2.0-beta.1`    | `0.2.0-alpha.3`      | `0.2.0-rc.2`           |
-| `@resili/llm`           | `0.1.0-beta.1`    | `0.1.0-alpha.4`      | `0.1.0-rc.2`           |
-| `@resili/llm-openai`    | `0.1.0-beta.1`    | `0.1.0-alpha.4`      | `0.1.0-rc.2`           |
-| `@resili/llm-anthropic` | `0.1.0-beta.1`    | `0.1.0-alpha.4`      | `0.1.0-rc.2`           |
-| `@resili/llm-gemini`    | `0.1.0-beta.1`    | `0.1.0-alpha.3`      | `0.1.0-rc.2`           |
+| Package                 | Stable (prepared) | npm `latest` / `beta` today | `next` today (RC2) | `alpha` (historical) |
+| ----------------------- | ----------------- | --------------------------- | ------------------ | -------------------- |
+| `@resili/core`          | `0.2.0`           | `0.2.0-beta.1`              | `0.2.0-rc.2`       | `0.2.0-alpha.3`      |
+| `@resili/fetch`         | `0.2.0`           | `0.2.0-beta.1`              | `0.2.0-rc.2`       | `0.2.0-alpha.3`      |
+| `@resili/axios`         | `0.2.0`           | `0.2.0-beta.1`              | `0.2.0-rc.2`       | `0.2.0-alpha.3`      |
+| `@resili/undici`        | `0.2.0`           | `0.2.0-beta.1`              | `0.2.0-rc.2`       | `0.2.0-alpha.3`      |
+| `@resili/llm`           | `0.1.0`           | `0.1.0-beta.1`              | `0.1.0-rc.2`       | `0.1.0-alpha.4`      |
+| `@resili/llm-openai`    | `0.1.0`           | `0.1.0-beta.1`              | `0.1.0-rc.2`       | `0.1.0-alpha.4`      |
+| `@resili/llm-anthropic` | `0.1.0`           | `0.1.0-beta.1`              | `0.1.0-rc.2`       | `0.1.0-alpha.4`      |
+| `@resili/llm-gemini`    | `0.1.0`           | `0.1.0-beta.1`              | `0.1.0-rc.2`       | `0.1.0-alpha.3`      |
 
 Verify at any time:
 
@@ -51,8 +49,11 @@ npm view @resili/core dist-tags
   current public release.
 - The `beta` tag also points at Beta 1 (same versions today).
 - The `alpha` tag remains frozen on the final alpha line for historical installs.
-- RC1 and RC2 were published with `--tag next` only. `next` now points at RC2. Do **not** move `latest` or `beta` for an RC cut.
-- Stable `1.0` is a later bar.
+- RC1 and RC2 were published with `--tag next` only. `next` currently still points at RC2 until
+  any later tag move is approved.
+- This repository prepares Core/HTTP `0.2.0` and LLM `0.1.0` as the first stable cut. Publication
+  uses a staging dist-tag first, then promotes `latest` only after verification. See
+  [Stable status](./stable-status.md).
 
 If you are unsure what you actually installed:
 
@@ -62,10 +63,10 @@ npm ls @resili/core @resili/llm
 
 ## Two version lines
 
-| Line        | Packages                                                      | `next` (RC2) | `latest` / `beta` |
-| ----------- | ------------------------------------------------------------- | ------------ | ----------------- |
-| Core + HTTP | `@resili/core`, `-fetch`, `-axios`, `-undici`                 | `0.2.0-rc.2` | `0.2.0-beta.1`    |
-| LLM         | `@resili/llm`, `-llm-openai`, `-llm-anthropic`, `-llm-gemini` | `0.1.0-rc.2` | `0.1.0-beta.1`    |
+| Line        | Packages                                                      | Stable (prepared) | npm `latest` today |
+| ----------- | ------------------------------------------------------------- | ----------------- | ------------------ |
+| Core + HTTP | `@resili/core`, `-fetch`, `-axios`, `-undici`                 | `0.2.0`           | `0.2.0-beta.1`     |
+| LLM         | `@resili/llm`, `-llm-openai`, `-llm-anthropic`, `-llm-gemini` | `0.1.0`           | `0.1.0-beta.1`     |
 
 Versions are independent, so a fix in one layer does not force a release of the other. Packages within
 a line are released together and their internal dependency ranges are pinned to the version published
@@ -89,14 +90,14 @@ For reproducibility, pin exact versions rather than relying on a tag:
 ```json
 {
   "dependencies": {
-    "@resili/core": "0.2.0-rc.2",
-    "@resili/llm": "0.1.0-rc.2",
-    "@resili/llm-openai": "0.1.0-rc.2"
+    "@resili/core": "0.2.0",
+    "@resili/llm": "0.1.0",
+    "@resili/llm-openai": "0.1.0"
   }
 }
 ```
 
-Those RC2 pins are published on npm. A range like `^0.2.0-rc.2` behaves
+After publication, those stable pins are on npm. A prerelease range like `^0.2.0-rc.2` behaves
 unintuitively with prereleases. Exact versions avoid the
 question. Commit your lockfile.
 
